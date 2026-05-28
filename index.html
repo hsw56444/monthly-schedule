@@ -104,6 +104,52 @@
         .badge-solo .badge-label.size-2xs { font-size: 9.5px; }
         .badge-solo .badge-label.size-3xs { font-size: 9px; }
 
+        /* ─── 시간카드 편집 인터랙션 (추가/삭제/드래그/다중선택) ─── */
+        .day-header-strip .day-head-right { display: flex; align-items: center; gap: 4px; }
+        .day-add-btn {
+            width: 18px; height: 18px; border-radius: 50%;
+            border: none; background: #6366f1; color: #fff;
+            font-size: 14px; font-weight: 700; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; transition: opacity .12s, transform .12s;
+            flex-shrink: 0; box-shadow: 0 1px 3px rgba(99,102,241,0.4); padding: 0;
+        }
+        .calendar-day:hover .day-add-btn { opacity: 1; }
+        .day-add-btn:hover { background: #4f46e5; transform: scale(1.12); }
+
+        .badge { position: relative; }
+        .badge[draggable="true"] { cursor: grab; }
+        .badge.badge-dragging { opacity: .4; }
+        .calendar-day.drag-over { border-color: #6366f1 !important; box-shadow: 0 0 0 2px rgba(99,102,241,0.45) inset; }
+
+        .badge-del {
+            position: absolute; top: 1px; right: 2px;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #ef4444; color: #fff; border: 1.5px solid #fff;
+            font-size: 11px; line-height: 1; font-weight: 700;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 6; box-shadow: 0 1px 2px rgba(0,0,0,0.25); padding: 0;
+        }
+        .badge:hover .badge-del { display: flex; }
+
+        .badge-check { display: none; position: absolute; top: 2px; right: 3px; z-index: 6; }
+        .badge-check input { width: 15px; height: 15px; cursor: pointer; accent-color: #6366f1; margin: 0; }
+        .bulk-card-mode .badge-check { display: block; }
+        .bulk-card-mode .badge { cursor: pointer; padding-right: 22px; }
+        .bulk-card-mode .badge-del { display: none !important; }
+        .bulk-card-mode .day-add-btn { display: none !important; }
+        .badge.card-selected { box-shadow: 0 0 0 2px #6366f1; }
+
+        #bulkCardBtn.bulk-on { background: #6366f1; color: #fff; border-color: #6366f1; }
+
+        #bulkCardBar { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e0e7ff; padding: 1rem; box-shadow: 0 -4px 20px rgba(99,102,241,0.12); z-index: 60; transform: translateY(130%); transition: transform 0.3s ease-out; border-radius: 16px 16px 0 0; }
+        #bulkCardBar.active { transform: translateY(0); }
+
+        /* 캡처(이미지 저장) 시 편집 컨트롤 숨김 */
+        .exporting .day-add-btn,
+        .exporting .badge-del,
+        .exporting .badge-check { display: none !important; }
+
         /* ─── 이미지 캡처 전용 보정 (html2canvas 한글 받침/라인박스 어긋남 방지) ─── */
         .exporting .badge { padding: 6px 8px 8px; }
         .exporting .badge-label {
@@ -725,6 +771,7 @@
                 <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <button onclick="importPreviousMonthSchedule()" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" title="직전 달의 스케줄을 동일 요일에 일괄 적용"><i class="fa-solid fa-clock-rotate-left"></i> <span class="hidden sm:inline">직전 달 불러오기</span></button>
                     <button onclick="openCopyToModal()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-users-viewfinder"></i> 다른 학생 적용</button>
+                    <button onclick="toggleBulkCardMode()" id="bulkCardBtn" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-square-check"></i> <span class="hidden sm:inline">다중선택</span></button>
                     <div class="w-px h-6 bg-slate-200 mx-1"></div>
                     <button onclick="copySchedule()" class="hidden sm:flex bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-bold transition items-center gap-1"><i class="fa-regular fa-copy"></i></button>
                     <button onclick="pasteSchedule()" class="hidden sm:flex bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold transition items-center gap-1"><i class="fa-solid fa-paste"></i></button>
@@ -811,6 +858,20 @@
                     </div>
                     <div class="text-xs text-slate-500 bg-indigo-50 p-2 rounded border border-indigo-100 mb-1"><i class="fa-solid fa-circle-info mr-1 text-indigo-400"></i> 달력에서 붙여넣을 날짜들을 클릭하세요.</div>
                     <button onclick="applyMultiPaste()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold shadow-lg transition flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> 선택한 날짜에 일괄 적용</button>
+                </div>
+
+                <div id="bulkCardBar" class="flex flex-col gap-3">
+                    <div class="flex justify-between items-center">
+                        <div><span class="text-xs font-bold text-indigo-500 uppercase tracking-wider block mb-0.5">다중 선택 모드</span><span class="text-sm font-bold text-slate-700"><span id="bulkCount">0</span>개 선택됨</span></div>
+                        <button onclick="cancelBulkCardMode()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <div class="text-xs text-slate-500 bg-indigo-50 p-2 rounded border border-indigo-100"><i class="fa-solid fa-circle-info mr-1 text-indigo-400"></i> 달력의 시간 카드를 눌러 선택한 뒤, 시간 변경 또는 삭제하세요.</div>
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">시작</label><select id="bulkStart" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
+                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료</label><select id="bulkEnd" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
+                        <button onclick="applyBulkEdit()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition shrink-0">시간 변경</button>
+                    </div>
+                    <button onclick="applyBulkDelete()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2"><i class="fa-regular fa-trash-can"></i> 선택한 시간 일괄 삭제</button>
                 </div>
             </div>
         </div>
@@ -1583,10 +1644,15 @@
         var currentDirectorMode = 'day';
         var currentTuitionTab = 'input';
         
-        var scheduleClipboard = null; 
+        var scheduleClipboard = null;
         var isMultiSelectMode = false;
         var selectedDates = new Set();
         var entryClipboard = null;
+
+        // 시간카드 다중선택(삭제/시간변경) 모드 & 드래그 이동 상태
+        var isBulkCardMode = false;
+        var selectedCards = new Set(); // "YYYY-MM-DD|subjectKey"
+        var dragSource = null;         // { date, subj }
         
         var currentStudentViewMode = 'month';
         var currentStudentWeekDate = window.APP_CONFIG.startDate;
@@ -2862,6 +2928,11 @@
             const options = times.map(t => `<option value="${t}">${t}</option>`).join('');
             startSelect.innerHTML = options;
             endSelect.innerHTML = options;
+
+            const bulkStart = document.getElementById('bulkStart');
+            const bulkEnd = document.getElementById('bulkEnd');
+            if (bulkStart) bulkStart.innerHTML = options;
+            if (bulkEnd) bulkEnd.innerHTML = options;
         }
 
         function formatNumber(num) {
@@ -2908,6 +2979,7 @@
         function closeModal() {
             closeInputOverlay();
             cancelMultiSelect();
+            if (isBulkCardMode) cancelBulkCardMode();
             const modal = document.getElementById('plannerModal');
             modal.classList.add('opacity-0');
             
@@ -2938,6 +3010,7 @@
             }
             
             cancelMultiSelect();
+            if (isBulkCardMode) cancelBulkCardMode();
             renderCalendars();
 
             // 학생별 공지가 설정되어 있지 않으면(undefined) 전체 공지를 기본으로 표시
@@ -2965,6 +3038,8 @@
         }
         
         function setStudentViewMode(mode) {
+            // 시간카드 다중선택은 월간 보기 전용 — 보기 전환 시 종료
+            if (isBulkCardMode) cancelBulkCardMode();
             currentStudentViewMode = mode;
             const btnMonth = document.getElementById('s-btn-month');
             const btnWeek = document.getElementById('s-btn-week');
@@ -3156,6 +3231,7 @@
         function renderMonthCalendar(elId) {
             const container = document.getElementById(elId);
             container.innerHTML = '';
+            container.classList.toggle('bulk-card-mode', isBulkCardMode);
 
             const firstDateObj = new Date(SESSION_DATES[0]);
             const firstDayOfWeek = firstDateObj.getDay();
@@ -3208,11 +3284,12 @@
                 cell.className = cellClass;
 
                 const dayNumColorClass = isHoliday || dayOfWeek===0 ? 'text-holiday' : (dayOfWeek===6 ? 'text-blue-400' : '');
-                let content = `<div class="day-header-strip w-full flex justify-between items-start p-1"><span class="day-number ${dayNumColorClass}">${dayDisplay}</span>`;
+                let content = `<div class="day-header-strip w-full flex justify-between items-start p-1"><span class="day-number ${dayNumColorClass}">${dayDisplay}</span><span class="day-head-right">`;
                 if (isMakeupDay) {
-                    content += `<span class="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-300 px-1.5 py-0.5 rounded shadow-sm font-extrabold ml-1">보강일</span>`;
+                    content += `<span class="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-300 px-1.5 py-0.5 rounded shadow-sm font-extrabold">보강일</span>`;
                 }
-                content += `</div>`;
+                content += `<button class="day-add-btn" onclick="onDayAddClick(event,'${dateStr}')" title="시간 추가" tabindex="-1">+</button>`;
+                content += `</span></div>`;
 
                 content += `<div class="badge-container px-1 pb-1">`;
 
@@ -3278,11 +3355,24 @@
                     const soloCls = timeText ? '' : ' badge-solo';
                     const timeHtml = timeText ? `<div class="badge-time">${timeText}</div>` : '';
                     const labelCls = entry.type === 'custom' ? customLabelClass(entry.label) : 'badge-label';
-                    content += `<div class="badge ${style}${soloCls}"><div class="${labelCls}">${entry.label}</div>${timeHtml}</div>`;
+                    const cardKey = dateStr + '|' + entry.type;
+                    const isCardSel = selectedCards.has(cardKey);
+                    const dragAttr = isBulkCardMode ? '' : ' draggable="true"';
+                    content += `<div class="badge ${style}${soloCls}${isCardSel ? ' card-selected' : ''}"${dragAttr}`
+                        + ` onclick="onBadgeClick(event,'${dateStr}','${entry.type}')"`
+                        + ` ondragstart="onBadgeDragStart(event,'${dateStr}','${entry.type}')" ondragend="onBadgeDragEnd(event)">`
+                        + `<div class="${labelCls}">${entry.label}</div>${timeHtml}`
+                        + `<button class="badge-del" onclick="onBadgeDelete(event,'${dateStr}','${entry.type}')" title="삭제" tabindex="-1">&times;</button>`
+                        + `<span class="badge-check"><input type="checkbox" ${isCardSel ? 'checked' : ''} onclick="onBadgeCheck(event,'${dateStr}','${entry.type}')"></span>`
+                        + `</div>`;
                 });
 
                 // 모든 날짜에 클릭 핸들러 활성화 (휴일/공휴일/일요일에도 보강 입력 가능)
                 cell.onclick = () => handleDateClick(dateStr);
+                // 시간카드 드래그 이동 — 드롭 대상으로 동작
+                cell.ondragover = (e) => onCellDragOver(e, dateStr, cell);
+                cell.ondragleave = () => cell.classList.remove('drag-over');
+                cell.ondrop = (e) => onCellDrop(e, dateStr, cell);
                 content += `</div>`;
                 cell.innerHTML = content;
                 container.appendChild(cell);
@@ -3290,6 +3380,7 @@
         }
 
         function handleDateClick(dateStr) {
+            if (isBulkCardMode) return; // 다중선택 모드에서는 셀 클릭 비활성 (카드만 선택)
             if (isMultiSelectMode) {
                 if (selectedDates.has(dateStr)) selectedDates.delete(dateStr);
                 else selectedDates.add(dateStr);
@@ -3305,6 +3396,8 @@
             selectedDates.clear();
             const pasteBarEl = document.getElementById('multiPasteBar');
             if (pasteBarEl) pasteBarEl.classList.remove('active');
+            // [상호배제] 시간카드 다중선택 모드도 정리
+            if (isBulkCardMode) cancelBulkCardMode();
 
             selectedDate = dateStr;
             const dateObj = new Date(dateStr);
@@ -3495,6 +3588,8 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
+            // 상호배제: 시간카드 다중선택 모드 종료
+            if (isBulkCardMode) cancelBulkCardMode();
 
             const start = document.getElementById('inpStart').value;
             const end = document.getElementById('inpEnd').value;
@@ -3566,6 +3661,183 @@
             cancelMultiSelect();
         }
 
+        // ==================== 시간카드 편집 (추가/수정/삭제/드래그 이동) ====================
+
+        function onDayAddClick(e, dateStr) {
+            e.stopPropagation();
+            if (isBulkCardMode) return;
+            openInputOverlay(dateStr);
+        }
+
+        function onBadgeClick(e, dateStr, subj) {
+            e.stopPropagation();
+            if (isBulkCardMode) { toggleCardSelection(dateStr, subj); return; }
+            if (isMultiSelectMode) { handleDateClick(dateStr); return; }
+            // 해당 카드의 과목 탭을 연 상태로 입력창 표시 (수정)
+            openInputOverlay(dateStr);
+            setOverlaySubject(subj);
+        }
+
+        function onBadgeCheck(e, dateStr, subj) {
+            e.stopPropagation();
+            toggleCardSelection(dateStr, subj);
+        }
+
+        function toggleCardSelection(dateStr, subj) {
+            const key = dateStr + '|' + subj;
+            if (selectedCards.has(key)) selectedCards.delete(key);
+            else selectedCards.add(key);
+            updateBulkBar();
+            renderCalendars();
+        }
+
+        function onBadgeDelete(e, dateStr, subj) {
+            e.stopPropagation();
+            const opt = attendanceData[currentStudentId]?.[currentOption];
+            if (!opt || !opt[dateStr]) return;
+            delete opt[dateStr][subj];
+            if (Object.keys(opt[dateStr]).length === 0) delete opt[dateStr];
+            selectedCards.delete(dateStr + '|' + subj);
+            saveLocal();
+            renderCalendars();
+            updateBulkBar();
+        }
+
+        function onBadgeDragStart(e, dateStr, subj) {
+            if (isBulkCardMode) { e.preventDefault(); return; }
+            dragSource = { date: dateStr, subj: subj };
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', dateStr + '|' + subj); } catch (_) {}
+            if (e.currentTarget && e.currentTarget.classList) e.currentTarget.classList.add('badge-dragging');
+        }
+
+        function onBadgeDragEnd(e) {
+            if (e.currentTarget && e.currentTarget.classList) e.currentTarget.classList.remove('badge-dragging');
+            document.querySelectorAll('.calendar-day.drag-over').forEach(c => c.classList.remove('drag-over'));
+            dragSource = null;
+        }
+
+        function onCellDragOver(e, dateStr, cell) {
+            if (!dragSource) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (dragSource.date !== dateStr) cell.classList.add('drag-over');
+        }
+
+        function onCellDrop(e, dateStr, cell) {
+            cell.classList.remove('drag-over');
+            if (!dragSource) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const src = dragSource;
+            dragSource = null;
+            if (src.date === dateStr) return;
+            moveEntry(src.date, dateStr, src.subj);
+        }
+
+        function moveEntry(srcDate, dstDate, subj) {
+            const opt = attendanceData[currentStudentId]?.[currentOption];
+            if (!opt || !opt[srcDate] || !opt[srcDate][subj]) return;
+            if (!opt[dstDate]) opt[dstDate] = {};
+            opt[dstDate][subj] = opt[srcDate][subj]; // 같은 과목이 있으면 덮어쓰기
+            delete opt[srcDate][subj];
+            if (Object.keys(opt[srcDate]).length === 0) delete opt[srcDate];
+            if (selectedCards.has(srcDate + '|' + subj)) {
+                selectedCards.delete(srcDate + '|' + subj);
+                selectedCards.add(dstDate + '|' + subj);
+            }
+            saveLocal();
+            renderCalendars();
+        }
+
+        // ── 다중선택(시간카드) 모드 ──
+        function toggleBulkCardMode() {
+            if (isBulkCardMode) { cancelBulkCardMode(); return; }
+            // 상호배제: 입력창/붙여넣기 모드 종료
+            closeInputOverlay();
+            cancelMultiSelect();
+            isBulkCardMode = true;
+            selectedCards.clear();
+            document.getElementById('bulkCardBar').classList.add('active');
+            updateBulkBtn();
+            renderCalendars();
+            updateBulkBar();
+        }
+
+        function cancelBulkCardMode() {
+            isBulkCardMode = false;
+            selectedCards.clear();
+            const bar = document.getElementById('bulkCardBar');
+            if (bar) bar.classList.remove('active');
+            updateBulkBtn();
+            renderCalendars();
+        }
+
+        function updateBulkBtn() {
+            const btn = document.getElementById('bulkCardBtn');
+            if (!btn) return;
+            if (isBulkCardMode) {
+                btn.classList.add('bulk-on');
+                btn.innerHTML = '<i class="fa-solid fa-xmark"></i> <span class="hidden sm:inline">선택 종료</span>';
+            } else {
+                btn.classList.remove('bulk-on');
+                btn.innerHTML = '<i class="fa-solid fa-square-check"></i> <span class="hidden sm:inline">다중선택</span>';
+            }
+        }
+
+        function updateBulkBar() {
+            const cnt = document.getElementById('bulkCount');
+            if (cnt) cnt.textContent = selectedCards.size;
+        }
+
+        function applyBulkDelete() {
+            if (selectedCards.size === 0) return alert('삭제할 시간을 선택해주세요.');
+            if (!confirm(`선택한 ${selectedCards.size}개의 시간을 삭제할까요?`)) return;
+            const opt = attendanceData[currentStudentId]?.[currentOption];
+            if (!opt) return;
+            selectedCards.forEach(key => {
+                const sep = key.lastIndexOf('|');
+                const date = key.slice(0, sep);
+                const subj = key.slice(sep + 1);
+                if (opt[date]) {
+                    delete opt[date][subj];
+                    if (Object.keys(opt[date]).length === 0) delete opt[date];
+                }
+            });
+            saveLocal();
+            cancelBulkCardMode();
+        }
+
+        function applyBulkEdit() {
+            if (selectedCards.size === 0) return alert('수정할 시간을 선택해주세요.');
+            const start = document.getElementById('bulkStart').value;
+            const end = document.getElementById('bulkEnd').value;
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
+            if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
+            const hours = parseFloat(diff.toFixed(1));
+            const opt = attendanceData[currentStudentId]?.[currentOption];
+            if (!opt) return;
+            let applied = 0;
+            selectedCards.forEach(key => {
+                const sep = key.lastIndexOf('|');
+                const date = key.slice(0, sep);
+                const subj = key.slice(sep + 1);
+                const entry = opt[date] && opt[date][subj];
+                if (!entry) return;
+                if (subj === 'custom') return; // 직접입력은 시간 변경 제외
+                entry.status = 'present';
+                entry.start = start;
+                entry.end = end;
+                entry.hours = hours;
+                applied++;
+            });
+            if (applied === 0) return alert('시간을 변경할 수 있는 항목이 없습니다. (직접입력 항목은 제외됩니다)');
+            saveLocal();
+            cancelBulkCardMode();
+        }
+
         function copySchedule() {
             if (!currentStudentId) return;
             const currentSchedule = attendanceData[currentStudentId][currentOption] || {};
@@ -3586,6 +3858,7 @@
             // 다른 모달 열릴 때 방어 코드
             closeInputOverlay();
             cancelMultiSelect();
+            if (isBulkCardMode) cancelBulkCardMode();
 
             const modal = document.getElementById('copyToOthersModal');
             const sourceStudent = studentList.find(s => s.id === currentStudentId);
@@ -3835,6 +4108,7 @@
         async function saveAsImage() {
             closeInputOverlay();
             cancelMultiSelect();
+            if (isBulkCardMode) cancelBulkCardMode();
 
             const element = document.getElementById('capture-target-apr');
             const student = studentList.find(s => s.id === currentStudentId);
