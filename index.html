@@ -168,6 +168,10 @@
         }
         .exporting .badge-container { padding: 4px 4px 6px; }
         .exporting .day-number { line-height: 1.5; }
+        /* 학원보강일 배너/칩: 캡처 시 flex 수직정렬이 어긋나 텍스트가 처지는 문제 방지 → block 처리 */
+        .exporting .makeup-banner { display: block; text-align: center; line-height: 1.7; padding: 4px 6px 6px; }
+        .exporting .makeup-banner i { margin-right: 4px; }
+        .exporting .makeup-pill { display: inline-block; line-height: 1.7; padding: 1.5px 7px 3px; }
         /* 호버/transition 비활성화로 캡처 안정 */
         .exporting *, .exporting *::before, .exporting *::after {
             transition: none !important;
