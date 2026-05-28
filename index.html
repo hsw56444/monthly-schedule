@@ -172,6 +172,8 @@
         .exporting .makeup-banner { display: block; text-align: center; line-height: 1.7; padding: 4px 6px 6px; }
         .exporting .makeup-banner i { margin-right: 4px; }
         .exporting .makeup-pill { display: inline-block; line-height: 1.7; padding: 1.5px 7px 3px; }
+        /* 캡처 시 inset box-shadow가 셀 전체 배경처럼 칠해지는 문제 방지 */
+        .exporting .calendar-day.makeup-cell { box-shadow: none !important; border-color: #e5e7eb !important; }
         /* 호버/transition 비활성화로 캡처 안정 */
         .exporting *, .exporting *::before, .exporting *::after {
             transition: none !important;
@@ -514,13 +516,13 @@
             /* ── 공용 모달 (학생 추가/삭제/형제/월별설정/템플릿 등) 풀스크린 ── */
             #addStudentModal, #deleteStudentModal, #familyModal,
             #monthSettingsModal, #templateModal, #copyToOthersModal, #copyEntryModal,
-            #bulkRateModal, #tuitionModal, #scheduleSnapshotModal {
+            #bulkRateModal, #tuitionModal {
                 padding: 0 !important;
                 align-items: flex-end !important;
             }
             #addStudentModal > div, #deleteStudentModal > div, #familyModal > div,
             #monthSettingsModal > div, #templateModal > div, #copyToOthersModal > div, #copyEntryModal > div,
-            #bulkRateModal > div, #tuitionModal > div, #scheduleSnapshotModal > div {
+            #bulkRateModal > div, #tuitionModal > div {
                 width: 100% !important;
                 max-width: 100% !important;
                 max-height: 92vh !important;
@@ -1103,47 +1105,6 @@
                         <i class="fa-solid fa-download"></i> 청구서 + 시간표 한번에 저장
                     </button>
                 </div>
-                <div class="static-group w-full mt-2">
-                    <button onclick="openScheduleSnapshot()" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-2.5 rounded-xl font-bold transition flex justify-center items-center gap-2">
-                        <i class="fa-solid fa-calendar-days"></i> 시간표 미리보기 / 이미지 저장
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 시간표 미리보기/이미지 저장 (청구서 페이지에서 호출) -->
-    <div id="scheduleSnapshotModal" class="fixed inset-0 bg-slate-900/85 hidden items-center justify-center z-[70] p-2 md:p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
-            <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-white shrink-0">
-                <div>
-                    <h3 class="font-bold text-base flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> <span id="snapshot-student-name">학생 이름</span> · 시간표 미리보기</h3>
-                    <p class="text-[11px] opacity-70">읽기 전용 — 수정은 학생 시간표 화면에서 가능합니다</p>
-                </div>
-                <button onclick="closeScheduleSnapshot()" class="text-slate-300 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="flex-grow overflow-y-auto p-4 bg-slate-50 custom-scrollbar">
-                <div id="snapshot-capture-target" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col" style="pointer-events: none;">
-                    <div class="flex justify-between items-end mb-3">
-                        <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded">2026</span> <span class="month-title">4월</span></h3>
-                        <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded" id="snapshot-print-name"></div>
-                        <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="snapshot-stat"></div>
-                    </div>
-                    <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
-                    <div id="snapshot-calendar" class="calendar-grid mb-4"></div>
-                    <div class="mt-auto pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-amber-600 mb-2 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Notice (공지사항)</h4>
-                        <div id="snapshot-notice" class="w-full whitespace-pre-wrap break-keep" style="background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:60px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;letter-spacing:-0.2px;"></div>
-                        <h4 id="snapshot-personal-heading" class="text-sm font-bold text-rose-600 mb-2 mt-3 flex items-center gap-1"><i class="fa-solid fa-user-pen"></i> 개인별 안내사항</h4>
-                        <div id="snapshot-personal-notice" class="w-full whitespace-pre-wrap break-keep" style="background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:40px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;letter-spacing:-0.2px;"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-slate-50 px-4 py-3 border-t border-slate-200 flex gap-2 shrink-0">
-                <button onclick="closeScheduleSnapshot()" class="flex-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 py-2.5 rounded-xl font-bold transition">닫기</button>
-                <button onclick="saveSnapshotImage()" id="btn-snapshot-save" class="flex-[2] bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl font-bold shadow-lg transition flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-camera"></i> 시간표 이미지 저장
-                </button>
             </div>
         </div>
     </div>
@@ -2882,73 +2843,6 @@
             });
         }
 
-        // ─────────────── 시간표 미리보기 (청구서 페이지에서 호출) ───────────────
-        function openScheduleSnapshot() {
-            if (!currentStudentId) return;
-            const s = studentList.find(x => x.id === currentStudentId);
-            if (!s) return;
-
-            // 헤더 라벨 세팅
-            document.getElementById('snapshot-student-name').textContent = s.name;
-            document.getElementById('snapshot-print-name').textContent = `${s.name} (Option A)`;
-
-            // 시간표 미리보기는 항상 Option A 기준 (청구서가 Option A 기준이므로)
-            const prevOption = currentOption;
-            currentOption = 'A';
-
-            // 달력 렌더링 (snapshot-calendar에 그리고 동시에 snapshot-period-bar 갱신)
-            renderMonthCalendar('snapshot-calendar');
-            updateSnapshotStats(s.id);
-
-            // 공지사항 텍스트 채우기 (학생별 미설정 시 전체 공지 fallback)
-            const studentNotice = attendanceData[s.id]?.['A']?.__notice;
-            const noticeText = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : (globalNotice || '');
-            document.getElementById('snapshot-notice').textContent = noticeText;
-
-            // 개인별 안내사항: 비어있으면 헤딩+박스 모두 숨김
-            const personalText = (attendanceData[s.id]?.['A']?.__personalNotice || '').trim();
-            const personalHeading = document.getElementById('snapshot-personal-heading');
-            const personalBox = document.getElementById('snapshot-personal-notice');
-            if (personalText) {
-                personalBox.textContent = personalText;
-                personalHeading.style.display = '';
-                personalBox.style.display = '';
-            } else {
-                personalHeading.style.display = 'none';
-                personalBox.style.display = 'none';
-            }
-
-            // 옵션 복원 (실제 사용자 옵션 유지)
-            currentOption = prevOption;
-
-            const modal = document.getElementById('scheduleSnapshotModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeScheduleSnapshot() {
-            const modal = document.getElementById('scheduleSnapshotModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            // 사용자가 직전에 보던 정상 달력으로 복원 (메인 캘린더)
-            if (currentStudentId) renderCalendars();
-        }
-
-        function updateSnapshotStats(sid) {
-            // updateStats() 함수의 #stat-apr 산출 로직을 #snapshot-stat에도 동일 적용
-            const _prevId = currentStudentId;
-            const _prevOpt = currentOption;
-            currentStudentId = sid;
-            currentOption = 'A';
-            updateStats();
-            // 산출된 결과를 snapshot-stat에도 복제
-            const src = document.getElementById('stat-apr');
-            const dst = document.getElementById('snapshot-stat');
-            if (src && dst) dst.innerHTML = src.innerHTML;
-            currentStudentId = _prevId;
-            currentOption = _prevOpt;
-        }
-
         // 시간표를 '학생 시간표 화면'과 동일한 전체 폭으로 렌더링하는 오프스크린 스테이지 생성
         // (작은 미리보기 모달에서 캡처하면 이미지가 좁게 깨지는 문제를 회피)
         function _buildScheduleStage(studentId) {
@@ -3021,26 +2915,6 @@
             link.download = filename;
             link.href = canvas.toDataURL('image/png');
             link.click();
-        }
-
-        async function saveSnapshotImage() {
-            const btn = document.getElementById('btn-snapshot-save');
-            const orig = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`;
-            btn.disabled = true;
-            const s = studentList.find(x => x.id === currentStudentId);
-            try {
-                const stage = _buildScheduleStage(currentStudentId);
-                const card = document.getElementById('schedule-export-card');
-                await _captureStageToPng(card, `${s.name}_${window.APP_CONFIG.monthTitle}_OptionA_시간표.png`);
-                stage.remove();
-            } catch (err) {
-                console.error('시간표 이미지 저장 오류:', err);
-                alert('이미지 저장 중 오류가 발생했습니다.');
-            } finally {
-                btn.innerHTML = orig;
-                btn.disabled = false;
-            }
         }
 
         // 청구서 + 시간표 이미지를 한 번에 저장
