@@ -469,10 +469,11 @@
 
             #selectedDateLabel { font-size: 0.9rem; }
 
-            /* 시간복사 버튼 작게 */
-            .time-input-overlay button[onclick^="startMultiSelect"] {
+            /* 복사 버튼 작게 */
+            .time-input-overlay button[onclick^="startMultiSelect"],
+            .time-input-overlay button[onclick^="openCopyEntryModal"] {
                 font-size: 0.7rem;
-                padding: 6px 10px;
+                padding: 6px 9px;
             }
 
             /* 다중 붙여넣기 바 */
@@ -512,13 +513,13 @@
 
             /* ── 공용 모달 (학생 추가/삭제/형제/월별설정/템플릿 등) 풀스크린 ── */
             #addStudentModal, #deleteStudentModal, #familyModal,
-            #monthSettingsModal, #templateModal, #copyToOthersModal,
+            #monthSettingsModal, #templateModal, #copyToOthersModal, #copyEntryModal,
             #bulkRateModal, #tuitionModal, #scheduleSnapshotModal {
                 padding: 0 !important;
                 align-items: flex-end !important;
             }
             #addStudentModal > div, #deleteStudentModal > div, #familyModal > div,
-            #monthSettingsModal > div, #templateModal > div, #copyToOthersModal > div,
+            #monthSettingsModal > div, #templateModal > div, #copyToOthersModal > div, #copyEntryModal > div,
             #bulkRateModal > div, #tuitionModal > div, #scheduleSnapshotModal > div {
                 width: 100% !important;
                 max-width: 100% !important;
@@ -528,7 +529,7 @@
             }
 
             /* 모달 안의 학생 체크리스트 그리드 — 2열 유지 */
-            #studentCheckList, #familyStudentList, #deleteStudentList {
+            #studentCheckList, #familyStudentList, #deleteStudentList, #entryCopyCheckList {
                 gap: 6px !important;
             }
 
@@ -834,9 +835,10 @@
                 <div id="inputOverlay" class="time-input-overlay flex flex-col gap-0">
                     <div class="flex justify-between items-center mb-2">
                         <span id="selectedDateLabel" class="text-sm font-bold text-slate-800">날짜를 선택하세요</span>
-                        <div class="flex gap-2">
-                            <button onclick="startMultiSelect(event)" class="text-xs font-bold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-regular fa-copy"></i> 시간 복사</button>
-                            <button onclick="closeInputOverlay()" class="text-slate-400 hover:text-slate-600 ml-2"><i class="fa-solid fa-xmark"></i></button>
+                        <div class="flex gap-2 items-center flex-wrap justify-end">
+                            <button onclick="startMultiSelect(event)" class="text-xs font-bold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm" title="이 시간을 같은 학생의 여러 날짜에 복사"><i class="fa-regular fa-copy"></i> 여러 날짜</button>
+                            <button onclick="openCopyEntryModal()" class="text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm" title="이 날짜의 이 시간을 다른 학생들에게 복사"><i class="fa-solid fa-user-group"></i> 다른 학생</button>
+                            <button onclick="closeInputOverlay()" class="text-slate-400 hover:text-slate-600 ml-1"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     </div>
                     <div class="flex border-b border-slate-200 mb-4 overflow-x-auto gap-0.5">
@@ -1159,6 +1161,33 @@
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button onclick="closeCopyToModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
                 <button onclick="applyCopyToOthers()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">적용하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 특정 날짜·특정 시간 1건을 다른 학생들에게 복사 -->
+    <div id="copyEntryModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">이 시간을 다른 학생에게 복사</h3>
+                <button onclick="closeCopyEntryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto bg-white custom-scrollbar flex-grow">
+                <div class="mb-3 bg-teal-50 border border-teal-200 rounded-lg p-3 text-sm text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-clone text-teal-500"></i>
+                    <span id="entryCopySummary" class="font-bold"></span>
+                </div>
+                <p class="text-xs text-slate-500 mb-3 text-center">위 시간을 동일 날짜·동일 옵션으로 적용할 학생들을 선택하세요.<br>(같은 항목이 있으면 덮어쓰기 됩니다)</p>
+                <div class="flex justify-end gap-2 mb-3 text-xs">
+                    <button onclick="selectAllEntryCopy(true)" class="text-indigo-600 hover:underline">전체 선택</button>
+                    <span class="text-slate-300">|</span>
+                    <button onclick="selectAllEntryCopy(false)" class="text-slate-500 hover:underline">선택 해제</button>
+                </div>
+                <div id="entryCopyCheckList" class="grid grid-cols-2 gap-2"></div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                <button onclick="closeCopyEntryModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                <button onclick="applyCopyEntryToOthers()" class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-bold shadow-md transition">복사하기</button>
             </div>
         </div>
     </div>
@@ -3984,10 +4013,108 @@
             });
             
             saveLocal();
-            
+
             renderStudentList(currentFilter);
             closeCopyToModal();
             alert('적용되었습니다.');
+        }
+
+        // ===== 특정 날짜·특정 시간 1건을 다른 학생에게 복사 =====
+        var entryCopyPayload = null;
+
+        function _subjectLabel(subj, customLabel) {
+            switch (subj) {
+                case 'eng': return '영어';
+                case 'math': return '수학';
+                case 'supp': return '보강';
+                case 'supp_eng': return '보강(영)';
+                case 'supp_math': return '보강(수)';
+                case 'spec': return '특강';
+                case 'spec_eng': return '특강(영)';
+                case 'spec_math': return '특강(수)';
+                case 'oneonone': return '1:1수업';
+                case 'custom': return customLabel || '직접입력';
+                default: return subj;
+            }
+        }
+
+        function openCopyEntryModal() {
+            if (!currentStudentId || !selectedDate) return alert('먼저 날짜와 시간을 선택해주세요.');
+            const subj = currentSubject;
+            let start, end, label = '', hours = 0;
+            if (subj === 'custom') {
+                label = document.getElementById('customSubjectName').value.trim() || '일정';
+                start = '00:00'; end = '23:59'; hours = 0;
+            } else {
+                start = document.getElementById('inpStart').value;
+                end = document.getElementById('inpEnd').value;
+                const [h1, m1] = start.split(':').map(Number);
+                const [h2, m2] = end.split(':').map(Number);
+                const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
+                if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
+                hours = parseFloat(diff.toFixed(1));
+            }
+            entryCopyPayload = { date: selectedDate, subject: subj, start, end, label, hours };
+
+            const dObj = new Date(selectedDate);
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const dateLabel = `${dObj.getMonth() + 1}/${dObj.getDate()}(${days[dObj.getDay()]})`;
+            const subjLabel = _subjectLabel(subj, label);
+            const timeLabel = subj === 'custom' ? '' : ` ${start}~${end}`;
+            document.getElementById('entryCopySummary').textContent = `${dateLabel} · ${subjLabel}${timeLabel}`;
+
+            const listContainer = document.getElementById('entryCopyCheckList');
+            listContainer.innerHTML = '';
+            studentList.forEach(s => {
+                if (s.id === currentStudentId) return;
+                const div = document.createElement('div');
+                div.className = 'relative';
+                div.innerHTML = `
+                    <input type="checkbox" id="ecpy-${s.id}" class="entry-copy-checkbox peer absolute opacity-0 w-full h-full cursor-pointer" value="${s.id}">
+                    <div class="p-3 rounded-lg border border-slate-200 bg-white hover:border-teal-300 transition peer-checked:border-teal-500 peer-checked:bg-teal-50 peer-checked:text-teal-700 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">${s.group === 'Elementary' ? '초' : '중'}</span>
+                            <span class="font-bold text-sm">${_escapeHtml(s.name)}</span>
+                        </div>
+                        <i class="fa-solid fa-check text-teal-600 opacity-0 peer-checked:opacity-100 transition"></i>
+                    </div>
+                `;
+                listContainer.appendChild(div);
+            });
+
+            const modal = document.getElementById('copyEntryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCopyEntryModal() {
+            const modal = document.getElementById('copyEntryModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function selectAllEntryCopy(select) {
+            document.querySelectorAll('.entry-copy-checkbox').forEach(cb => cb.checked = select);
+        }
+
+        function applyCopyEntryToOthers() {
+            if (!entryCopyPayload) return;
+            const checked = document.querySelectorAll('.entry-copy-checkbox:checked');
+            if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
+            const p = entryCopyPayload;
+            checked.forEach(cb => {
+                const sid = parseInt(cb.value);
+                if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
+                if (!attendanceData[sid][currentOption]) attendanceData[sid][currentOption] = {};
+                const opt = attendanceData[sid][currentOption];
+                if (!opt[p.date]) opt[p.date] = {};
+                const data = { status: 'present', start: p.start, end: p.end, hours: p.hours };
+                if (p.subject === 'custom') data.label = p.label;
+                opt[p.date][p.subject] = data;
+            });
+            saveLocal();
+            closeCopyEntryModal();
+            alert(`${checked.length}명의 학생에게 복사되었습니다. (Option ${currentOption})`);
         }
 
         // --- Add/Delete Student ---
