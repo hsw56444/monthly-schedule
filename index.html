@@ -61,6 +61,12 @@
         /* ─── 수업기준일 강조: 셀 상단 헤더 영역에만 가로 띠 (토/일/공휴일은 제외) ─── */
         .calendar-day.in-session .day-header-strip { background-color: #eef2ff; }
 
+        /* ─── 학원보강일 표시: 시인성 강화 ─── */
+        .makeup-pill { font-size: 10.5px; line-height: 1; background: #4f46e5; color: #fff; padding: 2.5px 7px; border-radius: 5px; box-shadow: 0 1px 3px rgba(79,70,229,0.45); font-weight: 800; white-space: nowrap; letter-spacing: -0.2px; }
+        .makeup-banner { margin-top: 4px; background: #4f46e5; color: #fff; font-size: 11.5px; font-weight: 800; text-align: center; line-height: 1.3; padding: 4px 6px; border-radius: 7px; box-shadow: 0 2px 6px rgba(79,70,229,0.4); word-break: keep-all; white-space: normal; letter-spacing: -0.3px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .makeup-banner i { font-size: 10px; }
+        .calendar-day.makeup-cell { border-color: #a5b4fc; box-shadow: 0 0 0 1.5px rgba(99,102,241,0.25) inset; }
+
         /* ─── Badge: 2줄 구조(과목 / 시간) — 한글 받침 잘림 방지 ─── */
         .badge-container { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 3px 4px 5px; box-sizing: border-box; }
         .badge {
@@ -281,6 +287,8 @@
         .option-tab.inactive { background-color: white; color: #64748b; border-color: #e2e8f0; }
         .tuition-input { width: 100%; text-align: right; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; font-size: 0.9rem; color: #334155; outline: none; transition: border-color 0.15s; }
         .tuition-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .bill-hr-input { width: 42px; text-align: center; border: 1px solid #cbd5e1; border-radius: 5px; padding: 1px 3px; font-size: 11px; font-weight: 700; color: #4f46e5; background: #fff; outline: none; transition: border-color 0.15s; }
+        .bill-hr-input:focus { border-color: #818cf8; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
         .tuition-row { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
         .mode-edit .input-group { display: flex; } .mode-edit .static-group { display: none; }
         .mode-view .input-group { display: none; } .mode-view .static-group { display: flex; }
@@ -364,6 +372,9 @@
 
             /* 보강일 배지 등 텍스트 라벨 */
             .calendar-day .text-\[10px\] { font-size: 8.5px !important; }
+            .makeup-pill { font-size: 8px; padding: 1.5px 4px; }
+            .makeup-banner { font-size: 8.5px; padding: 2px 3px; margin-top: 2px; gap: 2px; }
+            .makeup-banner i { font-size: 7.5px; }
 
             /* ── 플래너 모달: 모바일에서 풀스크린 ── */
             #plannerModal { padding: 0 !important; align-items: stretch !important; }
@@ -959,7 +970,10 @@
 
             <div class="p-5 bg-white overflow-y-auto relative">
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-200 pb-1">수업 시수 확인 (Option A)</h4>
+                    <div class="flex justify-between items-center mb-2 border-b border-slate-200 pb-1">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase">수업 시수 (Option A)</h4>
+                        <button onclick="resetBillHours()" class="input-group text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded transition" title="정산 시수를 달력 값으로 되돌립니다"><i class="fa-solid fa-rotate-left mr-1"></i>달력값으로 초기화</button>
+                    </div>
                     <div class="space-y-1 text-sm">
                         <div class="flex justify-between"><span class="text-slate-600">영어</span><span class="font-bold text-indigo-600" id="bill-hr-eng">0h</span></div>
                         <div class="flex justify-between"><span class="text-slate-600">수학</span><span class="font-bold text-orange-600" id="bill-hr-math">0h</span></div>
@@ -967,6 +981,7 @@
                         <div class="flex justify-between"><span class="text-slate-600">1:1 수업</span><span class="font-bold text-teal-600" id="bill-hr-one">0h</span></div>
                         <div class="flex justify-between pt-1 border-t border-slate-200"><span class="text-slate-400">보강</span><span class="font-bold text-amber-600" id="bill-hr-supp">0h</span></div>
                     </div>
+                    <p class="input-group text-[11px] text-slate-400 mt-2 leading-snug"><i class="fa-solid fa-circle-info mr-1 text-indigo-400"></i>정산 시수는 아래 각 항목에서 직접 수정할 수 있습니다. (기본값: 달력 시수)</p>
                 </div>
 
                 <div class="space-y-3">
@@ -975,7 +990,7 @@
                             <span class="text-sm font-bold text-slate-700 block">영어 수업료</span>
                             <div class="input-group flex items-center gap-1 mt-0.5">
                                 <input type="text" id="bill-rate-eng" class="tuition-input w-24 text-xs py-1 px-2" placeholder="시급 입력" onkeyup="calcBillTotal()">
-                                <span class="text-[11px] text-slate-400">원/h × <span id="bill-calc-hr-eng">0</span>h</span>
+                                <span class="text-[11px] text-slate-400">원/h × <input type="text" inputmode="decimal" id="bill-hr-input-eng" class="bill-hr-input" onkeyup="calcBillTotal()" oninput="calcBillTotal()">h</span>
                             </div>
                             <div class="static-group text-[11px] text-slate-500 mt-0.5">
                                 <span id="static-rate-eng" class="font-bold text-slate-600">0</span> 원/h × <span id="static-calc-hr-eng">0</span>h
@@ -990,7 +1005,7 @@
                             <span class="text-sm font-bold text-slate-700 block">수학 수업료</span>
                             <div class="input-group flex items-center gap-1 mt-0.5">
                                 <input type="text" id="bill-rate-math" class="tuition-input w-24 text-xs py-1 px-2" placeholder="시급 입력" onkeyup="calcBillTotal()">
-                                <span class="text-[11px] text-slate-400">원/h × <span id="bill-calc-hr-math">0</span>h</span>
+                                <span class="text-[11px] text-slate-400">원/h × <input type="text" inputmode="decimal" id="bill-hr-input-math" class="bill-hr-input" onkeyup="calcBillTotal()" oninput="calcBillTotal()">h</span>
                             </div>
                             <div class="static-group text-[11px] text-slate-500 mt-0.5">
                                 <span id="static-rate-math" class="font-bold text-slate-600">0</span> 원/h × <span id="static-calc-hr-math">0</span>h
@@ -1005,7 +1020,7 @@
                             <span class="text-sm font-bold text-slate-700 block">특강비</span>
                             <div class="input-group flex items-center gap-1 mt-0.5">
                                 <input type="text" id="bill-rate-spec" class="tuition-input w-24 text-xs py-1 px-2" placeholder="시급 입력" onkeyup="calcBillTotal()">
-                                <span class="text-[11px] text-slate-400">원/h × <span id="bill-calc-hr-spec">0</span>h</span>
+                                <span class="text-[11px] text-slate-400">원/h × <input type="text" inputmode="decimal" id="bill-hr-input-spec" class="bill-hr-input" onkeyup="calcBillTotal()" oninput="calcBillTotal()">h</span>
                             </div>
                             <div class="static-group text-[11px] text-slate-500 mt-0.5">
                                 <span id="static-rate-spec" class="font-bold text-slate-600">0</span> 원/h × <span id="static-calc-hr-spec">0</span>h
@@ -1020,7 +1035,7 @@
                             <span class="text-sm font-bold text-slate-700 block">1:1 수업료</span>
                             <div class="input-group flex items-center gap-1 mt-0.5">
                                 <input type="text" id="bill-rate-one" class="tuition-input w-24 text-xs py-1 px-2" placeholder="시급 입력" onkeyup="calcBillTotal()">
-                                <span class="text-[11px] text-slate-400">원/h × <span id="bill-calc-hr-one">0</span>h</span>
+                                <span class="text-[11px] text-slate-400">원/h × <input type="text" inputmode="decimal" id="bill-hr-input-one" class="bill-hr-input" onkeyup="calcBillTotal()" oninput="calcBillTotal()">h</span>
                             </div>
                             <div class="static-group text-[11px] text-slate-500 mt-0.5">
                                 <span id="static-rate-one" class="font-bold text-slate-600">0</span> 원/h × <span id="static-calc-hr-one">0</span>h
@@ -1035,7 +1050,7 @@
                             <span class="text-sm font-bold text-slate-700 block">보강 수업료</span>
                             <div class="input-group flex items-center gap-1 mt-0.5">
                                 <input type="text" id="bill-rate-supp" class="tuition-input w-24 text-xs py-1 px-2" placeholder="시급 입력" onkeyup="calcBillTotal()">
-                                <span class="text-[11px] text-slate-400">원/h × <span id="bill-calc-hr-supp">0</span>h</span>
+                                <span class="text-[11px] text-slate-400">원/h × <input type="text" inputmode="decimal" id="bill-hr-input-supp" class="bill-hr-input" onkeyup="calcBillTotal()" oninput="calcBillTotal()">h</span>
                             </div>
                             <div class="static-group text-[11px] text-slate-500 mt-0.5">
                                 <span id="static-rate-supp" class="font-bold text-slate-600">0</span> 원/h × <span id="static-calc-hr-supp">0</span>h
@@ -2229,8 +2244,7 @@
             const s = studentList.find(x => x.id === id);
             if (!s) return;
             const t = _ensureTuitionRecord(id);
-            const logs = (attendanceData[id] && attendanceData[id]['A']) ? attendanceData[id]['A'] : {};
-            const h = getHoursFromLogs(logs);
+            const h = getBillableHours(id);
             const rEng = Number(t.rate_eng) || 0;
             const rMath = Number(t.rate_math) || 0;
             const rSpec = Number(t.rate_spec) || 0;
@@ -2309,8 +2323,7 @@
 
         // ─── 학생 한 명의 청구액/시수 계산 ───
         function _calcStudentBill(s) {
-            const logs = (attendanceData[s.id] && attendanceData[s.id]['A']) ? attendanceData[s.id]['A'] : {};
-            const h = getHoursFromLogs(logs);
+            const h = getBillableHours(s.id);
             const t = tuitionData[s.id] || {};
             const rEng = Number(t.rate_eng) || 0;
             const rMath = Number(t.rate_math) || 0;
@@ -2485,9 +2498,8 @@
             csvContent += "학생 이름,구분,총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태\n";
 
             studentList.forEach(s => {
-                const logs = (attendanceData[s.id] && attendanceData[s.id]['A']) ? attendanceData[s.id]['A'] : {};
-                const h = getHoursFromLogs(logs); 
-                
+                const h = getBillableHours(s.id);
+
                 const t = tuitionData[s.id] || {};
                 const rEng = Number(t.rate_eng) || 0;
                 const rMath = Number(t.rate_math) || 0;
@@ -2582,25 +2594,27 @@
             const s = studentList.find(x => x.id === id);
             document.getElementById('billStudentName').textContent = s.name;
             
-            const logs = (attendanceData[id] && attendanceData[id]['A']) ? attendanceData[id]['A'] : {};
-            const h = getHoursFromLogs(logs); 
+            const bh = getBillableHours(id);
 
-            document.getElementById('bill-hr-eng').textContent = h.eng + 'h';
-            document.getElementById('bill-hr-math').textContent = h.math + 'h';
-            document.getElementById('bill-hr-spec').textContent = h.spec + 'h';
-            document.getElementById('bill-hr-one').textContent = h.oneonone + 'h';
-            document.getElementById('bill-hr-supp').textContent = h.supp + 'h';
-            
-            document.getElementById('bill-calc-hr-eng').textContent = h.eng;
-            document.getElementById('static-calc-hr-eng').textContent = h.eng;
-            document.getElementById('bill-calc-hr-math').textContent = h.math;
-            document.getElementById('static-calc-hr-math').textContent = h.math;
-            document.getElementById('bill-calc-hr-spec').textContent = h.spec;
-            document.getElementById('static-calc-hr-spec').textContent = h.spec;
-            document.getElementById('bill-calc-hr-one').textContent = h.oneonone;
-            document.getElementById('static-calc-hr-one').textContent = h.oneonone;
-            document.getElementById('bill-calc-hr-supp').textContent = h.supp;
-            document.getElementById('static-calc-hr-supp').textContent = h.supp;
+            // 상단 요약 박스: 실제 정산 시수(override 우선, 없으면 달력값) 표시
+            document.getElementById('bill-hr-eng').textContent = bh.eng + 'h';
+            document.getElementById('bill-hr-math').textContent = bh.math + 'h';
+            document.getElementById('bill-hr-spec').textContent = bh.spec + 'h';
+            document.getElementById('bill-hr-one').textContent = bh.oneonone + 'h';
+            document.getElementById('bill-hr-supp').textContent = bh.supp + 'h';
+
+            // 각 항목의 정산 시수 입력칸 = 정산 시수(override 우선, 없으면 달력값)
+            document.getElementById('bill-hr-input-eng').value = bh.eng;
+            document.getElementById('bill-hr-input-math').value = bh.math;
+            document.getElementById('bill-hr-input-spec').value = bh.spec;
+            document.getElementById('bill-hr-input-one').value = bh.oneonone;
+            document.getElementById('bill-hr-input-supp').value = bh.supp;
+
+            document.getElementById('static-calc-hr-eng').textContent = bh.eng;
+            document.getElementById('static-calc-hr-math').textContent = bh.math;
+            document.getElementById('static-calc-hr-spec').textContent = bh.spec;
+            document.getElementById('static-calc-hr-one').textContent = bh.oneonone;
+            document.getElementById('static-calc-hr-supp').textContent = bh.supp;
             
             let t = tuitionData[id] || {};
 
@@ -2714,43 +2728,85 @@
         }
 
         function calcBillTotal() {
-            const logs = (attendanceData[currentStudentId] && attendanceData[currentStudentId]['A']) ? attendanceData[currentStudentId]['A'] : {};
-            const h = getHoursFromLogs(logs); 
+            const cal = getBillableHours(currentStudentId).cal;
 
-            const getVal = (id) => parseNumber(document.getElementById(id).value);
-            const rEng = getVal('bill-rate-eng');
-            const rMath = getVal('bill-rate-math');
-            const rSpec = getVal('bill-rate-spec');
-            const rOne = getVal('bill-rate-one');
-            const rSupp = getVal('bill-rate-supp');
-            const add = getVal('bill-add-amt');
-            const disc = getVal('bill-disc-amt');
-            
-            document.getElementById('bill-sum-eng').textContent = formatNumber(Math.round(h.eng * rEng)) + "원";
-            document.getElementById('bill-sum-math').textContent = formatNumber(Math.round(h.math * rMath)) + "원";
-            document.getElementById('bill-sum-spec').textContent = formatNumber(Math.round(h.spec * rSpec)) + "원";
-            document.getElementById('bill-sum-one').textContent = formatNumber(Math.round(h.oneonone * rOne)) + "원";
-            document.getElementById('bill-sum-supp').textContent = formatNumber(Math.round(h.supp * rSupp)) + "원";
-            
-            const total = Math.round(h.eng * rEng + h.math * rMath + h.spec * rSpec + h.oneonone * rOne + h.supp * rSupp + add - disc);
+            const getRate = (id) => parseNumber(document.getElementById(id).value);
+            const getHr = (id) => { const v = parseFloat(document.getElementById(id).value); return (isNaN(v) || v < 0) ? 0 : v; };
+
+            const rEng = getRate('bill-rate-eng');
+            const rMath = getRate('bill-rate-math');
+            const rSpec = getRate('bill-rate-spec');
+            const rOne = getRate('bill-rate-one');
+            const rSupp = getRate('bill-rate-supp');
+            const add = getRate('bill-add-amt');
+            const disc = getRate('bill-disc-amt');
+
+            // 정산 시수 (사용자가 직접 수정 가능)
+            const hEng = getHr('bill-hr-input-eng');
+            const hMath = getHr('bill-hr-input-math');
+            const hSpec = getHr('bill-hr-input-spec');
+            const hOne = getHr('bill-hr-input-one');
+            const hSupp = getHr('bill-hr-input-supp');
+
+            document.getElementById('bill-sum-eng').textContent = formatNumber(Math.round(hEng * rEng)) + "원";
+            document.getElementById('bill-sum-math').textContent = formatNumber(Math.round(hMath * rMath)) + "원";
+            document.getElementById('bill-sum-spec').textContent = formatNumber(Math.round(hSpec * rSpec)) + "원";
+            document.getElementById('bill-sum-one').textContent = formatNumber(Math.round(hOne * rOne)) + "원";
+            document.getElementById('bill-sum-supp').textContent = formatNumber(Math.round(hSupp * rSupp)) + "원";
+
+            // 보기 모드 시수 표시 동기화
+            document.getElementById('static-calc-hr-eng').textContent = hEng;
+            document.getElementById('static-calc-hr-math').textContent = hMath;
+            document.getElementById('static-calc-hr-spec').textContent = hSpec;
+            document.getElementById('static-calc-hr-one').textContent = hOne;
+            document.getElementById('static-calc-hr-supp').textContent = hSupp;
+
+            // 상단 요약 박스도 동기화
+            document.getElementById('bill-hr-eng').textContent = hEng + 'h';
+            document.getElementById('bill-hr-math').textContent = hMath + 'h';
+            document.getElementById('bill-hr-spec').textContent = hSpec + 'h';
+            document.getElementById('bill-hr-one').textContent = hOne + 'h';
+            document.getElementById('bill-hr-supp').textContent = hSupp + 'h';
+
+            const total = Math.round(hEng * rEng + hMath * rMath + hSpec * rSpec + hOne * rOne + hSupp * rSupp + add - disc);
             document.getElementById('bill-grand-total').textContent = formatNumber(total) + "원";
-            
-            const existingPaid = (tuitionData[currentStudentId] && tuitionData[currentStudentId].is_paid) || false;
-            
-            tuitionData[currentStudentId] = {
-                rate_eng: rEng,
-                rate_math: rMath,
-                rate_spec: rSpec,
-                rate_oneonone: rOne,
-                rate_supp: rSupp,
-                add_name: document.getElementById('bill-add-name').value,
-                add_amount: add,
-                disc_name: document.getElementById('bill-disc-name').value,
-                disc_amount: disc,
-                is_paid: existingPaid
-            };
-            
+
+            // 시수 override: 달력값과 다른 항목만 저장 → 미수정 항목은 달력 시수를 계속 추종
+            const hours = {};
+            if (hEng  !== cal.eng)      hours.eng = hEng;
+            if (hMath !== cal.math)     hours.math = hMath;
+            if (hSpec !== cal.spec)     hours.spec = hSpec;
+            if (hOne  !== cal.oneonone) hours.oneonone = hOne;
+            if (hSupp !== cal.supp)     hours.supp = hSupp;
+
+            const t = tuitionData[currentStudentId] || {};
+            t.rate_eng = rEng;
+            t.rate_math = rMath;
+            t.rate_spec = rSpec;
+            t.rate_oneonone = rOne;
+            t.rate_supp = rSupp;
+            t.add_name = document.getElementById('bill-add-name').value;
+            t.add_amount = add;
+            t.disc_name = document.getElementById('bill-disc-name').value;
+            t.disc_amount = disc;
+            if (t.is_paid === undefined) t.is_paid = false;
+            if (Object.keys(hours).length > 0) t.hours = hours;
+            else delete t.hours;
+            tuitionData[currentStudentId] = t;
+
             saveLocal();
+        }
+
+        // 정산 시수를 달력 입력 시수로 초기화
+        function resetBillHours() {
+            const cal = getBillableHours(currentStudentId).cal;
+            document.getElementById('bill-hr-input-eng').value = cal.eng;
+            document.getElementById('bill-hr-input-math').value = cal.math;
+            document.getElementById('bill-hr-input-spec').value = cal.spec;
+            document.getElementById('bill-hr-input-one').value = cal.oneonone;
+            document.getElementById('bill-hr-input-supp').value = cal.supp;
+            if (tuitionData[currentStudentId]) delete tuitionData[currentStudentId].hours;
+            calcBillTotal();
         }
 
         function saveBillImage() {
@@ -2912,6 +2968,20 @@
                 supp: parseFloat(h.supp.toFixed(1)),
                 spec: parseFloat(h.spec.toFixed(1)),
                 oneonone: parseFloat(h.oneonone.toFixed(1))
+            };
+        }
+
+        // 정산용 시수: 달력 시수가 기본값이며, 사용자가 직접 수정한 값(override)이 있으면 그 값을 사용.
+        // 반환 객체의 .cal 에는 항상 달력 원본 시수가 들어있어 "기본값" 비교/리셋에 사용한다.
+        function getBillableHours(id) {
+            const logs = (attendanceData[id] && attendanceData[id]['A']) ? attendanceData[id]['A'] : {};
+            const cal = getHoursFromLogs(logs);
+            const ov = (tuitionData[id] && tuitionData[id].hours) || {};
+            const pick = (k) => (ov[k] !== undefined && ov[k] !== null && ov[k] !== '') ? Number(ov[k]) : cal[k];
+            return {
+                eng: pick('eng'), math: pick('math'), spec: pick('spec'),
+                oneonone: pick('oneonone'), supp: pick('supp'),
+                cal: cal
             };
         }
 
@@ -3280,13 +3350,14 @@
                 // 헤더 띠: 수업기준일 범위 ∩ 평일(월~금) ∩ 비공휴일에만 색칠
                 const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
                 if (isInSession && !isHoliday && !isWeekendDay) cellClass += ' in-session';
+                if (isMakeupDay) cellClass += ' makeup-cell';
                 if (isSelected) cellClass += ' multi-selected';
                 cell.className = cellClass;
 
                 const dayNumColorClass = isHoliday || dayOfWeek===0 ? 'text-holiday' : (dayOfWeek===6 ? 'text-blue-400' : '');
                 let content = `<div class="day-header-strip w-full flex justify-between items-start p-1"><span class="day-number ${dayNumColorClass}">${dayDisplay}</span><span class="day-head-right">`;
                 if (isMakeupDay) {
-                    content += `<span class="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-300 px-1.5 py-0.5 rounded shadow-sm font-extrabold">보강일</span>`;
+                    content += `<span class="makeup-pill">보강일</span>`;
                 }
                 content += `<button class="day-add-btn" onclick="onDayAddClick(event,'${dateStr}')" title="시간 추가" tabindex="-1">+</button>`;
                 content += `</span></div>`;
@@ -3302,7 +3373,7 @@
                 }
                 if (isMakeupDay) {
                     const makeupLabel = (MAKEUP_LABELS[dateStr] && MAKEUP_LABELS[dateStr].trim()) || '학원보강일 (사전신청)';
-                    content += `<span class="text-[10px] text-indigo-600 font-bold mt-1 text-center break-keep">${_escapeHtml(makeupLabel)}</span>`;
+                    content += `<div class="makeup-banner"><i class="fa-solid fa-bell"></i><span>${_escapeHtml(makeupLabel)}</span></div>`;
                 }
 
                 // 모든 날짜(휴일/공휴일/일요일 포함)에 대해 entries 렌더링 — 특수 보강 등 입력 가능
