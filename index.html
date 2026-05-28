@@ -1099,6 +1099,11 @@
                     </button>
                 </div>
                 <div class="static-group w-full mt-2">
+                    <button onclick="saveBillAndSchedule()" id="btn-bill-save-both" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold shadow-lg transition flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-download"></i> 청구서 + 시간표 한번에 저장
+                    </button>
+                </div>
+                <div class="static-group w-full mt-2">
                     <button onclick="openScheduleSnapshot()" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-2.5 rounded-xl font-bold transition flex justify-center items-center gap-2">
                         <i class="fa-solid fa-calendar-days"></i> 시간표 미리보기 / 이미지 저장
                     </button>
@@ -1109,7 +1114,7 @@
 
     <!-- 시간표 미리보기/이미지 저장 (청구서 페이지에서 호출) -->
     <div id="scheduleSnapshotModal" class="fixed inset-0 bg-slate-900/85 hidden items-center justify-center z-[70] p-2 md:p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
             <div class="bg-slate-800 px-4 py-3 flex justify-between items-center text-white shrink-0">
                 <div>
                     <h3 class="font-bold text-base flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> <span id="snapshot-student-name">학생 이름</span> · 시간표 미리보기</h3>
@@ -2842,13 +2847,25 @@
             calcBillTotal();
         }
 
-        function saveBillImage() {
+        async function saveBillImage() {
             const btn = document.getElementById('btn-bill-save');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`;
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) { btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`; btn.disabled = true; }
+            try {
+                await _captureBillToPng();
+            } catch (e) {
+                console.error('청구서 이미지 저장 오류:', e);
+                alert('이미지 저장 중 오류가 발생했습니다.');
+            } finally {
+                if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+            }
+        }
 
+        // 청구서 이미지 캡처 (await 가능) — 단독/일괄 저장에서 공용 사용
+        function _captureBillToPng() {
             const element = document.getElementById('tuitionBillContent');
-            html2canvas(element, {
+            const s = studentList.find(x => x.id === currentStudentId);
+            return html2canvas(element, {
                 scale: 3,
                 backgroundColor: '#ffffff',
                 onclone: (clonedDoc) => {
@@ -2858,12 +2875,10 @@
                     btnWrappers.forEach(div => div.style.display = 'none');
                 }
             }).then(canvas => {
-                const s = studentList.find(x => x.id === currentStudentId);
                 const link = document.createElement('a');
                 link.download = `${s.name}_${window.APP_CONFIG.monthTitle}_수업료정산서.png`;
                 link.href = canvas.toDataURL();
                 link.click();
-                btn.innerHTML = originalText;
             });
         }
 
@@ -2934,49 +2949,122 @@
             currentOption = _prevOpt;
         }
 
-        async function saveSnapshotImage() {
-            const btn = document.getElementById('btn-snapshot-save');
-            const orig = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`;
-            btn.disabled = true;
+        // 시간표를 '학생 시간표 화면'과 동일한 전체 폭으로 렌더링하는 오프스크린 스테이지 생성
+        // (작은 미리보기 모달에서 캡처하면 이미지가 좁게 깨지는 문제를 회피)
+        function _buildScheduleStage(studentId) {
+            const old = document.getElementById('schedule-export-stage');
+            if (old) old.remove();
 
-            const element = document.getElementById('snapshot-capture-target');
-            const s = studentList.find(x => x.id === currentStudentId);
+            const s = studentList.find(x => x.id === studentId);
+            const logsA = (attendanceData[studentId] && attendanceData[studentId]['A']) ? attendanceData[studentId]['A'] : {};
+            const studentNotice = logsA.__notice;
+            const noticeText = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : (globalNotice || '');
+            const personalText = (logsA.__personalNotice || '').trim();
+            const noticeStyle = "background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:80px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
+            const personalStyle = "background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:50px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
 
-            element.classList.add('exporting');
-            try { await document.fonts.ready; } catch(e) {}
+            const stage = document.createElement('div');
+            stage.id = 'schedule-export-stage';
+            stage.style.cssText = 'position:fixed; left:-99999px; top:0; width:1120px; background:#ffffff; z-index:-1;';
+            stage.innerHTML = `
+                <div id="schedule-export-card" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                    <div class="flex justify-between items-end mb-3">
+                        <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded">2026</span> <span class="month-title">${_escapeHtml(window.APP_CONFIG.monthTitle)}</span></h3>
+                        <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded">${_escapeHtml(s.name)} (Option A)</div>
+                        <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="schedule-export-stat"></div>
+                    </div>
+                    <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
+                    <div id="schedule-export-grid" class="calendar-grid mb-4"></div>
+                    <div class="mt-auto pt-4 border-t border-slate-100">
+                        <h4 class="text-sm font-bold text-amber-600 mb-2 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Notice (공지사항)</h4>
+                        <div class="w-full" style="${noticeStyle}">${_escapeHtml(noticeText)}</div>
+                        ${personalText ? `<h4 class="text-sm font-bold text-rose-600 mb-2 mt-3 flex items-center gap-1"><i class="fa-solid fa-user-pen"></i> 개인별 안내사항</h4><div class="w-full" style="${personalStyle}">${_escapeHtml(personalText)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(stage);
+
+            // Option A 기준으로 달력/통계 렌더 (전역 상태는 임시로만 변경 후 복원)
+            const prevId = currentStudentId, prevOpt = currentOption;
+            currentStudentId = studentId;
+            currentOption = 'A';
+            renderMonthCalendar('schedule-export-grid');
+            updateStats();
+            const statSrc = document.getElementById('stat-apr');
+            if (statSrc) document.getElementById('schedule-export-stat').innerHTML = statSrc.innerHTML;
+            currentStudentId = prevId;
+            currentOption = prevOpt;
+
+            return stage;
+        }
+
+        // 스테이지 카드 요소를 PNG로 캡처/다운로드 (학생 시간표 저장과 동일 품질)
+        async function _captureStageToPng(card, filename) {
+            card.classList.add('exporting');
+            try { await document.fonts.ready; } catch (e) {}
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-            void element.offsetHeight;
+            void card.offsetHeight;
             await new Promise(r => setTimeout(r, 50));
-
-            const cleanup = () => {
-                element.classList.remove('exporting');
-                btn.innerHTML = orig;
-                btn.disabled = false;
-            };
-
-            html2canvas(element, {
+            const canvas = await html2canvas(card, {
                 scale: 3,
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 logging: false,
                 letterRendering: true,
-                windowWidth: element.scrollWidth,
+                windowWidth: card.scrollWidth,
                 onclone: (clonedDoc) => {
-                    const cloned = clonedDoc.getElementById('snapshot-capture-target');
-                    if (cloned) cloned.classList.add('exporting');
+                    const c = clonedDoc.getElementById(card.id);
+                    if (c) c.classList.add('exporting');
                 }
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `${s.name}_${window.APP_CONFIG.monthTitle}_OptionA_시간표.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                cleanup();
-            }).catch(err => {
-                console.error('시간표 이미지 저장 오류:', err);
-                cleanup();
-                alert('이미지 저장 중 오류가 발생했습니다.');
             });
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function saveSnapshotImage() {
+            const btn = document.getElementById('btn-snapshot-save');
+            const orig = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`;
+            btn.disabled = true;
+            const s = studentList.find(x => x.id === currentStudentId);
+            try {
+                const stage = _buildScheduleStage(currentStudentId);
+                const card = document.getElementById('schedule-export-card');
+                await _captureStageToPng(card, `${s.name}_${window.APP_CONFIG.monthTitle}_OptionA_시간표.png`);
+                stage.remove();
+            } catch (err) {
+                console.error('시간표 이미지 저장 오류:', err);
+                alert('이미지 저장 중 오류가 발생했습니다.');
+            } finally {
+                btn.innerHTML = orig;
+                btn.disabled = false;
+            }
+        }
+
+        // 청구서 + 시간표 이미지를 한 번에 저장
+        async function saveBillAndSchedule() {
+            const btn = document.getElementById('btn-bill-save-both');
+            const orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...`; btn.disabled = true; }
+            const s = studentList.find(x => x.id === currentStudentId);
+            try {
+                // 1) 청구서
+                await _captureBillToPng();
+                // 다중 다운로드 차단 방지를 위한 짧은 간격
+                await new Promise(r => setTimeout(r, 400));
+                // 2) 시간표 (학생 시간표 화면과 동일 품질)
+                const stage = _buildScheduleStage(currentStudentId);
+                const card = document.getElementById('schedule-export-card');
+                await _captureStageToPng(card, `${s.name}_${window.APP_CONFIG.monthTitle}_OptionA_시간표.png`);
+                stage.remove();
+            } catch (e) {
+                console.error('일괄 이미지 저장 오류:', e);
+                alert('이미지 저장 중 오류가 발생했습니다.');
+            } finally {
+                if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+            }
         }
 
         function getHoursFromLogs(logs) {
