@@ -515,13 +515,13 @@
 
             /* ── 공용 모달 (학생 추가/삭제/형제/월별설정/템플릿 등) 풀스크린 ── */
             #addStudentModal, #deleteStudentModal, #familyModal,
-            #monthSettingsModal, #templateModal, #copyToOthersModal, #copyEntryModal,
+            #monthSettingsModal, #templateModal, #copyToOthersModal, #copyEntryModal, #bulkCopyToOthersModal,
             #bulkRateModal, #tuitionModal {
                 padding: 0 !important;
                 align-items: flex-end !important;
             }
             #addStudentModal > div, #deleteStudentModal > div, #familyModal > div,
-            #monthSettingsModal > div, #templateModal > div, #copyToOthersModal > div, #copyEntryModal > div,
+            #monthSettingsModal > div, #templateModal > div, #copyToOthersModal > div, #copyEntryModal > div, #bulkCopyToOthersModal > div,
             #bulkRateModal > div, #tuitionModal > div {
                 width: 100% !important;
                 max-width: 100% !important;
@@ -890,6 +890,7 @@
                         <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료</label><select id="bulkEnd" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
                         <button onclick="applyBulkEdit()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition shrink-0">시간 변경</button>
                     </div>
+                    <button onclick="openBulkCopyToOthersModal()" class="w-full bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2"><i class="fa-solid fa-user-group"></i> 선택 항목을 다른 학생에게 복사</button>
                     <button onclick="applyBulkDelete()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2"><i class="fa-regular fa-trash-can"></i> 선택한 시간 일괄 삭제</button>
                 </div>
             </div>
@@ -1154,6 +1155,33 @@
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button onclick="closeCopyEntryModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
                 <button onclick="applyCopyEntryToOthers()" class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-bold shadow-md transition">복사하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다중선택한 여러 시간을 다른 학생들에게 일괄 복사 -->
+    <div id="bulkCopyToOthersModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">선택한 일정을 다른 학생에게 복사</h3>
+                <button onclick="closeBulkCopyToOthersModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto bg-white custom-scrollbar flex-grow">
+                <div class="mb-3 bg-teal-50 border border-teal-200 rounded-lg p-3 text-sm text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-clone text-teal-500"></i>
+                    <span id="bulkCopySummary" class="font-bold"></span>
+                </div>
+                <p class="text-xs text-slate-500 mb-3 text-center">선택한 일정들을 그대로 적용할 학생들을 선택하세요.<br>(같은 날짜·같은 항목이 있으면 덮어쓰기 됩니다 · Option <span id="bulkCopyOptionLabel"></span>)</p>
+                <div class="flex justify-end gap-2 mb-3 text-xs">
+                    <button onclick="selectAllBulkCopy(true)" class="text-indigo-600 hover:underline">전체 선택</button>
+                    <span class="text-slate-300">|</span>
+                    <button onclick="selectAllBulkCopy(false)" class="text-slate-500 hover:underline">선택 해제</button>
+                </div>
+                <div id="bulkCopyCheckList" class="grid grid-cols-2 gap-2"></div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                <button onclick="closeBulkCopyToOthersModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                <button onclick="applyBulkCopyToOthers()" class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-bold shadow-md transition">복사하기</button>
             </div>
         </div>
     </div>
@@ -4077,6 +4105,89 @@
             saveLocal();
             closeCopyEntryModal();
             alert(`${checked.length}명의 학생에게 복사되었습니다. (Option ${currentOption})`);
+        }
+
+        // ===== 다중선택한 여러 시간 카드를 다른 학생에게 일괄 복사 =====
+        var bulkCopyPayload = null;
+
+        function openBulkCopyToOthersModal() {
+            if (!currentStudentId) return;
+            if (selectedCards.size === 0) return alert('복사할 시간을 선택해주세요.');
+            const opt = attendanceData[currentStudentId]?.[currentOption] || {};
+            const entries = [];
+            selectedCards.forEach(key => {
+                const sep = key.lastIndexOf('|');
+                const date = key.slice(0, sep);
+                const subj = key.slice(sep + 1);
+                const src = opt[date] && opt[date][subj];
+                if (!src) return;
+                entries.push({ date, subject: subj, data: JSON.parse(JSON.stringify(src)) });
+            });
+            if (entries.length === 0) return alert('복사할 수 있는 항목이 없습니다.');
+            bulkCopyPayload = { option: currentOption, entries };
+
+            const dates = Array.from(new Set(entries.map(e => e.date))).sort();
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const formatDate = (ds) => { const d = new Date(ds); return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`; };
+            const dateLabel = dates.length <= 3
+                ? dates.map(formatDate).join(', ')
+                : `${formatDate(dates[0])} 외 ${dates.length - 1}일`;
+            document.getElementById('bulkCopySummary').textContent = `${entries.length}건 · ${dateLabel}`;
+            document.getElementById('bulkCopyOptionLabel').textContent = currentOption;
+
+            const listContainer = document.getElementById('bulkCopyCheckList');
+            listContainer.innerHTML = '';
+            studentList.forEach(s => {
+                if (s.id === currentStudentId) return;
+                const div = document.createElement('div');
+                div.className = 'relative';
+                div.innerHTML = `
+                    <input type="checkbox" id="bcpy-${s.id}" class="bulk-copy-checkbox peer absolute opacity-0 w-full h-full cursor-pointer" value="${s.id}">
+                    <div class="p-3 rounded-lg border border-slate-200 bg-white hover:border-teal-300 transition peer-checked:border-teal-500 peer-checked:bg-teal-50 peer-checked:text-teal-700 flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">${s.group === 'Elementary' ? '초' : '중'}</span>
+                            <span class="font-bold text-sm">${_escapeHtml(s.name)}</span>
+                        </div>
+                        <i class="fa-solid fa-check text-teal-600 opacity-0 peer-checked:opacity-100 transition"></i>
+                    </div>
+                `;
+                listContainer.appendChild(div);
+            });
+
+            const modal = document.getElementById('bulkCopyToOthersModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeBulkCopyToOthersModal() {
+            const modal = document.getElementById('bulkCopyToOthersModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function selectAllBulkCopy(select) {
+            document.querySelectorAll('.bulk-copy-checkbox').forEach(cb => cb.checked = select);
+        }
+
+        function applyBulkCopyToOthers() {
+            if (!bulkCopyPayload) return;
+            const checked = document.querySelectorAll('.bulk-copy-checkbox:checked');
+            if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
+            const { option, entries } = bulkCopyPayload;
+            checked.forEach(cb => {
+                const sid = parseInt(cb.value);
+                if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
+                if (!attendanceData[sid][option]) attendanceData[sid][option] = {};
+                const opt = attendanceData[sid][option];
+                entries.forEach(e => {
+                    if (!opt[e.date]) opt[e.date] = {};
+                    opt[e.date][e.subject] = JSON.parse(JSON.stringify(e.data));
+                });
+            });
+            saveLocal();
+            closeBulkCopyToOthersModal();
+            cancelBulkCardMode();
+            alert(`${checked.length}명의 학생에게 ${entries.length}건의 일정이 복사되었습니다. (Option ${option})`);
         }
 
         // --- Add/Delete Student ---
