@@ -766,7 +766,7 @@
                                 <tr>
                                     <th class="px-3 py-3 text-center" style="width:48px">#</th>
                                     <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
-                                    <th class="px-3 py-3">구분<span class="sort-arrow sort-arrow-group" onclick="toggleTuitionSort('group')" title="초→중 순 + 가나다순">⇅</span></th>
+                                    <th class="px-3 py-3">구분</th>
                                     <th class="px-3 py-3 text-center">영어</th>
                                     <th class="px-3 py-3 text-center">수학</th>
                                     <th class="px-3 py-3 text-center">특강/1:1</th>
@@ -786,7 +786,7 @@
                                 <tr>
                                     <th class="px-3 py-3 text-center" style="width:48px">#</th>
                                     <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
-                                    <th class="px-3 py-3">구분<span class="sort-arrow sort-arrow-group" onclick="toggleTuitionSort('group')" title="초→중 순 + 가나다순">⇅</span></th>
+                                    <th class="px-3 py-3">구분</th>
                                     <th class="px-3 py-3 text-center">총 시수</th>
                                     <th class="px-3 py-3 text-right">기본 수업료</th>
                                     <th class="px-3 py-3 text-right">추가/할인</th>
@@ -2571,7 +2571,8 @@
             if (cntP) cntP.textContent = cntPayapp;
             if (cntU) cntU.textContent = cntUnpaid;
 
-            const useSibling = document.getElementById('sibling-toggle')?.checked;
+            // 이름 정렬 모드일 때는 형제 묶음 그룹화를 무시하고 단순 가나다순으로 (사용자 요청)
+            const useSibling = document.getElementById('sibling-toggle')?.checked && tuitionSortMode !== 'name';
             const sortedList = _getSortedStudents(studentList);
 
             // 입력 현황 탭은 항상 학생별 단순 렌더 (형제 묶음은 요약 보기에만)
