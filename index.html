@@ -1135,7 +1135,7 @@
                 </div>
             </div>
             
-            <div class="bg-slate-50 py-3 px-4 border-t border-slate-200 flex-shrink-0">
+            <div id="bill-footer" class="bg-slate-50 py-3 px-4 border-t border-slate-200 flex-shrink-0">
                 <div class="flex justify-between items-end mb-3">
                     <span class="text-sm font-bold text-slate-500">총 납부 금액</span>
                     <span class="text-2xl font-black text-slate-800" id="bill-grand-total">0원</span>
@@ -3072,7 +3072,7 @@
                     const closeBtn = clonedDoc.querySelector('#tuitionBillContent .bg-slate-800 button');
                     if(closeBtn) closeBtn.style.display = 'none';
                     // footer의 '총 납부 금액' 행만 남기고 나머지 버튼 영역 모두 숨김
-                    const footer = clonedDoc.querySelector('#tuitionBillContent .border-t.border-slate-200');
+                    const footer = clonedDoc.getElementById('bill-footer');
                     if (footer) {
                         Array.from(footer.children).forEach((child, i) => {
                             if (i > 0) child.style.display = 'none';
