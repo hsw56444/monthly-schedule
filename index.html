@@ -999,7 +999,10 @@
             <div class="bg-slate-800 p-4 flex justify-between items-center text-white flex-shrink-0">
                 <div>
                     <h3 class="font-bold text-lg" id="billStudentName">학생 이름</h3>
-                    <p class="text-xs opacity-70"><span class="month-title">4월</span> 수업료 정산서</p>
+                    <div class="mt-1.5 inline-flex items-center gap-1.5 bg-amber-400 text-slate-900 px-2.5 py-1 rounded-full text-xs font-extrabold shadow-sm">
+                        <i class="fa-solid fa-file-invoice text-[10px]"></i>
+                        <span><span class="month-title">4월</span> 수업료 정산서</span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="togglePrevBillPopover()" id="btn-prev-bill" class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 hidden" title="이전 달 청구서 조회">
@@ -3068,8 +3071,13 @@
                 onclone: (clonedDoc) => {
                     const closeBtn = clonedDoc.querySelector('#tuitionBillContent .bg-slate-800 button');
                     if(closeBtn) closeBtn.style.display = 'none';
-                    const btnWrappers = clonedDoc.querySelectorAll('#tuitionBillContent .bg-slate-50 .input-group, #tuitionBillContent .bg-slate-50 .static-group');
-                    btnWrappers.forEach(div => div.style.display = 'none');
+                    // footer의 '총 납부 금액' 행만 남기고 나머지 버튼 영역 모두 숨김
+                    const footer = clonedDoc.querySelector('#tuitionBillContent .border-t.border-slate-200');
+                    if (footer) {
+                        Array.from(footer.children).forEach((child, i) => {
+                            if (i > 0) child.style.display = 'none';
+                        });
+                    }
                 }
             }).then(canvas => {
                 const link = document.createElement('a');
