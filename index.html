@@ -807,7 +807,12 @@
                                 <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded print-student-name hidden"></div>
                                 <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="stat-apr"></div>
                             </div>
-                            
+
+                            <!-- 학부모 미리보기 카드 (달력 위, 저장 이미지에 그대로 들어감) -->
+                            <div id="notice-preview-card" class="mb-4 hidden" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;">
+                                <div id="notice-preview-content"></div>
+                            </div>
+
                             <div id="student-week-nav" class="hidden flex justify-center items-center gap-4 mb-3 bg-slate-50 py-2 rounded-lg border border-slate-100">
                                 <button onclick="changeStudentWeek(-1)" class="w-8 h-8 rounded-full hover:bg-slate-200 transition shadow-sm bg-white"><i class="fa-solid fa-chevron-left text-slate-500"></i></button>
                                 <span id="student-week-label" class="font-bold text-slate-700 text-sm"></span>
@@ -818,14 +823,18 @@
                                 <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
                                 <div id="calendar-apr" class="calendar-grid mb-4"></div>
                             </div>
-                            
+
                             <div id="student-week-view" class="hidden mb-4 overflow-x-auto">
                                 <div id="student-week-container"></div>
                             </div>
 
-                            <div class="mt-auto pt-4 border-t border-slate-100">
+                            <!-- 편집 영역 (저장 이미지에서 제외) -->
+                            <div id="notice-edit-section" class="mt-auto pt-4 border-t border-slate-100">
+                                <div class="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                                    <i class="fa-solid fa-pen-to-square"></i> 편집 영역 <span class="font-normal normal-case tracking-normal text-slate-300">(이미지 저장 시 자동 제외)</span>
+                                </div>
                                 <h4 class="text-sm font-bold text-amber-600 mb-2 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Notice (공지사항)</h4>
-                                <textarea id="student-notice" class="notice-textarea w-full text-sm text-slate-700 p-3 rounded-lg border resize-none outline-none transition" rows="3" placeholder="학부모님께 전달할 내용을 입력하세요." oninput="saveNotice()"></textarea>
+                                <textarea id="student-notice" class="notice-textarea w-full text-sm text-slate-700 p-3 rounded-lg border resize-none outline-none transition" rows="3" placeholder="학부모님께 전달할 내용을 입력하세요. (한 줄에 하나씩, '제목 : 내용' 형태 권장)" oninput="saveNotice()"></textarea>
 
                                 <h4 class="text-sm font-bold text-rose-600 mb-2 mt-3 flex items-center gap-1"><i class="fa-solid fa-user-pen"></i> 개인별 안내사항 <span class="text-[11px] font-normal text-slate-400 ml-1">(비워두면 이미지에 표시되지 않음)</span></h4>
                                 <textarea id="student-personal-notice" class="personal-notice-textarea w-full text-sm text-slate-700 p-3 rounded-lg border border-rose-200 bg-rose-50 focus:bg-white focus:border-rose-400 resize-none outline-none transition" rows="2" placeholder="예: 다음 주 시험 대비 보충 진행 예정" oninput="savePersonalNotice()"></textarea>
@@ -1701,6 +1710,45 @@
             }).filter(Boolean).join('');
 
             return `<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">${items}</ul>`;
+        }
+
+        // 공지/개인안내 두 섹션을 합친 카드 본문 HTML 생성 (학부모 미리보기 = 저장 이미지)
+        function _buildNoticeCardInner(noticeText, personalText, studentName) {
+            const noticeHtml = _renderNoticeBullets(noticeText, 'amber');
+            const personalHtml = personalText && personalText.trim() ? _renderNoticeBullets(personalText, 'rose') : '';
+            if (!noticeHtml && !personalHtml) return '';
+            let html = '';
+            if (noticeHtml) {
+                html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <span style="display:inline-flex;align-items:center;gap:6px;background:#f59e0b;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-regular fa-comment-dots"></i> NOTICE</span>
+                    <span style="font-size:12px;color:#92400e;font-weight:600;">학원 공지사항</span>
+                </div>${noticeHtml}`;
+            }
+            if (personalHtml) {
+                html += `<div style="display:flex;align-items:center;gap:8px;margin:${noticeHtml ? '14px' : '0'} 0 10px 0;">
+                    <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-solid fa-user-pen"></i> ${_escapeHtml(studentName || '')} 학부모님</span>
+                    <span style="font-size:12px;color:#9f1239;font-weight:600;">개인별 안내사항</span>
+                </div>${personalHtml}`;
+            }
+            return html;
+        }
+
+        // 현재 학생의 공지/개인안내 텍스트영역 값을 읽어 화면 상단 미리보기 카드 갱신
+        function refreshNoticePreview() {
+            const card = document.getElementById('notice-preview-card');
+            const content = document.getElementById('notice-preview-content');
+            if (!card || !content) return;
+            const noticeVal = document.getElementById('student-notice')?.value || '';
+            const personalVal = document.getElementById('student-personal-notice')?.value || '';
+            const s = (typeof studentList !== 'undefined' && currentStudentId) ? studentList.find(x => x.id === currentStudentId) : null;
+            const html = _buildNoticeCardInner(noticeVal, personalVal, s ? s.name : '');
+            if (!html) {
+                card.classList.add('hidden');
+                content.innerHTML = '';
+                return;
+            }
+            card.classList.remove('hidden');
+            content.innerHTML = html;
         }
 
         let SESSION_DATES = [];
@@ -3164,6 +3212,8 @@
             // 개인별 안내사항 (전체 공지와 별개, 빈 값이면 이미지에 표시 X)
             const personalNotice = attendanceData[currentStudentId][currentOption]?.__personalNotice || '';
             document.getElementById('student-personal-notice').value = personalNotice;
+
+            refreshNoticePreview();
         }
 
         function saveNotice() {
@@ -3171,6 +3221,7 @@
             if (!attendanceData[currentStudentId][currentOption]) attendanceData[currentStudentId][currentOption] = {};
             attendanceData[currentStudentId][currentOption].__notice = document.getElementById('student-notice').value;
             saveLocal();
+            refreshNoticePreview();
         }
 
         function savePersonalNotice() {
@@ -3178,6 +3229,7 @@
             if (!attendanceData[currentStudentId][currentOption]) attendanceData[currentStudentId][currentOption] = {};
             attendanceData[currentStudentId][currentOption].__personalNotice = document.getElementById('student-personal-notice').value;
             saveLocal();
+            refreshNoticePreview();
         }
         
         function setStudentViewMode(mode) {
@@ -4477,30 +4529,9 @@
                     // 클론 문서에도 .exporting 적용 (보강)
                     const clonedTarget = clonedDoc.getElementById('capture-target-apr');
                     if (clonedTarget) clonedTarget.classList.add('exporting');
-                    // textarea는 html2canvas가 내용을 렌더링 못하므로 div로 교체
-                    // [시인성 개선] 폰트 크기↑, 라인높이↑, 굵기↑, 좌측 액센트 바, 진한 글자색
-                    const noticeTextarea = clonedDoc.getElementById('student-notice');
-                    if (noticeTextarea) {
-                        const noticeDiv = clonedDoc.createElement('div');
-                        noticeDiv.style.cssText = 'background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:80px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;font-family:\'Noto Sans KR\',sans-serif;letter-spacing:-0.2px;';
-                        noticeDiv.textContent = noticeTextarea.value;
-                        noticeTextarea.parentNode.replaceChild(noticeDiv, noticeTextarea);
-                    }
-                    // 개인별 안내사항: 비어있으면 헤딩+입력창 모두 제거, 있으면 div로 교체
-                    const personalTextarea = clonedDoc.getElementById('student-personal-notice');
-                    if (personalTextarea) {
-                        const val = (personalTextarea.value || '').trim();
-                        const heading = personalTextarea.previousElementSibling;
-                        if (!val) {
-                            if (heading && heading.tagName === 'H4') heading.remove();
-                            personalTextarea.remove();
-                        } else {
-                            const personalDiv = clonedDoc.createElement('div');
-                            personalDiv.style.cssText = 'background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:50px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;font-family:\'Noto Sans KR\',sans-serif;letter-spacing:-0.2px;';
-                            personalDiv.textContent = personalTextarea.value;
-                            personalTextarea.parentNode.replaceChild(personalDiv, personalTextarea);
-                        }
-                    }
+                    // 편집 영역 제거 — 학부모 미리보기 카드(달력 상단)만 남김
+                    const editSection = clonedDoc.getElementById('notice-edit-section');
+                    if (editSection) editSection.remove();
                 }
             }).then(canvas => {
                 const link = document.createElement('a');
