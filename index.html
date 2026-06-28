@@ -3128,6 +3128,22 @@
 
             // capture-target-apr 그대로 클론
             const orig = document.getElementById('capture-target-apr');
+            // 원본의 실제 렌더 너비 측정 (view-schedule이 hidden이면 0이므로 폴백)
+            let targetWidth = orig.offsetWidth;
+            if (!targetWidth) {
+                // view-schedule을 임시로 보이게 만들어 너비 측정 후 복원
+                const viewSchedule = document.getElementById('view-schedule');
+                const wasActive = viewSchedule?.classList.contains('active');
+                if (viewSchedule && !wasActive) {
+                    viewSchedule.style.cssText = 'position:fixed;left:-99999px;top:0;display:block;width:100vw;';
+                    viewSchedule.classList.add('active');
+                    targetWidth = orig.offsetWidth;
+                    viewSchedule.classList.remove('active');
+                    viewSchedule.style.cssText = '';
+                }
+            }
+            if (!targetWidth) targetWidth = 750; // 최종 폴백
+
             const clone = orig.cloneNode(true);
             clone.id = 'schedule-export-card';
 
@@ -3144,7 +3160,7 @@
 
             const stage = document.createElement('div');
             stage.id = 'schedule-export-stage';
-            stage.style.cssText = 'position:fixed; left:-99999px; top:0; width:1120px; background:#ffffff; z-index:-1;';
+            stage.style.cssText = `position:fixed; left:-99999px; top:0; width:${targetWidth}px; background:#ffffff; z-index:-1;`;
             stage.appendChild(clone);
             document.body.appendChild(stage);
 
