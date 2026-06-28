@@ -999,9 +999,8 @@
             <div class="bg-slate-800 p-4 flex justify-between items-center text-white flex-shrink-0">
                 <div>
                     <h3 class="font-bold text-lg" id="billStudentName">학생 이름</h3>
-                    <div class="mt-1.5 inline-flex items-center gap-1.5 bg-amber-400 text-slate-900 px-2.5 py-1 rounded-full text-xs font-extrabold shadow-sm">
-                        <i class="fa-solid fa-file-invoice text-[10px]"></i>
-                        <span><span class="month-title">4월</span> 수업료 정산서</span>
+                    <div id="bill-title-badge" style="display:inline-block;margin-top:6px;background:#fbbf24;color:#0f172a;padding:5px 12px 6px;border-radius:999px;font-size:12px;font-weight:800;line-height:1;white-space:nowrap;">
+                        <i class="fa-solid fa-file-invoice" style="font-size:10px;margin-right:5px;"></i><span class="month-title">4월</span> 수업료 정산서
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -3065,6 +3064,12 @@
         function _captureBillToPng() {
             const element = document.getElementById('tuitionBillContent');
             const s = studentList.find(x => x.id === currentStudentId);
+            // 시수 0인 항목 키 식별 (원본 DOM의 input value 기준)
+            const hourKeys = ['eng', 'math', 'spec', 'one', 'supp'];
+            const zeroKeys = hourKeys.filter(k => {
+                const v = parseFloat(document.getElementById(`bill-hr-input-${k}`)?.value || '0');
+                return !v;
+            });
             return html2canvas(element, {
                 scale: 3,
                 backgroundColor: '#ffffff',
@@ -3078,6 +3083,16 @@
                             if (i > 0) child.style.display = 'none';
                         });
                     }
+                    // 시수 0인 항목 행 숨김 (상단 요약 + 본문 수업료 행)
+                    zeroKeys.forEach(key => {
+                        const sumLabel = clonedDoc.getElementById(`bill-hr-${key}`);
+                        if (sumLabel && sumLabel.parentElement) sumLabel.parentElement.style.display = 'none';
+                        const detailSum = clonedDoc.getElementById(`bill-sum-${key}`);
+                        if (detailSum) {
+                            const row = detailSum.closest('.tuition-row');
+                            if (row) row.style.display = 'none';
+                        }
+                    });
                 }
             }).then(canvas => {
                 const link = document.createElement('a');
