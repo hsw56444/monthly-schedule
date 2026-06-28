@@ -1691,6 +1691,8 @@
             const lines = String(rawText).split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             if (!lines.length) return '';
 
+            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+
             const items = lines.map(line => {
                 const stripped = line.replace(/^[\*\-•·▪◦●]\s*/, '').trim();
                 if (!stripped) return '';
@@ -1699,17 +1701,16 @@
                 if (colonIdx > 0 && colonIdx <= 18) {
                     const label = stripped.substring(0, colonIdx).trim();
                     const body = stripped.substring(colonIdx + 1).trim();
-                    inner = `<span style="font-weight:800;color:${labelColor};font-size:16px;white-space:nowrap;">${_escapeHtml(label)}</span><span style="color:#cbd5e1;font-weight:700;">·</span><span style="color:#1e293b;font-size:16px;line-height:1.55;font-weight:500;">${_escapeHtml(body)}</span>`;
+                    inner = `<span style="${baseFont}font-weight:800;color:${labelColor};font-size:16px;line-height:1.5;vertical-align:middle;">${_escapeHtml(label)}</span><span style="color:#cbd5e1;font-weight:700;margin:0 6px;vertical-align:middle;line-height:1.5;">·</span><span style="${baseFont}color:#1e293b;font-size:16px;line-height:1.5;font-weight:500;vertical-align:middle;">${_escapeHtml(body)}</span>`;
                 } else {
-                    inner = `<span style="color:#1e293b;font-size:16px;line-height:1.55;font-weight:500;">${_escapeHtml(stripped)}</span>`;
+                    inner = `<span style="${baseFont}color:#1e293b;font-size:16px;line-height:1.5;font-weight:500;vertical-align:middle;">${_escapeHtml(stripped)}</span>`;
                 }
-                return `<li style="background:${cardBg};border:1px solid ${borderColor};border-left:4px solid ${dotColor};border-radius:8px;padding:9px 14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
-                    <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;position:relative;top:-2px;"></span>
-                    ${inner}
-                </li>`;
+                return `<div style="background:${cardBg};border:1px solid ${borderColor};border-left:4px solid ${dotColor};border-radius:8px;padding:10px 14px;margin-bottom:6px;">
+                    <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};margin-right:9px;vertical-align:middle;"></span>${inner}
+                </div>`;
             }).filter(Boolean).join('');
 
-            return `<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">${items}</ul>`;
+            return `<div style="margin:0;">${items}</div>`;
         }
 
         // 공지/개인안내 두 섹션을 합친 카드 본문 HTML 생성 (학부모 미리보기 = 저장 이미지)
@@ -1717,17 +1718,20 @@
             const noticeHtml = _renderNoticeBullets(noticeText, 'amber');
             const personalHtml = personalText && personalText.trim() ? _renderNoticeBullets(personalText, 'rose') : '';
             if (!noticeHtml && !personalHtml) return '';
+            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+            // html2canvas 호환: inline-flex/align-items 대신 inline-block + line-height로 수직 정렬
+            const pill = (bg, icon, text) => `<span style="${baseFont}display:inline-block;background:${bg};color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:5px 11px;border-radius:999px;line-height:1.2;vertical-align:middle;"><i class="${icon}" style="margin-right:5px;vertical-align:middle;"></i>${_escapeHtml(text)}</span>`;
             let html = '';
             if (noticeHtml) {
-                html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                    <span style="display:inline-flex;align-items:center;gap:6px;background:#f59e0b;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-regular fa-comment-dots"></i> NOTICE</span>
-                    <span style="font-size:12px;color:#92400e;font-weight:600;">학원 공지사항</span>
+                html += `<div style="margin-bottom:10px;">
+                    ${pill('#f59e0b', 'fa-regular fa-comment-dots', 'NOTICE')}
+                    <span style="${baseFont}font-size:12px;color:#92400e;font-weight:600;margin-left:8px;vertical-align:middle;line-height:1.2;">학원 공지사항</span>
                 </div>${noticeHtml}`;
             }
             if (personalHtml) {
-                html += `<div style="display:flex;align-items:center;gap:8px;margin:${noticeHtml ? '14px' : '0'} 0 10px 0;">
-                    <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-solid fa-user-pen"></i> ${_escapeHtml(studentName || '')} 학부모님</span>
-                    <span style="font-size:12px;color:#9f1239;font-weight:600;">개인별 안내사항</span>
+                html += `<div style="margin:${noticeHtml ? '14px' : '0'} 0 10px 0;">
+                    ${pill('#e11d48', 'fa-solid fa-user-pen', (studentName || '') + ' 학부모님')}
+                    <span style="${baseFont}font-size:12px;color:#9f1239;font-weight:600;margin-left:8px;vertical-align:middle;line-height:1.2;">개인별 안내사항</span>
                 </div>${personalHtml}`;
             }
             return html;
@@ -2966,9 +2970,7 @@
             const noticeStyle = "background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:80px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
             const personalStyle = "background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:50px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
 
-            const noticeBulletsHtml = _renderNoticeBullets(noticeText, 'amber');
-            const personalBulletsHtml = personalText ? _renderNoticeBullets(personalText, 'rose') : '';
-            const hasAnyNotice = !!(noticeBulletsHtml || personalBulletsHtml);
+            const noticeCardInner = _buildNoticeCardInner(noticeText, personalText, s.name);
 
             const stage = document.createElement('div');
             stage.id = 'schedule-export-stage';
@@ -2980,22 +2982,9 @@
                         <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded">${_escapeHtml(s.name)} (Option A)</div>
                         <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="schedule-export-stat"></div>
                     </div>
-                    ${hasAnyNotice ? `
+                    ${noticeCardInner ? `
                     <div class="mb-4" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;">
-                        ${noticeBulletsHtml ? `
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                                <span style="display:inline-flex;align-items:center;gap:6px;background:#f59e0b;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-regular fa-comment-dots"></i> NOTICE</span>
-                                <span style="font-size:12px;color:#92400e;font-weight:600;">학원 공지사항</span>
-                            </div>
-                            ${noticeBulletsHtml}
-                        ` : ''}
-                        ${personalBulletsHtml ? `
-                            <div style="display:flex;align-items:center;gap:8px;margin:${noticeBulletsHtml ? '14px' : '0'} 0 10px 0;">
-                                <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-solid fa-user-pen"></i> ${_escapeHtml(s.name)} 학부모님</span>
-                                <span style="font-size:12px;color:#9f1239;font-weight:600;">개인별 안내사항</span>
-                            </div>
-                            ${personalBulletsHtml}
-                        ` : ''}
+                        ${noticeCardInner}
                     </div>
                     ` : ''}
                     <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
