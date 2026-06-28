@@ -946,8 +946,8 @@
     </div>
 
     <div id="tuitionModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-50 p-4 backdrop-blur-sm mode-edit">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col" id="tuitionBillContent">
-            <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-hidden flex flex-col" id="tuitionBillContent">
+            <div class="bg-slate-800 p-4 flex justify-between items-center text-white flex-shrink-0">
                 <div>
                     <h3 class="font-bold text-lg" id="billStudentName">학생 이름</h3>
                     <p class="text-xs opacity-70"><span class="month-title">4월</span> 수업료 정산서</p>
@@ -977,7 +977,7 @@
                 <div id="prev-bill-popover-content" class="p-3 text-xs text-slate-600 max-h-80 overflow-y-auto"></div>
             </div>
 
-            <div class="p-5 bg-white overflow-y-auto relative">
+            <div class="p-5 bg-white overflow-y-auto relative flex-1 min-h-0">
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div class="flex justify-between items-center mb-2 border-b border-slate-200 pb-1">
                         <h4 class="text-xs font-bold text-slate-500 uppercase">수업 시수 (Option A)</h4>
@@ -1083,7 +1083,7 @@
                 </div>
             </div>
             
-            <div class="bg-slate-50 py-3 px-4 border-t border-slate-200">
+            <div class="bg-slate-50 py-3 px-4 border-t border-slate-200 flex-shrink-0">
                 <div class="flex justify-between items-end mb-3">
                     <span class="text-sm font-bold text-slate-500">총 납부 금액</span>
                     <span class="text-2xl font-black text-slate-800" id="bill-grand-total">0원</span>
@@ -1668,6 +1668,39 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        // 공지사항 텍스트를 줄별 카드 리스트로 변환 (이미지 export 전용)
+        function _renderNoticeBullets(rawText, palette) {
+            if (!rawText || !String(rawText).trim()) return '';
+            const isRose = palette === 'rose';
+            const dotColor = isRose ? '#e11d48' : '#f59e0b';
+            const labelColor = isRose ? '#9f1239' : '#b45309';
+            const borderColor = isRose ? '#fda4af' : '#fde68a';
+            const cardBg = '#ffffff';
+
+            const lines = String(rawText).split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            if (!lines.length) return '';
+
+            const items = lines.map(line => {
+                const stripped = line.replace(/^[\*\-•·▪◦●]\s*/, '').trim();
+                if (!stripped) return '';
+                const colonIdx = stripped.search(/[:：]/);
+                let inner;
+                if (colonIdx > 0 && colonIdx <= 18) {
+                    const label = stripped.substring(0, colonIdx).trim();
+                    const body = stripped.substring(colonIdx + 1).trim();
+                    inner = `<span style="font-weight:800;color:${labelColor};font-size:16px;white-space:nowrap;">${_escapeHtml(label)}</span><span style="color:#cbd5e1;font-weight:700;">·</span><span style="color:#1e293b;font-size:16px;line-height:1.55;font-weight:500;">${_escapeHtml(body)}</span>`;
+                } else {
+                    inner = `<span style="color:#1e293b;font-size:16px;line-height:1.55;font-weight:500;">${_escapeHtml(stripped)}</span>`;
+                }
+                return `<li style="background:${cardBg};border:1px solid ${borderColor};border-left:4px solid ${dotColor};border-radius:8px;padding:9px 14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                    <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;position:relative;top:-2px;"></span>
+                    ${inner}
+                </li>`;
+            }).filter(Boolean).join('');
+
+            return `<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">${items}</ul>`;
         }
 
         let SESSION_DATES = [];
@@ -2885,6 +2918,10 @@
             const noticeStyle = "background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:80px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
             const personalStyle = "background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:50px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
 
+            const noticeBulletsHtml = _renderNoticeBullets(noticeText, 'amber');
+            const personalBulletsHtml = personalText ? _renderNoticeBullets(personalText, 'rose') : '';
+            const hasAnyNotice = !!(noticeBulletsHtml || personalBulletsHtml);
+
             const stage = document.createElement('div');
             stage.id = 'schedule-export-stage';
             stage.style.cssText = 'position:fixed; left:-99999px; top:0; width:1120px; background:#ffffff; z-index:-1;';
@@ -2895,13 +2932,26 @@
                         <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded">${_escapeHtml(s.name)} (Option A)</div>
                         <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="schedule-export-stat"></div>
                     </div>
-                    <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
-                    <div id="schedule-export-grid" class="calendar-grid mb-4"></div>
-                    <div class="mt-auto pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-amber-600 mb-2 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Notice (공지사항)</h4>
-                        <div class="w-full" style="${noticeStyle}">${_escapeHtml(noticeText)}</div>
-                        ${personalText ? `<h4 class="text-sm font-bold text-rose-600 mb-2 mt-3 flex items-center gap-1"><i class="fa-solid fa-user-pen"></i> 개인별 안내사항</h4><div class="w-full" style="${personalStyle}">${_escapeHtml(personalText)}</div>` : ''}
+                    ${hasAnyNotice ? `
+                    <div class="mb-4" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;">
+                        ${noticeBulletsHtml ? `
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                <span style="display:inline-flex;align-items:center;gap:6px;background:#f59e0b;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-regular fa-comment-dots"></i> NOTICE</span>
+                                <span style="font-size:12px;color:#92400e;font-weight:600;">학원 공지사항</span>
+                            </div>
+                            ${noticeBulletsHtml}
+                        ` : ''}
+                        ${personalBulletsHtml ? `
+                            <div style="display:flex;align-items:center;gap:8px;margin:${noticeBulletsHtml ? '14px' : '0'} 0 10px 0;">
+                                <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:4px 10px;border-radius:999px;"><i class="fa-solid fa-user-pen"></i> ${_escapeHtml(s.name)} 학부모님</span>
+                                <span style="font-size:12px;color:#9f1239;font-weight:600;">개인별 안내사항</span>
+                            </div>
+                            ${personalBulletsHtml}
+                        ` : ''}
                     </div>
+                    ` : ''}
+                    <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
+                    <div id="schedule-export-grid" class="calendar-grid mb-1"></div>
                 </div>
             `;
             document.body.appendChild(stage);
