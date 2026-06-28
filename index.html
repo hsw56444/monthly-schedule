@@ -95,11 +95,13 @@
         .badge-solo .badge-label { font-size: 12.5px; }
 
         /* 직접입력 라벨: 긴 텍스트가 셀을 넘지 않도록 줄바꿈 + 길이별 자동 축소 */
+        /* word-break: keep-all → 한글은 공백 기준 단어 단위로 줄바꿈 (글자 중간 잘림 방지) */
         .badge-label.badge-label-custom {
             white-space: normal;
-            word-break: break-word;
-            overflow-wrap: anywhere;
+            word-break: keep-all;
+            overflow-wrap: break-word;
             line-height: 1.25;
+            text-align: center;
         }
         .badge-label.size-sm  { font-size: 11px; }
         .badge-label.size-xs  { font-size: 10px; }
