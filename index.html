@@ -260,6 +260,22 @@
         .tuition-filter-btn:hover { border-color: #c7d2fe; color: #4f46e5; }
         .tuition-filter-btn.active { background: #1e293b; border-color: #1e293b; color: white; }
 
+        /* 수업료 정산목록 헤더 정렬 화살표 */
+        .sort-arrow {
+            display: inline-block;
+            margin-left: 4px;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 11px;
+            user-select: none;
+            transition: color 0.15s, transform 0.15s;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        .sort-arrow:hover { color: #6366f1; }
+        .sort-arrow.active { color: #4f46e5; transform: scale(1.25); }
+        .tuition-row-num { color: #94a3b8; font-weight: 600; font-variant-numeric: tabular-nums; }
+
         /* Status pill (small clickable badge) */
         .status-pill {
             display: inline-flex; align-items: center; justify-content: center;
@@ -748,8 +764,9 @@
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                    <th class="px-4 py-3">학생 이름</th>
-                                    <th class="px-3 py-3">구분</th>
+                                    <th class="px-3 py-3 text-center" style="width:48px">#</th>
+                                    <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
+                                    <th class="px-3 py-3">구분<span class="sort-arrow sort-arrow-group" onclick="toggleTuitionSort('group')" title="초→중 순 + 가나다순">⇅</span></th>
                                     <th class="px-3 py-3 text-center">영어</th>
                                     <th class="px-3 py-3 text-center">수학</th>
                                     <th class="px-3 py-3 text-center">특강/1:1</th>
@@ -767,8 +784,9 @@
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                    <th class="px-4 py-3">학생 이름</th>
-                                    <th class="px-3 py-3">구분</th>
+                                    <th class="px-3 py-3 text-center" style="width:48px">#</th>
+                                    <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
+                                    <th class="px-3 py-3">구분<span class="sort-arrow sort-arrow-group" onclick="toggleTuitionSort('group')" title="초→중 순 + 가나다순">⇅</span></th>
                                     <th class="px-3 py-3 text-center">총 시수</th>
                                     <th class="px-3 py-3 text-right">기본 수업료</th>
                                     <th class="px-3 py-3 text-right">추가/할인</th>
@@ -2499,11 +2517,43 @@
             return `<span class="status-pill ${cls}" onclick="${onclickFn}(${id}, event)">${txt}</span>`;
         }
 
+        // 수업료 정산목록 정렬 상태: 'default' | 'name' | 'group'
+        let tuitionSortMode = 'default';
+
+        function toggleTuitionSort(mode) {
+            tuitionSortMode = (tuitionSortMode === mode) ? 'default' : mode;
+            renderTuitionList();
+        }
+
+        function _getSortedStudents(list) {
+            const arr = [...list];
+            if (tuitionSortMode === 'name') {
+                arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            } else if (tuitionSortMode === 'group') {
+                arr.sort((a, b) => {
+                    if (a.group !== b.group) return a.group === 'Elementary' ? -1 : 1;
+                    return (a.name || '').localeCompare(b.name || '', 'ko');
+                });
+            }
+            return arr;
+        }
+
+        function _updateSortArrowActive() {
+            document.querySelectorAll('.sort-arrow').forEach(el => el.classList.remove('active'));
+            if (tuitionSortMode === 'name') {
+                document.querySelectorAll('.sort-arrow-name').forEach(el => el.classList.add('active'));
+            } else if (tuitionSortMode === 'group') {
+                document.querySelectorAll('.sort-arrow-group').forEach(el => el.classList.add('active'));
+            }
+        }
+
         function renderTuitionList() {
             const tbodyInput = document.getElementById('tuition-list-body');
             const tbodySummary = document.getElementById('tuition-summary-list-body');
             tbodyInput.innerHTML = '';
             if(tbodySummary) tbodySummary.innerHTML = '';
+
+            _updateSortArrowActive();
 
             // 카운터 집계 (필터와 무관하게 전체 기준)
             let cntKakao = 0, cntPayapp = 0, cntUnpaid = 0;
@@ -2522,17 +2572,21 @@
             if (cntU) cntU.textContent = cntUnpaid;
 
             const useSibling = document.getElementById('sibling-toggle')?.checked;
+            const sortedList = _getSortedStudents(studentList);
 
             // 입력 현황 탭은 항상 학생별 단순 렌더 (형제 묶음은 요약 보기에만)
-            studentList.forEach(s => {
+            let inputIdx = 0;
+            sortedList.forEach(s => {
                 const calc = _calcStudentBill(s);
                 if (!_passesTuitionFilter(s, calc.t, calc.hasRates)) return;
-                const tr = _renderInputRow(s, calc);
+                inputIdx++;
+                const tr = _renderInputRow(s, calc, inputIdx);
                 tbodyInput.appendChild(tr);
             });
 
             if (!tbodySummary) return;
 
+            let summaryIdx = 0;
             if (useSibling) {
                 const { families, singles } = _groupStudentsByFamily(studentList);
                 // 가족 그룹 먼저 렌더
@@ -2548,7 +2602,7 @@
                     // 그룹 헤더 행
                     const trH = document.createElement('tr');
                     trH.className = 'family-group-row';
-                    trH.innerHTML = `<td colspan="9" class="text-xs font-bold text-indigo-700">
+                    trH.innerHTML = `<td colspan="10" class="text-xs font-bold text-indigo-700">
                         <i class="fa-solid fa-people-roof mr-1"></i> 형제 묶음 (${members.length}명)
                         <button onclick="saveFamilyBillImage('${fid}')" class="ml-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded font-bold transition">
                             <i class="fa-solid fa-camera mr-1"></i>통합 청구서 이미지
@@ -2562,7 +2616,8 @@
                         famTotal += calc.grandTotal;
                         famHours += calc.totalHours;
                         if (filteredMembers.includes(s)) {
-                            tbodySummary.appendChild(_renderSummaryRow(s, calc));
+                            summaryIdx++;
+                            tbodySummary.appendChild(_renderSummaryRow(s, calc, summaryIdx));
                         }
                     });
 
@@ -2570,7 +2625,7 @@
                     const trT = document.createElement('tr');
                     trT.className = 'family-total-row';
                     trT.innerHTML = `
-                        <td colspan="2" class="text-indigo-700">💰 가족 합계</td>
+                        <td colspan="3" class="text-indigo-700">💰 가족 합계</td>
                         <td class="text-center text-slate-700">${parseFloat(famHours.toFixed(1))}h</td>
                         <td colspan="2"></td>
                         <td class="text-right text-lg text-indigo-700">${formatNumber(famTotal)}원</td>
@@ -2578,22 +2633,24 @@
                     `;
                     tbodySummary.appendChild(trT);
                 });
-                // 외동(단독) 학생들
-                singles.forEach(s => {
+                // 외동(단독) 학생들 (정렬 적용)
+                _getSortedStudents(singles).forEach(s => {
                     const calc = _calcStudentBill(s);
                     if (!_passesTuitionFilter(s, calc.t, calc.hasRates)) return;
-                    tbodySummary.appendChild(_renderSummaryRow(s, calc));
+                    summaryIdx++;
+                    tbodySummary.appendChild(_renderSummaryRow(s, calc, summaryIdx));
                 });
             } else {
-                studentList.forEach(s => {
+                sortedList.forEach(s => {
                     const calc = _calcStudentBill(s);
                     if (!_passesTuitionFilter(s, calc.t, calc.hasRates)) return;
-                    tbodySummary.appendChild(_renderSummaryRow(s, calc));
+                    summaryIdx++;
+                    tbodySummary.appendChild(_renderSummaryRow(s, calc, summaryIdx));
                 });
             }
         }
 
-        function _renderInputRow(s, calc) {
+        function _renderInputRow(s, calc, idx) {
             const { h, t, hasRates } = calc;
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 cursor-pointer transition";
@@ -2605,6 +2662,7 @@
             const payappPill = _statusPillHtml(t.is_sent_payapp, '✓', '✕', 'toggleSentPayapp', s.id, !hasRates);
             const familyIcon = s.familyId ? '<span class="text-indigo-500 ml-1" title="형제 있음">👨‍👩‍👧</span>' : '';
             tr.innerHTML = `
+                <td class="px-3 py-4 text-center tuition-row-num">${idx}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${s.name}${familyIcon}</td>
                 <td class="px-3 py-4 text-xs text-slate-500">${s.group === 'Elementary' ? '초등' : '중등'}</td>
                 <td class="px-3 py-4 text-center font-medium text-indigo-600">${h.eng}h</td>
@@ -2617,7 +2675,7 @@
             return tr;
         }
 
-        function _renderSummaryRow(s, calc) {
+        function _renderSummaryRow(s, calc, idx) {
             const { h, t, add, disc, baseTuition, grandTotal, totalHours, hasRates } = calc;
             const trSum = document.createElement('tr');
             trSum.className = "hover:bg-slate-50 cursor-pointer transition border-b border-slate-100";
@@ -2630,6 +2688,7 @@
             const payappPill = _statusPillHtml(t.is_sent_payapp, '✓', '✕', 'toggleSentPayapp', s.id, !hasRates);
             const paidPill = _statusPillHtml(t.is_paid, '완료', '미납', 'togglePaymentStatus', s.id, !hasRates);
             trSum.innerHTML = `
+                <td class="px-3 py-4 text-center tuition-row-num">${idx}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${s.name}${familyIcon}</td>
                 <td class="px-3 py-4 text-xs text-slate-500">${s.group === 'Elementary' ? '초등' : '중등'}</td>
                 <td class="px-3 py-4 text-center font-medium text-slate-600">${parseFloat(totalHours.toFixed(1))}h</td>
