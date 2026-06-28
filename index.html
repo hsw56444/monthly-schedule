@@ -1679,19 +1679,19 @@
                 .replace(/'/g, '&#39;');
         }
 
-        // 공지사항 텍스트를 줄별 카드 리스트로 변환 (이미지 export 전용)
+        // 공지사항 텍스트를 줄별 카드 리스트로 변환 (이미지 export + 화면 공통)
+        // html2canvas 호환을 위해 flex/inline-flex/vertical-align/icon 사용 안 함
+        // 한글 ascender 메트릭으로 텍스트가 박스 위쪽으로 쏠리므로 padding-top을 padding-bottom보다 크게
         function _renderNoticeBullets(rawText, palette) {
             if (!rawText || !String(rawText).trim()) return '';
             const isRose = palette === 'rose';
-            const dotColor = isRose ? '#e11d48' : '#f59e0b';
+            const accentColor = isRose ? '#e11d48' : '#f59e0b';
             const labelColor = isRose ? '#9f1239' : '#b45309';
             const borderColor = isRose ? '#fda4af' : '#fde68a';
-            const cardBg = '#ffffff';
+            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
 
             const lines = String(rawText).split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             if (!lines.length) return '';
-
-            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
 
             const items = lines.map(line => {
                 const stripped = line.replace(/^[\*\-•·▪◦●]\s*/, '').trim();
@@ -1701,16 +1701,14 @@
                 if (colonIdx > 0 && colonIdx <= 18) {
                     const label = stripped.substring(0, colonIdx).trim();
                     const body = stripped.substring(colonIdx + 1).trim();
-                    inner = `<span style="${baseFont}font-weight:800;color:${labelColor};font-size:16px;line-height:1.5;vertical-align:middle;">${_escapeHtml(label)}</span><span style="color:#cbd5e1;font-weight:700;margin:0 6px;vertical-align:middle;line-height:1.5;">·</span><span style="${baseFont}color:#1e293b;font-size:16px;line-height:1.5;font-weight:500;vertical-align:middle;">${_escapeHtml(body)}</span>`;
+                    inner = `<strong style="color:${labelColor};font-weight:800;">${_escapeHtml(label)}</strong><span style="color:#cbd5e1;font-weight:700;margin:0 8px;">·</span>${_escapeHtml(body)}`;
                 } else {
-                    inner = `<span style="${baseFont}color:#1e293b;font-size:16px;line-height:1.5;font-weight:500;vertical-align:middle;">${_escapeHtml(stripped)}</span>`;
+                    inner = _escapeHtml(stripped);
                 }
-                return `<div style="background:${cardBg};border:1px solid ${borderColor};border-left:4px solid ${dotColor};border-radius:8px;padding:10px 14px;margin-bottom:6px;">
-                    <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};margin-right:9px;vertical-align:middle;"></span>${inner}
-                </div>`;
+                return `<div style="${baseFont}background:#ffffff;border:1px solid ${borderColor};border-left:4px solid ${accentColor};border-radius:8px;padding:12px 14px 10px;margin-bottom:8px;font-size:16px;line-height:1.6;color:#1e293b;font-weight:500;">${inner}</div>`;
             }).filter(Boolean).join('');
 
-            return `<div style="margin:0;">${items}</div>`;
+            return items;
         }
 
         // 공지/개인안내 두 섹션을 합친 카드 본문 HTML 생성 (학부모 미리보기 = 저장 이미지)
@@ -1719,20 +1717,16 @@
             const personalHtml = personalText && personalText.trim() ? _renderNoticeBullets(personalText, 'rose') : '';
             if (!noticeHtml && !personalHtml) return '';
             const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
-            // html2canvas 호환: inline-flex/align-items 대신 inline-block + line-height로 수직 정렬
-            const pill = (bg, icon, text) => `<span style="${baseFont}display:inline-block;background:${bg};color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:5px 11px;border-radius:999px;line-height:1.2;vertical-align:middle;"><i class="${icon}" style="margin-right:5px;vertical-align:middle;"></i>${_escapeHtml(text)}</span>`;
+            // 알약 배지 — line-height를 padding 포함 박스 높이와 같게 강제, 아이콘 없음
+            const pill = (bg, text) => `<span style="${baseFont}display:inline-block;background:${bg};color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:0 12px;border-radius:999px;height:24px;line-height:24px;">${_escapeHtml(text)}</span>`;
+            const subLabel = (color, text) => `<span style="${baseFont}display:inline-block;color:${color};font-size:12px;font-weight:600;margin-left:8px;height:24px;line-height:24px;">${_escapeHtml(text)}</span>`;
+
             let html = '';
             if (noticeHtml) {
-                html += `<div style="margin-bottom:10px;">
-                    ${pill('#f59e0b', 'fa-regular fa-comment-dots', 'NOTICE')}
-                    <span style="${baseFont}font-size:12px;color:#92400e;font-weight:600;margin-left:8px;vertical-align:middle;line-height:1.2;">학원 공지사항</span>
-                </div>${noticeHtml}`;
+                html += `<div style="margin-bottom:12px;font-size:0;">${pill('#f59e0b', 'NOTICE')}${subLabel('#92400e', '학원 공지사항')}</div>${noticeHtml}`;
             }
             if (personalHtml) {
-                html += `<div style="margin:${noticeHtml ? '14px' : '0'} 0 10px 0;">
-                    ${pill('#e11d48', 'fa-solid fa-user-pen', (studentName || '') + ' 학부모님')}
-                    <span style="${baseFont}font-size:12px;color:#9f1239;font-weight:600;margin-left:8px;vertical-align:middle;line-height:1.2;">개인별 안내사항</span>
-                </div>${personalHtml}`;
+                html += `<div style="margin:${noticeHtml ? '16px' : '0'} 0 12px 0;font-size:0;">${pill('#e11d48', (studentName || '') + ' 학부모님')}${subLabel('#9f1239', '개인별 안내사항')}</div>${personalHtml}`;
             }
             return html;
         }
