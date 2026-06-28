@@ -180,6 +180,26 @@
             animation: none !important;
         }
 
+        /* ─── NOTICE 카드/배지 캡처 보정 (한글 ascent 메트릭으로 인한 위쪽 쏠림 방지) ─── */
+        .exporting #notice-preview-card > div > div[style*="border-left"],
+        .exporting #schedule-export-card div[style*="border-left:4px"] {
+            padding-top: 14px !important;
+            padding-bottom: 6px !important;
+            line-height: 1.4 !important;
+        }
+        .exporting #notice-preview-card span[style*="border-radius:999px"],
+        .exporting #schedule-export-card span[style*="border-radius:999px"] {
+            padding-top: 9px !important;
+            padding-bottom: 3px !important;
+            line-height: 1 !important;
+        }
+        .exporting #notice-preview-card span[style*="font-size:12px"],
+        .exporting #schedule-export-card span[style*="font-size:12px"] {
+            padding-top: 9px !important;
+            padding-bottom: 3px !important;
+            line-height: 1 !important;
+        }
+
         /* Subject Colors — Present */
         .badge-eng-present       { background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e3a8a; }
         .badge-math-present      { background-color: #ffedd5; border: 1px solid #fdba74; color: #9a3412; }
