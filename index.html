@@ -3102,53 +3102,65 @@
             });
         }
 
-        // 시간표를 '학생 시간표 화면'과 동일한 전체 폭으로 렌더링하는 오프스크린 스테이지 생성
-        // (작은 미리보기 모달에서 캡처하면 이미지가 좁게 깨지는 문제를 회피)
+        // 시간표를 '학생 시간표 화면'(capture-target-apr) 그대로 복제해서 오프스크린 캡처
+        // → 📷 이미지 저장 결과와 100% 동일한 디자인
         function _buildScheduleStage(studentId) {
             const old = document.getElementById('schedule-export-stage');
             if (old) old.remove();
 
             const s = studentList.find(x => x.id === studentId);
-            const logsA = (attendanceData[studentId] && attendanceData[studentId]['A']) ? attendanceData[studentId]['A'] : {};
-            const studentNotice = logsA.__notice;
-            const noticeText = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : (globalNotice || '');
-            const personalText = (logsA.__personalNotice || '').trim();
-            const noticeStyle = "background-color:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;min-height:80px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
-            const personalStyle = "background-color:#fff1f2;border:1px solid #fda4af;border-left:4px solid #e11d48;border-radius:8px;padding:14px 16px;min-height:50px;font-size:16px;line-height:1.65;font-weight:500;color:#1e293b;white-space:pre-wrap;word-break:break-word;letter-spacing:-0.2px;";
 
-            const noticeCardInner = _buildNoticeCardInner(noticeText, personalText, s.name);
+            // 현재 학생을 임시로 대상 학생으로 바꿔서 capture-target-apr를 그 학생 기준으로 다시 렌더
+            const prevId = currentStudentId, prevOpt = currentOption;
+            currentStudentId = studentId;
+            currentOption = 'A';
+            // 학생 시간표 텍스트영역 동기화 (notice/personalNotice가 미리보기 카드에 반영되도록)
+            try {
+                const logsA = (attendanceData[studentId] && attendanceData[studentId]['A']) ? attendanceData[studentId]['A'] : {};
+                const noticeEl = document.getElementById('student-notice');
+                const personalEl = document.getElementById('student-personal-notice');
+                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : (globalNotice || '');
+                if (personalEl) personalEl.value = logsA.__personalNotice || '';
+                if (typeof refreshNoticePreview === 'function') refreshNoticePreview();
+            } catch (e) {}
+            renderCalendars();
+            updateStats();
+
+            // capture-target-apr 그대로 클론
+            const orig = document.getElementById('capture-target-apr');
+            const clone = orig.cloneNode(true);
+            clone.id = 'schedule-export-card';
+
+            // 편집 영역 제거 (학부모 미리보기 카드만 남김)
+            const editSection = clone.querySelector('#notice-edit-section');
+            if (editSection) editSection.remove();
+
+            // 학생 이름 박스 표시
+            const printName = clone.querySelector('.print-student-name');
+            if (printName) {
+                printName.textContent = `${s.name} (Option A)`;
+                printName.classList.remove('hidden');
+            }
 
             const stage = document.createElement('div');
             stage.id = 'schedule-export-stage';
             stage.style.cssText = 'position:fixed; left:-99999px; top:0; width:1120px; background:#ffffff; z-index:-1;';
-            stage.innerHTML = `
-                <div id="schedule-export-card" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-                    <div class="flex justify-between items-end mb-3">
-                        <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded">2026</span> <span class="month-title">${_escapeHtml(window.APP_CONFIG.monthTitle)}</span></h3>
-                        <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded">${_escapeHtml(s.name)} (Option A)</div>
-                        <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="schedule-export-stat"></div>
-                    </div>
-                    ${noticeCardInner ? `
-                    <div class="mb-4" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;">
-                        ${noticeCardInner}
-                    </div>
-                    ` : ''}
-                    <div class="calendar-grid text-xs text-slate-400 mb-1 text-center font-bold"><div class="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-400">토</div></div>
-                    <div id="schedule-export-grid" class="calendar-grid mb-1"></div>
-                </div>
-            `;
+            stage.appendChild(clone);
             document.body.appendChild(stage);
 
-            // Option A 기준으로 달력/통계 렌더 (전역 상태는 임시로만 변경 후 복원)
-            const prevId = currentStudentId, prevOpt = currentOption;
-            currentStudentId = studentId;
-            currentOption = 'A';
-            renderMonthCalendar('schedule-export-grid');
-            updateStats();
-            const statSrc = document.getElementById('stat-apr');
-            if (statSrc) document.getElementById('schedule-export-stat').innerHTML = statSrc.innerHTML;
+            // 학생/옵션 복원 → capture-target-apr는 원래 학생 데이터로 재렌더
             currentStudentId = prevId;
             currentOption = prevOpt;
+            try {
+                const logsA = (currentStudentId && attendanceData[currentStudentId] && attendanceData[currentStudentId][currentOption]) ? attendanceData[currentStudentId][currentOption] : {};
+                const noticeEl = document.getElementById('student-notice');
+                const personalEl = document.getElementById('student-personal-notice');
+                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : (globalNotice || '');
+                if (personalEl) personalEl.value = logsA.__personalNotice || '';
+                if (typeof refreshNoticePreview === 'function') refreshNoticePreview();
+            } catch (e) {}
+            renderCalendars();
+            updateStats();
 
             return stage;
         }
