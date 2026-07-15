@@ -153,10 +153,15 @@
         #bulkCardBar { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e0e7ff; padding: 1rem; box-shadow: 0 -4px 20px rgba(99,102,241,0.12); z-index: 60; transform: translateY(130%); transition: transform 0.3s ease-out; border-radius: 16px 16px 0 0; }
         #bulkCardBar.active { transform: translateY(0); }
 
+        /* ─── 주요일정: 학교별 방학/개학/시험기간 등 (공휴일/휴무일처럼 작은 글씨) ─── */
+        .important-label { display: block; font-size: 10px; line-height: 1.25; color: #a78bfa; font-weight: 700; margin-top: 1px; text-align: center; word-break: keep-all; letter-spacing: -0.2px; }
+
         /* 캡처(이미지 저장) 시 편집 컨트롤 숨김 */
         .exporting .day-add-btn,
         .exporting .badge-del,
         .exporting .badge-check { display: none !important; }
+        /* 주요일정 '나만 보기': 이미지 저장 시 숨김 (해당 학생 지정된 항목은 important-label 로만 유지) */
+        .exporting .important-hidden { display: none !important; }
 
         /* ─── 이미지 캡처 전용 보정 (html2canvas 한글 받침/라인박스 어긋남 방지) ─── */
         .exporting .badge { padding: 6px 8px 8px; }
@@ -419,6 +424,7 @@
             .makeup-pill { font-size: 8px; padding: 1.5px 4px; }
             .makeup-banner { font-size: 8.5px; padding: 2px 3px; margin-top: 2px; gap: 2px; }
             .makeup-banner i { font-size: 7.5px; }
+            .important-label { font-size: 8px; }
 
             /* ── 플래너 모달: 모바일에서 풀스크린 ── */
             #plannerModal { padding: 0 !important; align-items: stretch !important; }
@@ -1377,6 +1383,17 @@
                     <div id="makeupList" class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-slate-50 rounded-lg border border-slate-100"></div>
                 </div>
 
+                <!-- 주요일정 (학교별 방학/개학/시험기간 등) -->
+                <div>
+                    <label class="block text-sm font-bold text-violet-600 mb-2"><i class="fa-solid fa-flag mr-1"></i> 주요일정 <span class="text-xs text-slate-400 font-normal ml-1">(학교별 방학·개학·시험기간 등. 기본은 <b class="text-violet-500">나만 보기</b> — 이미지 저장 시 제외됩니다. 학생을 지정하면 그 학생 이미지에만 표시)</span></label>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <input type="date" id="newImportantDate" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] shrink-0 outline-none focus:ring-2 focus:ring-violet-300">
+                        <input type="text" id="newImportantLabel" maxlength="30" placeholder="표시할 텍스트 (예: ○○중 기말고사)" class="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-[120px] outline-none focus:ring-2 focus:ring-violet-300">
+                        <button onclick="addImportantDay()" class="bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 px-4 py-2 rounded-lg text-sm font-bold transition shrink-0"><i class="fa-solid fa-plus"></i> 추가</button>
+                    </div>
+                    <div id="importantList" class="flex flex-col gap-2 min-h-[40px] p-2 bg-slate-50 rounded-lg border border-slate-100"></div>
+                </div>
+
                 <!-- 전체 공지사항 -->
                 <div>
                     <label class="block text-sm font-bold text-amber-600 mb-2"><i class="fa-regular fa-comment-dots mr-1"></i> 전체 공지사항 <span class="text-xs text-slate-400 font-normal ml-1">(개별 학생 페이지에서 수정 가능)</span></label>
@@ -1391,6 +1408,32 @@
             <div class="p-4 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end gap-2">
                 <button onclick="closeMonthSettingsModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">닫기</button>
                 <button onclick="saveMonthSettings()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition"><i class="fa-solid fa-floppy-disk mr-1"></i> 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주요일정: 표시 학생 지정 모달 -->
+    <div id="importantVisibleModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[95] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-violet-700 p-4 flex justify-between items-center text-white shrink-0">
+                <div>
+                    <h3 class="font-bold text-base flex items-center gap-2"><i class="fa-solid fa-user-check"></i> 표시 학생 지정</h3>
+                    <p class="text-xs opacity-70 mt-0.5"><span id="ivmDateLabel" class="font-bold"></span> — 선택한 학생의 <b>이미지 저장</b>에만 이 일정이 표시됩니다</p>
+                </div>
+                <button onclick="closeImportantVisibleModal()" class="text-violet-200 hover:text-white transition ml-4 shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-3 border-b border-slate-100 flex items-center gap-2 shrink-0">
+                <input type="text" id="ivmSearch" oninput="renderImportantVisiblePicker()" placeholder="학생 이름 검색…" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-violet-300">
+                <button onclick="ivmSelectAll(true)" class="text-xs bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 px-2.5 py-2 rounded-lg font-bold transition shrink-0">전체선택</button>
+                <button onclick="ivmSelectAll(false)" class="text-xs bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 px-2.5 py-2 rounded-lg font-bold transition shrink-0">해제</button>
+            </div>
+            <div id="ivmStudentList" class="p-3 overflow-y-auto flex-grow grid grid-cols-2 gap-1.5"></div>
+            <div class="p-3 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-between items-center gap-2">
+                <span id="ivmCount" class="text-xs text-slate-400 font-bold"></span>
+                <div class="flex gap-2">
+                    <button onclick="closeImportantVisibleModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                    <button onclick="saveImportantVisible()" class="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-bold shadow-md transition"><i class="fa-solid fa-check mr-1"></i> 적용</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1592,6 +1635,9 @@
                         window.CLOSURE_LABELS = (data.global.closureLabels && typeof data.global.closureLabels === 'object') ? data.global.closureLabels : {};
                         window.MAKEUP_DAYS = Array.isArray(data.global.makeupDays) ? data.global.makeupDays : [];
                         window.MAKEUP_LABELS = (data.global.makeupLabels && typeof data.global.makeupLabels === 'object') ? data.global.makeupLabels : {};
+                        window.IMPORTANT_DAYS = Array.isArray(data.global.importantDays) ? data.global.importantDays : [];
+                        window.IMPORTANT_LABELS = (data.global.importantLabels && typeof data.global.importantLabels === 'object') ? data.global.importantLabels : {};
+                        window.IMPORTANT_VISIBLE = (data.global.importantVisible && typeof data.global.importantVisible === 'object') ? data.global.importantVisible : {};
                         window.customStartDate = typeof data.global.customStartDate === 'string' ? data.global.customStartDate : '';
                         window.customEndDate = typeof data.global.customEndDate === 'string' ? data.global.customEndDate : '';
                         window.globalNotice = typeof data.global.globalNotice === 'string' ? data.global.globalNotice : '';
@@ -1603,6 +1649,9 @@
                                 closureLabels: window.CLOSURE_LABELS,
                                 makeupDays: window.MAKEUP_DAYS,
                                 makeupLabels: window.MAKEUP_LABELS,
+                                importantDays: window.IMPORTANT_DAYS,
+                                importantLabels: window.IMPORTANT_LABELS,
+                                importantVisible: window.IMPORTANT_VISIBLE,
                                 customStartDate: window.customStartDate,
                                 customEndDate: window.customEndDate,
                                 globalNotice: window.globalNotice
@@ -1653,6 +1702,9 @@
                         closureLabels: window.CLOSURE_LABELS || {},
                         makeupDays: window.MAKEUP_DAYS || [],
                         makeupLabels: window.MAKEUP_LABELS || {},
+                        importantDays: window.IMPORTANT_DAYS || [],
+                        importantLabels: window.IMPORTANT_LABELS || {},
+                        importantVisible: window.IMPORTANT_VISIBLE || {},
                         customStartDate: window.customStartDate || '',
                         customEndDate: window.customEndDate || '',
                         globalNotice: window.globalNotice || ''
@@ -1710,6 +1762,9 @@
         var CLOSURE_LABELS = {}; // { 'YYYY-MM-DD': '개원기념일' } — 학원 휴무일 커스텀 표시 텍스트
         var MAKEUP_DAYS = []; // 학원 보강일 (사전신청, 모든 학생 달력에 표시)
         var MAKEUP_LABELS = {}; // { 'YYYY-MM-DD': '커스텀 라벨' } — 비워두면 기본 "학원보강일 (사전신청)"
+        var IMPORTANT_DAYS = []; // 주요일정 (학교별 방학/개학/시험기간 등) — 기본은 '나만 보기'(이미지 저장 시 제외)
+        var IMPORTANT_LABELS = {}; // { 'YYYY-MM-DD': '○○중 기말고사' }
+        var IMPORTANT_VISIBLE = {}; // { 'YYYY-MM-DD': [studentId,...] } — 해당 학생에게는 이미지 저장에도 표시
         var globalNotice = ''; // 월별 전체 공지사항 (학생별로 덮어쓰기 가능)
 
         function _escapeHtml(s) {
@@ -1916,14 +1971,17 @@
                     CLOSURE_LABELS = (g.closureLabels && typeof g.closureLabels === 'object') ? g.closureLabels : {};
                     MAKEUP_DAYS = Array.isArray(g.makeupDays) ? g.makeupDays : [];
                     MAKEUP_LABELS = (g.makeupLabels && typeof g.makeupLabels === 'object') ? g.makeupLabels : {};
+                    IMPORTANT_DAYS = Array.isArray(g.importantDays) ? g.importantDays : [];
+                    IMPORTANT_LABELS = (g.importantLabels && typeof g.importantLabels === 'object') ? g.importantLabels : {};
+                    IMPORTANT_VISIBLE = (g.importantVisible && typeof g.importantVisible === 'object') ? g.importantVisible : {};
                     customStartDate = typeof g.customStartDate === 'string' ? g.customStartDate : '';
                     customEndDate = typeof g.customEndDate === 'string' ? g.customEndDate : '';
                     globalNotice = typeof g.globalNotice === 'string' ? g.globalNotice : '';
                 } catch(e) {
-                    HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; globalNotice = '';
+                    HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; IMPORTANT_LABELS = {}; IMPORTANT_VISIBLE = {}; globalNotice = '';
                 }
             } else {
-                HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; globalNotice = '';
+                HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; IMPORTANT_LABELS = {}; IMPORTANT_VISIBLE = {}; globalNotice = '';
             }
 
             // 사용자 지정 시작/종료일 적용 후 SESSION_DATES 재생성
@@ -2430,7 +2488,7 @@
                 add_name: t.add_name || '', add_amount: add,
                 disc_name: t.disc_name || '', disc_amount: disc,
                 baseTuition: baseTuition,
-                grandTotal: baseTuition + add - disc
+                grandTotal: Math.floor((baseTuition + add - disc) / 10) * 10
             };
         }
         function toggleSentKakao(id, event) {
@@ -3665,6 +3723,13 @@
                     const makeupLabel = (MAKEUP_LABELS[dateStr] && MAKEUP_LABELS[dateStr].trim()) || '학원보강일 (사전신청)';
                     content += `<div class="makeup-banner"><i class="fa-solid fa-bell"></i><span>${_escapeHtml(makeupLabel)}</span></div>`;
                 }
+                // 주요일정: 달력엔 항상 보이되, 이미지 저장 시엔 '표시 학생'으로 지정된 경우에만 유지
+                if (IMPORTANT_DAYS.includes(dateStr)) {
+                    const impLabel = (IMPORTANT_LABELS[dateStr] && IMPORTANT_LABELS[dateStr].trim()) || '주요일정';
+                    const visList = Array.isArray(IMPORTANT_VISIBLE[dateStr]) ? IMPORTANT_VISIBLE[dateStr] : [];
+                    const shownOnExport = currentStudentId != null && visList.includes(currentStudentId);
+                    content += `<span class="important-label${shownOnExport ? '' : ' important-hidden'}">${_escapeHtml(impLabel)}</span>`;
+                }
 
                 // 모든 날짜(휴일/공휴일/일요일 포함)에 대해 entries 렌더링 — 특수 보강 등 입력 가능
                 const entries = [];
@@ -4555,6 +4620,9 @@
                 closureLabels: CLOSURE_LABELS,
                 makeupDays: MAKEUP_DAYS,
                 makeupLabels: MAKEUP_LABELS,
+                importantDays: IMPORTANT_DAYS,
+                importantLabels: IMPORTANT_LABELS,
+                importantVisible: IMPORTANT_VISIBLE,
                 customStartDate: window.customStartDate || '',
                 customEndDate: window.customEndDate || '',
                 globalNotice: globalNotice
@@ -4567,6 +4635,9 @@
             window.CLOSURE_LABELS = CLOSURE_LABELS;
             window.MAKEUP_DAYS = MAKEUP_DAYS;
             window.MAKEUP_LABELS = MAKEUP_LABELS;
+            window.IMPORTANT_DAYS = IMPORTANT_DAYS;
+            window.IMPORTANT_LABELS = IMPORTANT_LABELS;
+            window.IMPORTANT_VISIBLE = IMPORTANT_VISIBLE;
             window.globalNotice = globalNotice;
 
             // 클라우드(Firebase)에 월별 데이터 전송
@@ -4588,7 +4659,7 @@
                 students: studentList,
                 attendance: attendanceData,
                 tuition: tuitionData,
-                global: { holidays: HOLIDAYS, closureDays: CLOSURE_DAYS, holidayLabels: HOLIDAY_LABELS, closureLabels: CLOSURE_LABELS, makeupDays: MAKEUP_DAYS, makeupLabels: MAKEUP_LABELS, customStartDate: window.customStartDate || '', customEndDate: window.customEndDate || '', globalNotice: globalNotice }
+                global: { holidays: HOLIDAYS, closureDays: CLOSURE_DAYS, holidayLabels: HOLIDAY_LABELS, closureLabels: CLOSURE_LABELS, makeupDays: MAKEUP_DAYS, makeupLabels: MAKEUP_LABELS, importantDays: IMPORTANT_DAYS, importantLabels: IMPORTANT_LABELS, importantVisible: IMPORTANT_VISIBLE, customStartDate: window.customStartDate || '', customEndDate: window.customEndDate || '', globalNotice: globalNotice }
             };
             const dataStr = JSON.stringify(exportData, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
@@ -4620,6 +4691,9 @@
                         CLOSURE_LABELS = (loaded.global.closureLabels && typeof loaded.global.closureLabels === 'object') ? loaded.global.closureLabels : {};
                         MAKEUP_DAYS = Array.isArray(loaded.global.makeupDays) ? loaded.global.makeupDays : [];
                         MAKEUP_LABELS = (loaded.global.makeupLabels && typeof loaded.global.makeupLabels === 'object') ? loaded.global.makeupLabels : {};
+                        IMPORTANT_DAYS = Array.isArray(loaded.global.importantDays) ? loaded.global.importantDays : [];
+                        IMPORTANT_LABELS = (loaded.global.importantLabels && typeof loaded.global.importantLabels === 'object') ? loaded.global.importantLabels : {};
+                        IMPORTANT_VISIBLE = (loaded.global.importantVisible && typeof loaded.global.importantVisible === 'object') ? loaded.global.importantVisible : {};
                         window.customStartDate = typeof loaded.global.customStartDate === 'string' ? loaded.global.customStartDate : '';
                         window.customEndDate = typeof loaded.global.customEndDate === 'string' ? loaded.global.customEndDate : '';
                         globalNotice = typeof loaded.global.globalNotice === 'string' ? loaded.global.globalNotice : '';
@@ -4629,6 +4703,9 @@
                         window.CLOSURE_LABELS = CLOSURE_LABELS;
                         window.MAKEUP_DAYS = MAKEUP_DAYS;
                         window.MAKEUP_LABELS = MAKEUP_LABELS;
+                        window.IMPORTANT_DAYS = IMPORTANT_DAYS;
+                        window.IMPORTANT_LABELS = IMPORTANT_LABELS;
+                        window.IMPORTANT_VISIBLE = IMPORTANT_VISIBLE;
                         window.globalNotice = globalNotice;
                         // 사용자 지정 시작/종료일 즉시 반영
                         if (window.customStartDate) window.APP_CONFIG.startDate = window.customStartDate;
@@ -4938,6 +5015,7 @@
             renderHolidayList();
             renderClosureList();
             renderMakeupList();
+            renderImportantList();
             document.getElementById('globalNoticeInput').value = globalNotice || '';
 
             // 사용자 지정 시작/종료일을 입력창에 표시 (없으면 현재 적용된 값으로 채움)
@@ -4956,9 +5034,11 @@
             document.getElementById('newHolidayDate').value = def;
             document.getElementById('newClosureDate').value = def;
             document.getElementById('newMakeupDate').value = def;
+            document.getElementById('newImportantDate').value = def;
             document.getElementById('newHolidayLabel').value = '';
             document.getElementById('newClosureLabel').value = '';
             document.getElementById('newMakeupLabel').value = '';
+            document.getElementById('newImportantLabel').value = '';
 
             const modal = document.getElementById('monthSettingsModal');
             modal.classList.remove('hidden');
@@ -5107,6 +5187,141 @@
             window.MAKEUP_DAYS = MAKEUP_DAYS;
             window.MAKEUP_LABELS = MAKEUP_LABELS;
             renderMakeupList();
+        }
+
+        // ─── 주요일정 ───
+        function renderImportantList() {
+            const container = document.getElementById('importantList');
+            const sorted = [...IMPORTANT_DAYS].sort();
+            if (sorted.length === 0) {
+                container.innerHTML = '<span class="text-xs text-slate-400 px-2 py-1">등록된 주요일정이 없습니다.</span>';
+                return;
+            }
+            container.innerHTML = sorted.map(d => {
+                const raw = (IMPORTANT_LABELS[d] || '').trim();
+                const labelHtml = raw
+                    ? `<span class="px-1.5 py-0.5 bg-violet-200 text-violet-800 rounded text-[11px]">${_escapeHtml(raw)}</span>`
+                    : `<span class="text-violet-400 text-[11px] italic">주요일정</span>`;
+                const visList = Array.isArray(IMPORTANT_VISIBLE[d]) ? IMPORTANT_VISIBLE[d] : [];
+                const visNames = visList
+                    .map(id => (studentList.find(s => s.id === id) || {}).name)
+                    .filter(Boolean);
+                let visHtml;
+                if (visNames.length === 0) {
+                    visHtml = `<span class="text-[11px] text-slate-400"><i class="fa-solid fa-eye-slash mr-1"></i>나만 보기 (이미지 저장 제외)</span>`;
+                } else {
+                    const shown = visNames.slice(0, 4).join(', ');
+                    const more = visNames.length > 4 ? ` 외 ${visNames.length - 4}명` : '';
+                    visHtml = `<span class="text-[11px] text-violet-600 font-bold"><i class="fa-solid fa-user-check mr-1"></i>${_escapeHtml(shown)}${more} 에게 표시</span>`;
+                }
+                return `
+                <div class="flex items-center justify-between gap-2 bg-white border border-violet-100 rounded-lg px-3 py-2">
+                    <div class="flex flex-col gap-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-xs font-bold text-violet-700">${d}</span>
+                            <span class="text-violet-400 text-xs">${_formatKDate(d)}</span>
+                            ${labelHtml}
+                        </div>
+                        ${visHtml}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="openImportantVisibleModal('${d}')" class="text-xs bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg font-bold transition"><i class="fa-solid fa-user-gear mr-1"></i>학생 지정</button>
+                        <button onclick="removeImportantDay('${d}')" class="text-slate-300 hover:text-red-500 transition px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addImportantDay() {
+            const v = document.getElementById('newImportantDate').value;
+            const labelEl = document.getElementById('newImportantLabel');
+            const labelVal = (labelEl.value || '').trim();
+            if (!v) return alert('날짜를 선택해주세요.');
+            if (IMPORTANT_DAYS.includes(v)) return alert('이미 등록된 날짜입니다.');
+            IMPORTANT_DAYS.push(v);
+            if (labelVal) IMPORTANT_LABELS[v] = labelVal;
+            labelEl.value = '';
+            window.IMPORTANT_DAYS = IMPORTANT_DAYS;
+            window.IMPORTANT_LABELS = IMPORTANT_LABELS;
+            renderImportantList();
+        }
+
+        function removeImportantDay(d) {
+            IMPORTANT_DAYS = IMPORTANT_DAYS.filter(x => x !== d);
+            delete IMPORTANT_LABELS[d];
+            delete IMPORTANT_VISIBLE[d];
+            window.IMPORTANT_DAYS = IMPORTANT_DAYS;
+            window.IMPORTANT_LABELS = IMPORTANT_LABELS;
+            window.IMPORTANT_VISIBLE = IMPORTANT_VISIBLE;
+            renderImportantList();
+        }
+
+        // ─── 주요일정: 표시 학생 지정 서브 모달 ───
+        var _ivmDate = null;          // 현재 편집 중인 주요일정 날짜
+        var _ivmSelected = new Set(); // 임시 선택 상태
+
+        function openImportantVisibleModal(d) {
+            _ivmDate = d;
+            _ivmSelected = new Set(Array.isArray(IMPORTANT_VISIBLE[d]) ? IMPORTANT_VISIBLE[d] : []);
+            const rawLabel = (IMPORTANT_LABELS[d] || '').trim() || '주요일정';
+            document.getElementById('ivmDateLabel').textContent = `${_formatKDate(d)} · ${rawLabel}`;
+            document.getElementById('ivmSearch').value = '';
+            renderImportantVisiblePicker();
+            const modal = document.getElementById('importantVisibleModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeImportantVisibleModal() {
+            const modal = document.getElementById('importantVisibleModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            _ivmDate = null;
+        }
+
+        function renderImportantVisiblePicker() {
+            const container = document.getElementById('ivmStudentList');
+            const q = (document.getElementById('ivmSearch').value || '').trim().toLowerCase();
+            const list = studentList.filter(s => !q || (s.name || '').toLowerCase().includes(q));
+            if (list.length === 0) {
+                container.innerHTML = '<span class="col-span-2 text-xs text-slate-400 px-2 py-4 text-center">학생이 없습니다.</span>';
+            } else {
+                container.innerHTML = list.map(s => {
+                    const on = _ivmSelected.has(s.id);
+                    const grp = s.group ? `<span class="text-[10px] text-slate-400 ml-1">${_escapeHtml(s.group)}</span>` : '';
+                    return `<button type="button" onclick="ivmToggle(${JSON.stringify(s.id)})" class="flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition ${on ? 'bg-violet-50 border-violet-300' : 'bg-white border-slate-200 hover:bg-slate-50'}">
+                        <i class="fa-${on ? 'solid' : 'regular'} fa-square-check ${on ? 'text-violet-600' : 'text-slate-300'}"></i>
+                        <span class="text-sm font-bold text-slate-700 truncate">${_escapeHtml(s.name || '이름없음')}</span>${grp}
+                    </button>`;
+                }).join('');
+            }
+            document.getElementById('ivmCount').textContent = `${_ivmSelected.size}명 선택됨`;
+        }
+
+        function ivmToggle(id) {
+            if (_ivmSelected.has(id)) _ivmSelected.delete(id);
+            else _ivmSelected.add(id);
+            renderImportantVisiblePicker();
+        }
+
+        function ivmSelectAll(on) {
+            if (on) {
+                const q = (document.getElementById('ivmSearch').value || '').trim().toLowerCase();
+                studentList.filter(s => !q || (s.name || '').toLowerCase().includes(q)).forEach(s => _ivmSelected.add(s.id));
+            } else {
+                _ivmSelected.clear();
+            }
+            renderImportantVisiblePicker();
+        }
+
+        function saveImportantVisible() {
+            if (_ivmDate == null) return closeImportantVisibleModal();
+            const arr = [..._ivmSelected];
+            if (arr.length === 0) delete IMPORTANT_VISIBLE[_ivmDate];
+            else IMPORTANT_VISIBLE[_ivmDate] = arr;
+            window.IMPORTANT_VISIBLE = IMPORTANT_VISIBLE;
+            renderImportantList();
+            closeImportantVisibleModal();
         }
 
         function applyGlobalNoticeToAll() {
