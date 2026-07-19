@@ -8,8 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 50%, #f0fdf4 100%); min-height: 100vh; }
+        body { font-family: 'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 50%, #f0fdf4 100%); min-height: 100vh; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -55,19 +56,17 @@
         .bg-one { background-color: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; }
         .bg-custom { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 
-        .day-number { font-size: 0.92rem; font-weight: 800; color: #334155; letter-spacing: -0.3px; }
-        .text-holiday { color: #ef4444; }
+        .day-number { font-size: 0.92rem; font-weight: 700; color: #334155; letter-spacing: -0.2px; font-variant-numeric: tabular-nums; }
+        .text-holiday { color: #e11d48; }
 
-        /* ─── 수업기준일 강조: 교습 기간(평일) 셀을 3중 신호로 강조 ─── */
-        /* ① 셀 전체 옅은 남색 틴트 + 테두리 강조 ② 헤더 띠 진하게 ③ 날짜 숫자 남색 */
-        .calendar-day.in-session { background-color: #f5f7ff; border-color: #c7d2fe; }
-        .calendar-day.in-session .day-header-strip { background-color: #dbe4ff; }
+        /* ─── 수업기준일 강조 (A안): 틴트 + 인디고 테두리 + 인디고 날짜 숫자 3중 신호 (헤더 띠 없음) ─── */
+        .calendar-day.in-session { background-color: #f6f8ff; border-color: #c7d2fe; }
         .calendar-day.in-session .day-number { color: #4338ca; }
 
         /* ─── 수업 기준 범위 밖(인접 달에서 넘어온 채움 날짜): 은은하게 뒤로 물러나도록 ─── */
         /* opacity 대신 배경/날짜숫자만 회색 처리 → 범위 밖에 있는 실제 수업 뱃지는 선명하게 유지 */
-        .calendar-day.out-of-session { background-color: #f9fafb; }
-        .calendar-day.out-of-session .day-number { color: #cbd5e1; }
+        .calendar-day.out-of-session { background-color: #f8fafc; }
+        .calendar-day.out-of-session .day-number { color: #c2c9d6; }
 
         /* ─── 학원보강일 표시: 시인성 강화 ─── */
         .makeup-pill { font-size: 10.5px; line-height: 1; background: #4f46e5; color: #fff; padding: 2.5px 7px; border-radius: 5px; box-shadow: 0 1px 3px rgba(79,70,229,0.45); font-weight: 800; white-space: nowrap; letter-spacing: -0.2px; }
@@ -86,7 +85,7 @@
         }
         .badge-label {
             display: block;
-            font-size: 12px; font-weight: 700; letter-spacing: 0;
+            font-size: 12px; font-weight: 800; letter-spacing: 0;
             line-height: 1.45;   /* 한글 받침 확보 */
             white-space: nowrap;
             /* overflow: hidden 제거 — 받침 수직 클리핑 방지 */
@@ -95,10 +94,11 @@
         .badge-time {
             display: block;
             margin-top: 1px;
-            font-size: 12.5px; font-weight: 700; letter-spacing: -0.2px;
+            font-size: 12.5px; font-weight: 600; letter-spacing: 0;
             line-height: 1.4;
             opacity: 1; white-space: nowrap;
             font-variant-numeric: tabular-nums;
+            color: #475569; /* A안: 시간은 과목색 대신 슬레이트로 통일 — 대비·가독성 ↑ */
         }
         .badge-solo .badge-label { font-size: 12.5px; }
 
@@ -215,17 +215,25 @@
             line-height: 1 !important;
         }
 
-        /* Subject Colors — Present */
-        .badge-eng-present       { background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e3a8a; }
-        .badge-math-present      { background-color: #ffedd5; border: 1px solid #fdba74; color: #9a3412; }
-        .badge-supp-present      { background-color: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
-        .badge-supp-eng-present  { background-color: #bfdbfe; border: 1px solid #60a5fa; color: #1e3a8a; }
-        .badge-supp-math-present { background-color: #fed7aa; border: 1px solid #fb923c; color: #9a3412; }
-        .badge-spec-present      { background-color: #e9d5ff; border: 1px solid #c084fc; color: #6b21a8; }
-        .badge-spec-eng-present  { background-color: #ede9fe; border: 1px solid #c4b5fd; color: #5b21b6; }
-        .badge-spec-math-present { background-color: #fae8ff; border: 1px solid #e9a0f5; color: #86198f; }
-        .badge-oneonone-present  { background-color: #ccfbf1; border: 1px solid #5eead4; color: #0f766e; }
-        .badge-custom-present    { background-color: #fecaca; border: 1px solid #fca5a5; color: #991b1b; }
+        /* Subject Colors — Present (A안: 흰 바탕 + 과목색 왼쪽 바 3px + 과목색 라벨) */
+        .badge-eng-present, .badge-math-present, .badge-supp-present,
+        .badge-supp-eng-present, .badge-supp-math-present, .badge-spec-present,
+        .badge-spec-eng-present, .badge-spec-math-present, .badge-oneonone-present,
+        .badge-custom-present {
+            background-color: #ffffff;
+            border: 1px solid #e8eaf1;
+            border-left: 3px solid var(--bar, #94a3b8);
+        }
+        .badge-eng-present       { --bar: #3b82f6; color: #1d4ed8; }
+        .badge-math-present      { --bar: #f97316; color: #c2410c; }
+        .badge-supp-present      { --bar: #f59e0b; color: #92400e; }
+        .badge-supp-eng-present  { --bar: #2563eb; color: #1e3a8a; }
+        .badge-supp-math-present { --bar: #ea580c; color: #9a3412; }
+        .badge-spec-present      { --bar: #a855f7; color: #7e22ce; }
+        .badge-spec-eng-present  { --bar: #8b5cf6; color: #6d28d9; }
+        .badge-spec-math-present { --bar: #d946ef; color: #a21caf; }
+        .badge-oneonone-present  { --bar: #14b8a6; color: #0f766e; }
+        .badge-custom-present    { --bar: #ef4444; color: #b91c1c; }
 
         /* Absent — 과목별 배경을 은은히 유지하되 회색으로 누그러뜨리고 "결석" 태그를 빨강으로 강조 */
         .badge-eng-absent, .badge-math-absent, .badge-supp-absent,
@@ -1809,7 +1817,7 @@
             const accentColor = isRose ? '#e11d48' : '#f59e0b';
             const labelColor = isRose ? '#9f1239' : '#b45309';
             const borderColor = isRose ? '#fda4af' : '#fde68a';
-            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+            const baseFont = "font-family:'Pretendard Variable',Pretendard,'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
 
             const lines = String(rawText).split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             if (!lines.length) return '';
@@ -1858,7 +1866,7 @@
             const noticeHtml = _renderNoticeBullets(noticeText, 'amber');
             const personalHtml = personalText && personalText.trim() ? _renderNoticeBullets(personalText, 'rose') : '';
             if (!noticeHtml && !personalHtml) return '';
-            const baseFont = "font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+            const baseFont = "font-family:'Pretendard Variable',Pretendard,'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
             // 알약 배지 — line-height를 padding 포함 박스 높이와 같게 강제, 아이콘 없음
             // height와 line-height를 글자 크기에 거의 맞춰 한글 leading 흡수
             const pill = (bg, text) => `<span style="${baseFont}display:inline-block;background:${bg};color:#fff;font-weight:800;font-size:13px;letter-spacing:0.3px;padding:6px 12px 7px;border-radius:999px;line-height:1;vertical-align:middle;">${_escapeHtml(text)}</span>`;
@@ -5854,7 +5862,7 @@
 
             // 임시 캡처 컨테이너 생성
             const wrap = document.createElement('div');
-            wrap.style.cssText = 'position:fixed; left:-99999px; top:0; width:480px; background:white; padding:20px; font-family:"Noto Sans KR",sans-serif;';
+            wrap.style.cssText = 'position:fixed; left:-99999px; top:0; width:480px; background:white; padding:20px; font-family:"Pretendard Variable",Pretendard,"Noto Sans KR",sans-serif;';
             document.body.appendChild(wrap);
 
             const monthTitle = window.APP_CONFIG.monthTitle;
