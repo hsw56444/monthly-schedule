@@ -192,6 +192,7 @@
         .exporting .important-hidden { display: none !important; }
 
         /* ─── 이미지 캡처 전용 보정 (html2canvas 한글 받침/라인박스 어긋남 방지) ─── */
+        .exporting .print-student-name { padding: 6px 22px 10px; line-height: 1.5; }
         .exporting .badge { padding: 6px 8px 8px; }
         .exporting .badge-label {
             line-height: 1.7;
@@ -886,7 +887,7 @@
                         <div id="capture-target-apr" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <div class="flex justify-between items-end mb-3">
                                 <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded">2026</span> <span class="month-title">4월</span></h3>
-                                <div class="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded print-student-name hidden"></div>
+                                <div class="print-student-name hidden" style="font-size:1.2rem;font-weight:800;color:#ffffff;background:#4f46e5;background:linear-gradient(135deg,#4338ca,#6366f1);padding:8px 22px;border-radius:9999px;box-shadow:0 4px 12px rgba(67,56,202,0.35);letter-spacing:-0.02em;white-space:nowrap;line-height:1.45;"></div>
                                 <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="stat-apr"></div>
                             </div>
 
