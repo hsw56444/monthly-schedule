@@ -1433,12 +1433,22 @@
 
                 <!-- 전체 공지사항 -->
                 <div>
-                    <label class="block text-sm font-bold text-amber-600 mb-2"><i class="fa-regular fa-comment-dots mr-1"></i> 전체 공지사항 <span class="text-xs text-slate-400 font-normal ml-1">(개별 학생 페이지에서 수정 가능)</span></label>
+                    <label class="block text-sm font-bold text-amber-600 mb-2"><i class="fa-regular fa-comment-dots mr-1"></i> 전체 공지사항 <span class="text-xs text-slate-400 font-normal ml-1">(아래 <b class="text-amber-600">학생 지정 공지</b>에 포함되지 않은 학생에게 표시. 개별 학생 페이지에서 수정 가능)</span></label>
                     <textarea id="globalNoticeInput" class="w-full border border-amber-200 bg-amber-50 focus:bg-white focus:border-amber-400 rounded-lg p-3 text-sm resize-none outline-none transition" rows="4" placeholder="모든 학생에게 일괄 적용할 공지사항을 입력하세요."></textarea>
                     <div class="flex gap-2 mt-2">
                         <button onclick="applyGlobalNoticeToAll()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition"><i class="fa-solid fa-bullhorn mr-1"></i> 모든 학생에게 일괄 적용</button>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-2"><i class="fa-solid fa-circle-info text-amber-400 mr-1"></i>일괄 적용 시 각 학생의 기존 공지가 덮어씌워집니다. 이후 학생별로 자유롭게 수정 가능합니다.</p>
+                    <p class="text-[11px] text-slate-400 mt-2"><i class="fa-solid fa-circle-info text-amber-400 mr-1"></i>일괄 적용 시 각 학생의 기존 공지가 (지정 공지 대상은 지정 공지 내용으로) 덮어씌워집니다. 이후 학생별로 자유롭게 수정 가능합니다.</p>
+                </div>
+
+                <!-- 학생 지정 공지 (초등/중등 등 특정 학생에게만 다른 공지) -->
+                <div>
+                    <label class="block text-sm font-bold text-amber-700 mb-2"><i class="fa-solid fa-users-rectangle mr-1"></i> 학생 지정 공지 <span class="text-xs text-slate-400 font-normal ml-1">(특정 학생에게만 다른 공지. 예: 초등 / 중등 안내가 다를 때. 지정된 학생은 이 공지가 전체 공지 대신 표시됩니다)</span></label>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <textarea id="newNoticeGroupText" rows="2" placeholder="예: 초등부는 8/1~8/5 여름특강 진행합니다." class="border border-amber-200 bg-amber-50 focus:bg-white focus:border-amber-400 rounded-lg p-2 text-sm flex-1 min-w-[180px] resize-none outline-none transition"></textarea>
+                        <button onclick="addNoticeGroup()" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold transition shrink-0 self-start"><i class="fa-solid fa-plus"></i> 추가</button>
+                    </div>
+                    <div id="noticeGroupList" class="flex flex-col gap-2 min-h-[40px] p-2 bg-slate-50 rounded-lg border border-slate-100"></div>
                 </div>
             </div>
 
@@ -1452,10 +1462,10 @@
     <!-- 주요일정: 표시 학생 지정 모달 -->
     <div id="importantVisibleModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[95] p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="bg-violet-700 p-4 flex justify-between items-center text-white shrink-0">
+            <div id="ivmHeader" class="bg-violet-700 p-4 flex justify-between items-center text-white shrink-0">
                 <div>
-                    <h3 class="font-bold text-base flex items-center gap-2"><i class="fa-solid fa-user-check"></i> 표시 학생 지정</h3>
-                    <p class="text-xs opacity-70 mt-0.5"><span id="ivmDateLabel" class="font-bold"></span> — 선택한 학생의 <b>이미지 저장</b>에만 이 일정이 표시됩니다</p>
+                    <h3 id="ivmTitle" class="font-bold text-base flex items-center gap-2"><i class="fa-solid fa-user-check"></i> 표시 학생 지정</h3>
+                    <p id="ivmSubtitle" class="text-xs opacity-70 mt-0.5"><span id="ivmDateLabel" class="font-bold"></span> — 선택한 학생의 <b>이미지 저장</b>에만 이 일정이 표시됩니다</p>
                 </div>
                 <button onclick="closeImportantVisibleModal()" class="text-violet-200 hover:text-white transition ml-4 shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
@@ -1469,7 +1479,7 @@
                 <span id="ivmCount" class="text-xs text-slate-400 font-bold"></span>
                 <div class="flex gap-2">
                     <button onclick="closeImportantVisibleModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
-                    <button onclick="saveImportantVisible()" class="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-bold shadow-md transition"><i class="fa-solid fa-check mr-1"></i> 적용</button>
+                    <button onclick="saveVisiblePicker()" class="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-bold shadow-md transition"><i class="fa-solid fa-check mr-1"></i> 적용</button>
                 </div>
             </div>
         </div>
@@ -1676,6 +1686,8 @@
                         window.customStartDate = typeof data.global.customStartDate === 'string' ? data.global.customStartDate : '';
                         window.customEndDate = typeof data.global.customEndDate === 'string' ? data.global.customEndDate : '';
                         window.globalNotice = typeof data.global.globalNotice === 'string' ? data.global.globalNotice : '';
+                        window.NOTICE_GROUPS = _normalizeNoticeGroups(data.global.noticeGroups);
+                        NOTICE_GROUPS = window.NOTICE_GROUPS;
                         try {
                             localStorage.setItem(`regularClassGlobal_${dbName}`, JSON.stringify({
                                 holidays: window.HOLIDAYS,
@@ -1738,7 +1750,8 @@
                         importantDays: window.IMPORTANT_DAYS || [],
                         customStartDate: window.customStartDate || '',
                         customEndDate: window.customEndDate || '',
-                        globalNotice: window.globalNotice || ''
+                        globalNotice: window.globalNotice || '',
+                        noticeGroups: window.NOTICE_GROUPS || []
                     },
                     updatedAt:  new Date().toISOString()
                 });
@@ -1794,7 +1807,31 @@
         var MAKEUP_DAYS = []; // 학원 보강일 (사전신청, 모든 학생 달력에 표시)
         var MAKEUP_LABELS = {}; // { 'YYYY-MM-DD': '커스텀 라벨' } — 비워두면 기본 "학원보강일 (사전신청)"
         var IMPORTANT_DAYS = []; // 주요일정: [{id, date:'YYYY-MM-DD', label, visible:[studentId,...]}] — 같은 날짜에 여러 건 등록 가능, 기본은 '나만 보기'(이미지 저장 시 제외)
-        var globalNotice = ''; // 월별 전체 공지사항 (학생별로 덮어쓰기 가능)
+        var globalNotice = ''; // 월별 전체 공지사항 (지정 공지에 포함되지 않은 학생의 기본값)
+        var NOTICE_GROUPS = []; // 학생 지정 공지: [{id, text, target:[studentId,...]}] — 특정 학생에게만 다른 공지 (예: 초등/중등)
+
+        // 구버전/외부 데이터를 NOTICE_GROUPS 구조로 정규화
+        function _normalizeNoticeGroups(raw) {
+            if (!Array.isArray(raw)) return [];
+            return raw.map((item, idx) => {
+                const uid = 'ng_' + Date.now().toString(36) + '_' + idx + '_' + Math.random().toString(36).slice(2, 7);
+                if (item && typeof item === 'object') {
+                    return {
+                        id: item.id || uid,
+                        text: typeof item.text === 'string' ? item.text : '',
+                        target: Array.isArray(item.target) ? item.target : []
+                    };
+                }
+                return { id: uid, text: '', target: [] };
+            });
+        }
+
+        // 학생별 기본 공지: 지정 공지에 포함되면 그 텍스트, 아니면 전체 공지
+        function getGlobalNoticeForStudent(studentId) {
+            const grp = NOTICE_GROUPS.find(g => Array.isArray(g.target) && g.target.includes(studentId));
+            if (grp) return grp.text || '';
+            return globalNotice || '';
+        }
 
         // 구버전(날짜 1건당 1항목) 데이터를 새 구조(엔트리 배열)로 변환
         function _normalizeImportantEntries(rawDays, rawLabels, rawVisible) {
@@ -2028,11 +2065,12 @@
                     customStartDate = typeof g.customStartDate === 'string' ? g.customStartDate : '';
                     customEndDate = typeof g.customEndDate === 'string' ? g.customEndDate : '';
                     globalNotice = typeof g.globalNotice === 'string' ? g.globalNotice : '';
+                    NOTICE_GROUPS = _normalizeNoticeGroups(g.noticeGroups);
                 } catch(e) {
-                    HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; globalNotice = '';
+                    HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; globalNotice = ''; NOTICE_GROUPS = [];
                 }
             } else {
-                HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; globalNotice = '';
+                HOLIDAYS = []; CLOSURE_DAYS = []; HOLIDAY_LABELS = {}; CLOSURE_LABELS = {}; MAKEUP_DAYS = []; MAKEUP_LABELS = {}; IMPORTANT_DAYS = []; globalNotice = ''; NOTICE_GROUPS = [];
             }
 
             // 사용자 지정 시작/종료일 적용 후 SESSION_DATES 재생성
@@ -2050,6 +2088,7 @@
             window.customStartDate = customStartDate;
             window.customEndDate = customEndDate;
             window.globalNotice = globalNotice;
+            window.NOTICE_GROUPS = NOTICE_GROUPS;
         }
 
         // roster 로컬 로드 (과거의 월별 학생 데이터에서 마이그레이션 포함)
@@ -3228,7 +3267,7 @@
                 const logsA = (attendanceData[studentId] && attendanceData[studentId]['A']) ? attendanceData[studentId]['A'] : {};
                 const noticeEl = document.getElementById('student-notice');
                 const personalEl = document.getElementById('student-personal-notice');
-                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : (globalNotice || '');
+                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : getGlobalNoticeForStudent(studentId);
                 if (personalEl) personalEl.value = logsA.__personalNotice || '';
                 if (typeof refreshNoticePreview === 'function') refreshNoticePreview();
             } catch (e) {}
@@ -3280,7 +3319,7 @@
                 const logsA = (currentStudentId && attendanceData[currentStudentId] && attendanceData[currentStudentId][currentOption]) ? attendanceData[currentStudentId][currentOption] : {};
                 const noticeEl = document.getElementById('student-notice');
                 const personalEl = document.getElementById('student-personal-notice');
-                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : (globalNotice || '');
+                if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : getGlobalNoticeForStudent(currentStudentId);
                 if (personalEl) personalEl.value = logsA.__personalNotice || '';
                 if (typeof refreshNoticePreview === 'function') refreshNoticePreview();
             } catch (e) {}
@@ -3480,7 +3519,7 @@
 
             // 학생별 공지가 설정되어 있지 않으면(undefined) 전체 공지를 기본으로 표시
             const studentNotice = attendanceData[currentStudentId][currentOption]?.__notice;
-            const notice = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : (globalNotice || '');
+            const notice = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : getGlobalNoticeForStudent(currentStudentId);
             document.getElementById('student-notice').value = notice;
 
             // 개인별 안내사항 (전체 공지와 별개, 빈 값이면 이미지에 표시 X)
@@ -4675,7 +4714,8 @@
                 importantDays: IMPORTANT_DAYS,
                 customStartDate: window.customStartDate || '',
                 customEndDate: window.customEndDate || '',
-                globalNotice: globalNotice
+                globalNotice: globalNotice,
+                noticeGroups: NOTICE_GROUPS
             }));
 
             // window 동기화
@@ -4687,6 +4727,7 @@
             window.MAKEUP_LABELS = MAKEUP_LABELS;
             window.IMPORTANT_DAYS = IMPORTANT_DAYS;
             window.globalNotice = globalNotice;
+            window.NOTICE_GROUPS = NOTICE_GROUPS;
 
             // 클라우드(Firebase)에 월별 데이터 전송
             if (window.triggerCloudSave) {
@@ -4707,7 +4748,7 @@
                 students: studentList,
                 attendance: attendanceData,
                 tuition: tuitionData,
-                global: { holidays: HOLIDAYS, closureDays: CLOSURE_DAYS, holidayLabels: HOLIDAY_LABELS, closureLabels: CLOSURE_LABELS, makeupDays: MAKEUP_DAYS, makeupLabels: MAKEUP_LABELS, importantDays: IMPORTANT_DAYS, customStartDate: window.customStartDate || '', customEndDate: window.customEndDate || '', globalNotice: globalNotice }
+                global: { holidays: HOLIDAYS, closureDays: CLOSURE_DAYS, holidayLabels: HOLIDAY_LABELS, closureLabels: CLOSURE_LABELS, makeupDays: MAKEUP_DAYS, makeupLabels: MAKEUP_LABELS, importantDays: IMPORTANT_DAYS, customStartDate: window.customStartDate || '', customEndDate: window.customEndDate || '', globalNotice: globalNotice, noticeGroups: NOTICE_GROUPS }
             };
             const dataStr = JSON.stringify(exportData, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
@@ -4743,6 +4784,8 @@
                         window.customStartDate = typeof loaded.global.customStartDate === 'string' ? loaded.global.customStartDate : '';
                         window.customEndDate = typeof loaded.global.customEndDate === 'string' ? loaded.global.customEndDate : '';
                         globalNotice = typeof loaded.global.globalNotice === 'string' ? loaded.global.globalNotice : '';
+                        NOTICE_GROUPS = _normalizeNoticeGroups(loaded.global.noticeGroups);
+                        window.NOTICE_GROUPS = NOTICE_GROUPS;
                         window.HOLIDAYS = HOLIDAYS;
                         window.CLOSURE_DAYS = CLOSURE_DAYS;
                         window.HOLIDAY_LABELS = HOLIDAY_LABELS;
@@ -5061,6 +5104,9 @@
             renderMakeupList();
             renderImportantList();
             document.getElementById('globalNoticeInput').value = globalNotice || '';
+            const ngText = document.getElementById('newNoticeGroupText');
+            if (ngText) ngText.value = '';
+            renderNoticeGroupList();
 
             // 사용자 지정 시작/종료일을 입력창에 표시 (없으면 현재 적용된 값으로 채움)
             document.getElementById('customStartDateInput').value = window.customStartDate || window.APP_CONFIG.startDate || '';
@@ -5299,17 +5345,16 @@
             renderImportantList();
         }
 
-        // ─── 주요일정: 표시 학생 지정 서브 모달 ───
-        var _ivmEntryId = null;       // 현재 편집 중인 주요일정 엔트리 id
+        // ─── 표시 학생 지정 서브 모달 (주요일정 / 학생 지정 공지 공용) ───
         var _ivmSelected = new Set(); // 임시 선택 상태
+        var _ivmOnSave = null;        // 적용 시 실행할 콜백: (selectedIds) => {}
 
-        function openImportantVisibleModal(id) {
-            const entry = IMPORTANT_DAYS.find(e => e.id === id);
-            if (!entry) return;
-            _ivmEntryId = id;
-            _ivmSelected = new Set(Array.isArray(entry.visible) ? entry.visible : []);
-            const rawLabel = (entry.label || '').trim() || '주요일정';
-            document.getElementById('ivmDateLabel').textContent = `${_formatKDate(entry.date)} · ${rawLabel}`;
+        // 공용 피커 열기
+        function openStudentPicker({ selected, title, subtitleHtml, onSave }) {
+            _ivmSelected = new Set(Array.isArray(selected) ? selected : []);
+            _ivmOnSave = typeof onSave === 'function' ? onSave : null;
+            document.getElementById('ivmTitle').innerHTML = title || '<i class="fa-solid fa-user-check"></i> 표시 학생 지정';
+            document.getElementById('ivmSubtitle').innerHTML = subtitleHtml || '';
             document.getElementById('ivmSearch').value = '';
             renderImportantVisiblePicker();
             const modal = document.getElementById('importantVisibleModal');
@@ -5317,11 +5362,28 @@
             modal.classList.add('flex');
         }
 
+        function openImportantVisibleModal(id) {
+            const entry = IMPORTANT_DAYS.find(e => e.id === id);
+            if (!entry) return;
+            const rawLabel = (entry.label || '').trim() || '주요일정';
+            openStudentPicker({
+                selected: entry.visible,
+                title: '<i class="fa-solid fa-user-check"></i> 표시 학생 지정',
+                subtitleHtml: `<span class="font-bold">${_escapeHtml(_formatKDate(entry.date))} · ${_escapeHtml(rawLabel)}</span> — 선택한 학생의 <b>이미지 저장</b>에만 이 일정이 표시됩니다`,
+                onSave: (ids) => {
+                    const e = IMPORTANT_DAYS.find(x => x.id === id);
+                    if (e) e.visible = ids;
+                    window.IMPORTANT_DAYS = IMPORTANT_DAYS;
+                    renderImportantList();
+                }
+            });
+        }
+
         function closeImportantVisibleModal() {
             const modal = document.getElementById('importantVisibleModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            _ivmEntryId = null;
+            _ivmOnSave = null;
         }
 
         function renderImportantVisiblePicker() {
@@ -5359,27 +5421,30 @@
             renderImportantVisiblePicker();
         }
 
-        function saveImportantVisible() {
-            if (_ivmEntryId == null) return closeImportantVisibleModal();
-            const entry = IMPORTANT_DAYS.find(e => e.id === _ivmEntryId);
-            if (entry) entry.visible = [..._ivmSelected];
-            window.IMPORTANT_DAYS = IMPORTANT_DAYS;
-            renderImportantList();
+        function saveVisiblePicker() {
+            const cb = _ivmOnSave;
+            const ids = [..._ivmSelected];
             closeImportantVisibleModal();
+            if (cb) cb(ids);
         }
 
         function applyGlobalNoticeToAll() {
             const text = document.getElementById('globalNoticeInput').value;
-            if (!confirm('현재 입력된 공지사항을 모든 학생(A/B 모두)에게 일괄 적용합니다.\n각 학생의 기존 공지는 덮어씌워집니다.\n계속하시겠습니까?')) return;
+            const hasGroups = NOTICE_GROUPS.some(g => Array.isArray(g.target) && g.target.length > 0);
+            const msg = hasGroups
+                ? '전체 공지사항 + 학생 지정 공지를 모든 학생(A/B 모두)에게 일괄 적용합니다.\n지정 공지 대상 학생은 지정 공지 내용으로, 나머지는 전체 공지로 적용됩니다.\n각 학생의 기존 공지는 덮어씌워집니다.\n계속하시겠습니까?'
+                : '현재 입력된 공지사항을 모든 학생(A/B 모두)에게 일괄 적용합니다.\n각 학생의 기존 공지는 덮어씌워집니다.\n계속하시겠습니까?';
+            if (!confirm(msg)) return;
 
             globalNotice = text;
             window.globalNotice = text;
 
             studentList.forEach(s => {
+                const noticeForStudent = getGlobalNoticeForStudent(s.id);
                 if (!attendanceData[s.id]) attendanceData[s.id] = { 'A': {}, 'B': {} };
                 ['A', 'B'].forEach(opt => {
                     if (!attendanceData[s.id][opt]) attendanceData[s.id][opt] = {};
-                    attendanceData[s.id][opt].__notice = text;
+                    attendanceData[s.id][opt].__notice = noticeForStudent;
                 });
             });
 
@@ -5387,10 +5452,84 @@
 
             // 현재 학생 모달이 열려 있으면 텍스트 영역 갱신
             if (currentStudentId && !document.getElementById('plannerModal').classList.contains('hidden')) {
-                document.getElementById('student-notice').value = text;
+                document.getElementById('student-notice').value = getGlobalNoticeForStudent(currentStudentId);
             }
 
             alert(`✅ ${studentList.length}명의 학생에게 공지사항이 일괄 적용되었습니다.`);
+        }
+
+        // ─── 학생 지정 공지 (초등/중등 등 특정 학생에게만 다른 공지) ───
+        function renderNoticeGroupList() {
+            const container = document.getElementById('noticeGroupList');
+            if (!container) return;
+            if (NOTICE_GROUPS.length === 0) {
+                container.innerHTML = '<span class="text-xs text-slate-400 px-2 py-1">등록된 학생 지정 공지가 없습니다.</span>';
+                return;
+            }
+            container.innerHTML = NOTICE_GROUPS.map(g => {
+                const targetNames = (Array.isArray(g.target) ? g.target : [])
+                    .map(id => (studentList.find(s => s.id === id) || {}).name)
+                    .filter(Boolean);
+                let tgtHtml;
+                if (targetNames.length === 0) {
+                    tgtHtml = `<span class="text-[11px] text-rose-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>지정된 학생 없음 (표시 안 됨) — [학생 지정]을 눌러주세요</span>`;
+                } else {
+                    const shown = targetNames.slice(0, 5).join(', ');
+                    const more = targetNames.length > 5 ? ` 외 ${targetNames.length - 5}명` : '';
+                    tgtHtml = `<span class="text-[11px] text-amber-700 font-bold"><i class="fa-solid fa-user-check mr-1"></i>${_escapeHtml(shown)}${more} 에게 표시</span>`;
+                }
+                const preview = (g.text || '').trim();
+                const previewHtml = preview
+                    ? `<span class="text-xs text-slate-600 whitespace-pre-wrap break-words">${_escapeHtml(preview)}</span>`
+                    : `<span class="text-xs text-slate-300 italic">(내용 없음)</span>`;
+                return `
+                <div class="flex items-start justify-between gap-2 bg-white border border-amber-100 rounded-lg px-3 py-2">
+                    <div class="flex flex-col gap-1 min-w-0 flex-1">
+                        ${previewHtml}
+                        ${tgtHtml}
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="openNoticeGroupVisibleModal('${g.id}')" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg font-bold transition"><i class="fa-solid fa-user-gear mr-1"></i>학생 지정</button>
+                        <button onclick="removeNoticeGroup('${g.id}')" class="text-slate-300 hover:text-red-500 transition px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addNoticeGroup() {
+            const el = document.getElementById('newNoticeGroupText');
+            const text = (el.value || '').trim();
+            if (!text) return alert('공지 내용을 입력해주세요.');
+            const id = 'ng_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+            NOTICE_GROUPS.push({ id, text, target: [] });
+            el.value = '';
+            window.NOTICE_GROUPS = NOTICE_GROUPS;
+            renderNoticeGroupList();
+            // 학생을 바로 지정할 수 있게 피커 열기
+            openNoticeGroupVisibleModal(id);
+        }
+
+        function removeNoticeGroup(id) {
+            NOTICE_GROUPS = NOTICE_GROUPS.filter(g => g.id !== id);
+            window.NOTICE_GROUPS = NOTICE_GROUPS;
+            renderNoticeGroupList();
+        }
+
+        function openNoticeGroupVisibleModal(id) {
+            const grp = NOTICE_GROUPS.find(g => g.id === id);
+            if (!grp) return;
+            const preview = (grp.text || '').trim().replace(/\s+/g, ' ').slice(0, 40) || '(내용 없음)';
+            openStudentPicker({
+                selected: grp.target,
+                title: '<i class="fa-solid fa-users-rectangle"></i> 지정 공지 대상 학생',
+                subtitleHtml: `<span class="font-bold">“${_escapeHtml(preview)}”</span> — 선택한 학생에게 이 공지가 전체 공지 대신 표시됩니다`,
+                onSave: (ids) => {
+                    const g = NOTICE_GROUPS.find(x => x.id === id);
+                    if (g) g.target = ids;
+                    window.NOTICE_GROUPS = NOTICE_GROUPS;
+                    renderNoticeGroupList();
+                }
+            });
         }
 
         function saveMonthSettings() {
