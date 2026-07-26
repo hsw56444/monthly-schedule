@@ -888,7 +888,7 @@
                                     <th class="px-3 py-3 text-right">기본 수업료</th>
                                     <th class="px-3 py-3 text-right">추가/할인</th>
                                     <th class="px-3 py-3 text-right text-indigo-700 font-bold">총 청구액</th>
-                                    <th class="px-3 py-3 text-center">확정</th>
+                                    <th class="px-3 py-3 text-center" title="수업시간·수업료가 확정된 학생은 O, 특강 신청 미정 등 아직 확정 전이면 클릭해서 X">확정</th>
                                     <th class="px-3 py-3 text-center">📤 카톡</th>
                                     <th class="px-3 py-3 text-center">💳 결제선생</th>
                                     <th class="px-3 py-3 text-center">💰 납부</th>
@@ -2645,13 +2645,24 @@
         // ─── 발송/결제선생/납부 상태 토글 ───
         function _ensureTuitionRecord(id) {
             if (!tuitionData[id]) {
-                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false, pay_method: '', partial_amount: 0 };
+                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false, pay_method: '', partial_amount: 0, is_confirmed: true };
             }
             const t = tuitionData[id];
             // 납부방법 도입 이전 데이터 보정: 납부완료였으나 방법이 없으면 '방법 미기재'로 표기
             if (t.pay_method === undefined) t.pay_method = t.is_paid ? 'etc' : '';
             if (t.partial_amount === undefined) t.partial_amount = 0;
+            // 수업료 확정 여부: 미지정이면 확정(O)으로 본다 → 미확정 학생만 직접 X로 내림
+            if (t.is_confirmed === undefined) t.is_confirmed = true;
             return t;
+        }
+
+        // 수업료 확정 토글 — 특강 신청 미정 등 수업시간이 아직 확정되지 않은 학생은 X로 표시
+        function toggleConfirmed(id, event) {
+            if (event) event.stopPropagation();
+            const t = _ensureTuitionRecord(id);
+            t.is_confirmed = (t.is_confirmed === false);
+            saveLocal();
+            renderTuitionList();
         }
 
         // ─── 납부 방법 ───
@@ -3023,10 +3034,8 @@
                 ? `${add > 0 ? `<span class="text-indigo-500">+${formatNumber(add)}</span>` : ''}${(add>0&&disc>0)?'<br>':''}${disc > 0 ? `<span class="text-red-500">-${formatNumber(disc)}</span>` : ''}`
                 : '-';
             const familyIcon = s.familyId ? '<span class="text-indigo-500 ml-1" title="형제 있음">👨‍👩‍👧</span>' : '';
-            // 수업료 확정 = 단가가 입력되어 청구액이 산출된 상태
-            const confirmPill = hasRates
-                ? `<span class="status-pill on" title="단가 입력 완료">O</span>`
-                : `<span class="status-pill off" title="단가 미입력">X</span>`;
+            // 수업료 확정 여부 — 클릭해서 직접 O/X 전환 (특강 신청 미정 등은 X)
+            const confirmPill = _statusPillHtml(t.is_confirmed !== false, 'O', 'X', 'toggleConfirmed', s.id, !hasRates);
             const kakaoPill = _statusPillHtml(t.is_sent_kakao, '✓', '✕', 'toggleSentKakao', s.id, !hasRates);
             const payappPill = _statusPillHtml(t.is_sent_payapp, '✓', '✕', 'toggleSentPayapp', s.id, !hasRates);
             trSum.innerHTML = `
