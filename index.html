@@ -1580,7 +1580,7 @@
                     </label>
                     <label class="flex items-center gap-1.5 cursor-pointer">
                         <input type="radio" name="tplApplyMode" value="overwrite" class="accent-red-500">
-                        <span class="text-slate-700 font-medium">전체 덮어쓰기</span>
+                        <span class="text-slate-700 font-medium">전체 덮어쓰기 <span class="text-[11px] text-rose-500 font-bold">(이번 달 기존 일정 모두 삭제)</span></span>
                     </label>
                 </div>
                 <div class="flex gap-2">
@@ -5244,6 +5244,18 @@
 
             const applyMode = document.querySelector('input[name="tplApplyMode"]:checked').value;
 
+            const targetDates = _getVisibleMonthDates();
+
+            // [전체 덮어쓰기] 이번 달의 기존 일정을 전부 지우고 템플릿만 남긴다.
+            // (미리 확인 — 취소하면 템플릿 저장도 하지 않고 아무것도 바꾸지 않음)
+            let clearedCount = 0;
+            if (applyMode === 'overwrite') {
+                const existing = attendanceData[currentStudentId]?.[currentOption] || {};
+                targetDates.forEach(dateStr => { clearedCount += countDayEntries(existing[dateStr]); });
+                const warn = `[전체 덮어쓰기]\n\n${window.APP_CONFIG.monthTitle} 달력의 기존 일정 ${clearedCount}건이 모두 삭제되고,\n정기 시간표로 입력한 내용만 남습니다.\n(보강·특강·직접입력 등 수동으로 넣은 일정도 함께 삭제됩니다)\n\n계속할까요?`;
+                if (!confirm(warn)) return;
+            }
+
             // 저장 먼저
             _saveTplToMemory();
             saveTemplates();
@@ -5253,8 +5265,17 @@
             if (!attendanceData[currentStudentId][currentOption]) attendanceData[currentStudentId][currentOption] = {};
             const optionData = attendanceData[currentStudentId][currentOption];
 
+            // 기존 일정 비우기 (__notice 등 메타키는 날짜키가 아니므로 그대로 보존)
+            if (applyMode === 'overwrite') {
+                targetDates.forEach(dateStr => {
+                    if (!optionData[dateStr]) return;
+                    delete optionData[dateStr];
+                    ALL_SUBJECT_KEYS.forEach(k => selectedCards.delete(dateStr + '|' + k));
+                });
+                updateBulkBar();
+            }
+
             let appliedCount = 0;
-            const targetDates = _getVisibleMonthDates();
 
             targetDates.forEach(dateStr => {
                 const dateObj = new Date(dateStr);
@@ -5287,7 +5308,8 @@
             renderCalendars();
             closeTemplateModal();
 
-            alert(`✅ 적용 완료!\n총 ${appliedCount}개 수업이 ${window.APP_CONFIG.monthTitle} 달력에 입력되었습니다.`);
+            const clearedMsg = applyMode === 'overwrite' ? `\n기존 일정 ${clearedCount}건은 삭제되었습니다.` : '';
+            alert(`✅ 적용 완료!\n총 ${appliedCount}개 수업이 ${window.APP_CONFIG.monthTitle} 달력에 입력되었습니다.${clearedMsg}`);
         }
 
         // ==================== /정기 시간표 템플릿 ====================
