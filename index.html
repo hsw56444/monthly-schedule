@@ -378,6 +378,25 @@
         .status-pill.disabled { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
         .status-pill.disabled:hover { transform: none; box-shadow: none; }
 
+        /* ─── 납부 방법 드롭다운 ─── */
+        .pay-select {
+            font-size: 0.72rem; font-weight: 700; color: #64748b;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 6px;
+            padding: 4px 6px; cursor: pointer; outline: none; max-width: 108px;
+            transition: border-color .15s, background .15s, color .15s;
+        }
+        .pay-select:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .pay-select.paid { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
+        .pay-select.partial { background: #fffbeb; border-color: #fcd34d; color: #b45309; }
+        .pay-partial-input {
+            display: block; width: 100%; max-width: 108px; margin: 4px auto 0;
+            text-align: right; font-size: 0.72rem; font-weight: 700; color: #b45309;
+            border: 1px solid #fcd34d; border-radius: 6px; padding: 3px 6px;
+            background: #fff; outline: none;
+        }
+        .pay-partial-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+        .pay-partial-rest { font-size: 9.5px; font-weight: 700; color: #94a3b8; margin-top: 2px; }
+
         /* Family group row */
         .family-group-row { background: linear-gradient(90deg, #eef2ff 0%, #f5f3ff 100%); }
         .family-group-row td { padding: 8px 16px; }
@@ -643,7 +662,7 @@
             #view-tuition .p-6 { padding: 0.75rem !important; }
             #view-tuition .px-6 { padding-left: 0.6rem !important; padding-right: 0.6rem !important; }
             #view-tuition h2 { font-size: 0.95rem; }
-            #view-tuition table { font-size: 0.78rem; min-width: 640px; }
+            #view-tuition table { font-size: 0.78rem; min-width: 980px; }
             #view-tuition th, #view-tuition td { padding: 6px 6px !important; }
 
             /* 수업료 필터/카운터 영역 줄바꿈 */
@@ -834,11 +853,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="openBulkRateModal()" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1"><i class="fa-solid fa-layer-group"></i> 단가 일괄적용</button>
-                            <button onclick="downloadTuitionExcel()" id="btn-excel-download" class="hidden text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1"><i class="fa-solid fa-file-excel"></i> 엑셀 다운로드</button>
-                            <div class="flex gap-1 bg-slate-100 p-1 rounded-full shadow-sm border border-slate-200">
-                                <button onclick="setTuitionTab('input')" id="t-btn-input" class="sub-tab active">입력 현황</button>
-                                <button onclick="setTuitionTab('summary')" id="t-btn-summary" class="sub-tab">요약 보기</button>
-                            </div>
+                            <button onclick="downloadTuitionExcel()" id="btn-excel-download" class="text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1"><i class="fa-solid fa-file-excel"></i> 엑셀 다운로드</button>
                         </div>
                     </div>
 
@@ -852,7 +867,7 @@
                         <div class="ml-auto flex items-center gap-3 text-[11px]">
                             <span class="text-slate-600"><span id="cnt-kakao" class="font-black text-rose-600">0</span> 미발송</span>
                             <span class="text-slate-600"><span id="cnt-payapp" class="font-black text-amber-600">0</span> 결제선생 미입력</span>
-                            <span class="text-slate-600"><span id="cnt-unpaid" class="font-black text-slate-700">0</span> 미납</span>
+                            <span class="text-slate-600"><span id="cnt-unpaid" class="font-black text-slate-700">0</span> 미납(부분납부 포함)</span>
                             <label class="flex items-center gap-1.5 cursor-pointer ml-2 pl-3 border-l border-slate-300">
                                 <input type="checkbox" id="sibling-toggle" onchange="renderTuitionList()" class="w-4 h-4 accent-indigo-600">
                                 <span class="font-bold text-slate-700">👨‍👩‍👧 형제 묶음 보기</span>
@@ -860,7 +875,7 @@
                         </div>
                     </div>
 
-                    <div id="tuition-input-view" class="overflow-x-auto">
+                    <div id="tuition-summary-view" class="overflow-x-auto">
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
                                 <tr>
@@ -869,28 +884,11 @@
                                     <th class="px-3 py-3">구분</th>
                                     <th class="px-3 py-3 text-center">영어</th>
                                     <th class="px-3 py-3 text-center">수학</th>
-                                    <th class="px-3 py-3 text-center">특강/1:1</th>
-                                    <th class="px-3 py-3 text-center">작성</th>
-                                    <th class="px-3 py-3 text-center">📤 카톡</th>
-                                    <th class="px-3 py-3 text-center">💳 결제선생</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tuition-list-body" class="divide-y divide-slate-100">
-                                </tbody>
-                        </table>
-                    </div>
-
-                    <div id="tuition-summary-view" class="overflow-x-auto hidden">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                <tr>
-                                    <th class="px-3 py-3 text-center" style="width:48px">#</th>
-                                    <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
-                                    <th class="px-3 py-3">구분</th>
-                                    <th class="px-3 py-3 text-center">총 시수</th>
+                                    <th class="px-3 py-3 text-center">기타</th>
                                     <th class="px-3 py-3 text-right">기본 수업료</th>
                                     <th class="px-3 py-3 text-right">추가/할인</th>
                                     <th class="px-3 py-3 text-right text-indigo-700 font-bold">총 청구액</th>
+                                    <th class="px-3 py-3 text-center">확정</th>
                                     <th class="px-3 py-3 text-center">📤 카톡</th>
                                     <th class="px-3 py-3 text-center">💳 결제선생</th>
                                     <th class="px-3 py-3 text-center">💰 납부</th>
@@ -2079,7 +2077,6 @@
         var currentFilter = 'all'; 
         var currentOption = 'A'; 
         var currentDirectorMode = 'day';
-        var currentTuitionTab = 'input';
         
         var scheduleClipboard = null;
         var isMultiSelectMode = false;
@@ -2645,44 +2642,57 @@
             renderStudentList(group);
         }
 
-        function setTuitionTab(tab) {
-            currentTuitionTab = tab;
-            
-            document.getElementById('t-btn-input').classList.remove('active');
-            document.getElementById('t-btn-summary').classList.remove('active');
-            
-            document.getElementById(`t-btn-${tab}`).classList.add('active');
-            
-            const excelBtn = document.getElementById('btn-excel-download');
-            
-            if (tab === 'input') {
-                document.getElementById('tuition-input-view').classList.remove('hidden');
-                document.getElementById('tuition-summary-view').classList.add('hidden');
-                excelBtn.classList.add('hidden');
-            } else {
-                document.getElementById('tuition-input-view').classList.add('hidden');
-                document.getElementById('tuition-summary-view').classList.remove('hidden');
-                excelBtn.classList.remove('hidden');
-            }
-        }
-        
         // ─── 발송/결제선생/납부 상태 토글 ───
         function _ensureTuitionRecord(id) {
             if (!tuitionData[id]) {
-                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false };
+                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false, pay_method: '', partial_amount: 0 };
             }
-            return tuitionData[id];
+            const t = tuitionData[id];
+            // 납부방법 도입 이전 데이터 보정: 납부완료였으나 방법이 없으면 '방법 미기재'로 표기
+            if (t.pay_method === undefined) t.pay_method = t.is_paid ? 'etc' : '';
+            if (t.partial_amount === undefined) t.partial_amount = 0;
+            return t;
         }
-        function togglePaymentStatus(id, event) {
+
+        // ─── 납부 방법 ───
+        // 완납(현장카드/결제선생/계좌이체/방법미기재) → is_paid=true, 부분납부·미납 → is_paid=false
+        var PAY_METHODS = {
+            card:     '현장카드',
+            payapp:   '결제선생',
+            transfer: '계좌이체',
+            partial:  '부분납부',
+            etc:      '납부완료(방법 미기재)'
+        };
+        var FULL_PAY_METHODS = ['card', 'payapp', 'transfer', 'etc'];
+
+        function setPaymentMethod(id, method, event) {
             if (event) event.stopPropagation();
             const t = _ensureTuitionRecord(id);
-            t.is_paid = !t.is_paid;
-            // 납부완료로 바뀌는 순간 청구서 확정 스냅샷 저장
-            if (t.is_paid) {
-                _confirmBillSnapshot(id);
-            }
+            t.pay_method = method || '';
+            t.is_paid = FULL_PAY_METHODS.includes(t.pay_method);
+            if (t.pay_method !== 'partial') t.partial_amount = 0;
+            // 완납 처리되는 순간 청구서 확정 스냅샷 저장
+            if (t.is_paid) _confirmBillSnapshot(id);
             saveLocal();
             renderTuitionList();
+        }
+
+        function setPartialAmount(id, value, event) {
+            if (event) event.stopPropagation();
+            const t = _ensureTuitionRecord(id);
+            t.partial_amount = parseNumber(value);
+            saveLocal();
+            renderTuitionList();
+        }
+
+        // 납부 상태 라벨 (엑셀/요약용)
+        function _payStatusText(t) {
+            if (!t) return '미납';
+            const method = t.pay_method || (t.is_paid ? 'etc' : '');
+            if (method === 'partial') return `부분납부(${formatNumber(t.partial_amount || 0)}원)`;
+            if (method === 'etc') return '납부완료';
+            if (method && PAY_METHODS[method]) return `납부완료(${PAY_METHODS[method]})`;
+            return '미납';
         }
 
         // ─── 수업료 10원 미만 절사 ───
@@ -2850,10 +2860,9 @@
         }
 
         function renderTuitionList() {
-            const tbodyInput = document.getElementById('tuition-list-body');
             const tbodySummary = document.getElementById('tuition-summary-list-body');
-            tbodyInput.innerHTML = '';
-            if(tbodySummary) tbodySummary.innerHTML = '';
+            if (!tbodySummary) return;
+            tbodySummary.innerHTML = '';
 
             _updateSortArrowActive();
 
@@ -2875,18 +2884,6 @@
 
             const useSibling = document.getElementById('sibling-toggle')?.checked;
             const sortedList = _getSortedStudents(studentList);
-
-            // 입력 현황 탭은 항상 학생별 단순 렌더 (형제 묶음은 요약 보기에만)
-            let inputIdx = 0;
-            sortedList.forEach(s => {
-                const calc = _calcStudentBill(s);
-                if (!_passesTuitionFilter(s, calc.t, calc.hasRates)) return;
-                inputIdx++;
-                const tr = _renderInputRow(s, calc, inputIdx);
-                tbodyInput.appendChild(tr);
-            });
-
-            if (!tbodySummary) return;
 
             let summaryIdx = 0;
             if (useSibling) {
@@ -2937,7 +2934,7 @@
                         // 그룹 헤더 행
                         const trH = document.createElement('tr');
                         trH.className = 'family-group-row';
-                        trH.innerHTML = `<td colspan="10" class="text-xs font-bold text-indigo-700">
+                        trH.innerHTML = `<td colspan="13" class="text-xs font-bold text-indigo-700">
                             <i class="fa-solid fa-people-roof mr-1"></i> 형제 묶음 (${members.length}명)
                             <button onclick="saveFamilyBillImage('${item.fid}')" class="ml-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded font-bold transition">
                                 <i class="fa-solid fa-camera mr-1"></i>통합 청구서 이미지
@@ -2960,10 +2957,10 @@
                         trT.className = 'family-total-row';
                         trT.innerHTML = `
                             <td colspan="3" class="text-indigo-700">💰 가족 합계</td>
-                            <td class="text-center text-slate-700">${parseFloat(famHours.toFixed(1))}h</td>
+                            <td colspan="3" class="text-center text-slate-700">총 ${parseFloat(famHours.toFixed(1))}h</td>
                             <td colspan="2"></td>
                             <td class="text-right text-lg text-indigo-700">${formatNumber(famTotal)}원</td>
-                            <td colspan="3"></td>
+                            <td colspan="4"></td>
                         `;
                         tbodySummary.appendChild(trT);
                     }
@@ -2978,33 +2975,47 @@
             }
         }
 
-        function _renderInputRow(s, calc, idx) {
-            const { h, t, hasRates } = calc;
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 cursor-pointer transition";
-            tr.onclick = () => openTuitionModal(s.id);
-            const writeStatus = hasRates
-                ? `<span class="status-pill on">✓</span>`
-                : `<span class="status-pill disabled">─</span>`;
-            const kakaoPill = _statusPillHtml(t.is_sent_kakao, '✓', '✕', 'toggleSentKakao', s.id, !hasRates);
-            const payappPill = _statusPillHtml(t.is_sent_payapp, '✓', '✕', 'toggleSentPayapp', s.id, !hasRates);
-            const familyIcon = s.familyId ? '<span class="text-indigo-500 ml-1" title="형제 있음">👨‍👩‍👧</span>' : '';
-            tr.innerHTML = `
-                <td class="px-3 py-4 text-center tuition-row-num">${idx}</td>
-                <td class="px-4 py-4 font-bold text-slate-800">${s.name}${familyIcon}</td>
-                <td class="px-3 py-4 text-xs text-slate-500">${s.group === 'Elementary' ? '초등' : '중등'}</td>
-                <td class="px-3 py-4 text-center font-medium text-indigo-600">${h.eng}h</td>
-                <td class="px-3 py-4 text-center font-medium text-orange-600">${h.math}h</td>
-                <td class="px-3 py-4 text-center text-xs text-slate-500">특:${h.spec}/1:1:${h.oneonone}</td>
-                <td class="px-3 py-4 text-center">${writeStatus}</td>
-                <td class="px-3 py-4 text-center">${kakaoPill}</td>
-                <td class="px-3 py-4 text-center">${payappPill}</td>
-            `;
-            return tr;
+        // '기타' 칼럼: 특강/1:1/보강 중 시수가 있는 항목만 표시
+        function _etcHoursHtml(h) {
+            const parts = [];
+            if (h.spec > 0)     parts.push(`<span class="text-purple-600">특강 ${h.spec}h</span>`);
+            if (h.oneonone > 0) parts.push(`<span class="text-teal-600">1:1 ${h.oneonone}h</span>`);
+            if (h.supp > 0)     parts.push(`<span class="text-amber-600">보강 ${h.supp}h</span>`);
+            return parts.length ? parts.join('<br>') : '<span class="text-slate-300">-</span>';
+        }
+
+        // 납부 방법 드롭다운 (+ 부분납부 금액 입력)
+        function _payCellHtml(s, calc) {
+            const { t, grandTotal, hasRates } = calc;
+            if (!hasRates) return `<span class="status-pill disabled">─</span>`;
+
+            // 납부방법 도입 이전 데이터: is_paid만 true인 경우 '방법 미기재'로 표시
+            const method = t.pay_method || (t.is_paid ? 'etc' : '');
+            const opt = (val, label) => `<option value="${val}"${method === val ? ' selected' : ''}>${label}</option>`;
+            let html = `<select class="pay-select${method === 'partial' ? ' partial' : (method ? ' paid' : '')}"
+                    onclick="event.stopPropagation()"
+                    onchange="setPaymentMethod(${s.id}, this.value, event)">
+                ${opt('', '미납')}
+                ${opt('card', PAY_METHODS.card)}
+                ${opt('payapp', PAY_METHODS.payapp)}
+                ${opt('transfer', PAY_METHODS.transfer)}
+                ${opt('partial', PAY_METHODS.partial)}
+                ${method === 'etc' ? opt('etc', PAY_METHODS.etc) : ''}
+            </select>`;
+
+            if (method === 'partial') {
+                const paid = Number(t.partial_amount) || 0;
+                const rest = grandTotal - paid;
+                html += `<input type="text" class="pay-partial-input" value="${paid ? formatNumber(paid) : ''}" placeholder="납부액"
+                        onclick="event.stopPropagation()"
+                        onchange="setPartialAmount(${s.id}, this.value, event)">
+                    <div class="pay-partial-rest">잔액 ${formatNumber(rest)}원</div>`;
+            }
+            return html;
         }
 
         function _renderSummaryRow(s, calc, idx) {
-            const { h, t, add, disc, baseTuition, grandTotal, truncCut, totalHours, hasRates } = calc;
+            const { h, t, add, disc, baseTuition, grandTotal, truncCut, hasRates } = calc;
             const trSum = document.createElement('tr');
             trSum.className = "hover:bg-slate-50 cursor-pointer transition border-b border-slate-100";
             trSum.onclick = () => openTuitionModal(s.id);
@@ -3012,27 +3023,33 @@
                 ? `${add > 0 ? `<span class="text-indigo-500">+${formatNumber(add)}</span>` : ''}${(add>0&&disc>0)?'<br>':''}${disc > 0 ? `<span class="text-red-500">-${formatNumber(disc)}</span>` : ''}`
                 : '-';
             const familyIcon = s.familyId ? '<span class="text-indigo-500 ml-1" title="형제 있음">👨‍👩‍👧</span>' : '';
+            // 수업료 확정 = 단가가 입력되어 청구액이 산출된 상태
+            const confirmPill = hasRates
+                ? `<span class="status-pill on" title="단가 입력 완료">O</span>`
+                : `<span class="status-pill off" title="단가 미입력">X</span>`;
             const kakaoPill = _statusPillHtml(t.is_sent_kakao, '✓', '✕', 'toggleSentKakao', s.id, !hasRates);
             const payappPill = _statusPillHtml(t.is_sent_payapp, '✓', '✕', 'toggleSentPayapp', s.id, !hasRates);
-            const paidPill = _statusPillHtml(t.is_paid, '완료', '미납', 'togglePaymentStatus', s.id, !hasRates);
             trSum.innerHTML = `
                 <td class="px-3 py-4 text-center tuition-row-num">${idx}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${s.name}${familyIcon}</td>
                 <td class="px-3 py-4 text-xs text-slate-500">${s.group === 'Elementary' ? '초등' : '중등'}</td>
-                <td class="px-3 py-4 text-center font-medium text-slate-600">${parseFloat(totalHours.toFixed(1))}h</td>
+                <td class="px-3 py-4 text-center font-medium text-indigo-600">${h.eng ? h.eng + 'h' : '<span class="text-slate-300">-</span>'}</td>
+                <td class="px-3 py-4 text-center font-medium text-orange-600">${h.math ? h.math + 'h' : '<span class="text-slate-300">-</span>'}</td>
+                <td class="px-3 py-4 text-center text-[11px] leading-tight font-bold">${_etcHoursHtml(h)}</td>
                 <td class="px-3 py-4 text-right font-medium text-slate-700">${formatNumber(baseTuition)}원</td>
                 <td class="px-3 py-4 text-right leading-tight text-[11px]">${addDiscStr}</td>
                 <td class="px-3 py-4 text-right font-black text-base text-slate-800">${formatNumber(grandTotal)}원${truncMarkHtml(truncCut)}</td>
+                <td class="px-3 py-4 text-center">${confirmPill}</td>
                 <td class="px-3 py-4 text-center">${kakaoPill}</td>
                 <td class="px-3 py-4 text-center">${payappPill}</td>
-                <td class="px-3 py-4 text-center">${paidPill}</td>
+                <td class="px-3 py-4 text-center">${_payCellHtml(s, calc)}</td>
             `;
             return trSum;
         }
         
         function downloadTuitionExcel() {
             let csvContent = "\uFEFF"; 
-            csvContent += "학생 이름,구분,총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태\n";
+            csvContent += "학생 이름,구분,영어(h),수학(h),특강(h),1:1(h),보강(h),총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태,부분납부액\n";
 
             studentList.forEach(s => {
                 const h = getBillableHours(s.id);
@@ -3051,14 +3068,16 @@
                 const totalHours = h.eng + h.math + h.spec + h.oneonone + h.supp;
                 
                 const groupName = s.group === 'Elementary' ? '초등' : '중등';
-                const isPaidText = t.is_paid ? '납부완료' : '미납';
-                
+                const isPaidText = _payStatusText(t).replace(/,/g, ' ');
+                const partialAmt = t.pay_method === 'partial' ? (Number(t.partial_amount) || 0) : '';
+
                 const addName = (t.add_name || '').replace(/,/g, ' ');
                 const discName = (t.disc_name || '').replace(/,/g, ' ');
 
                 const row = [
-                    s.name, groupName, parseFloat(totalHours.toFixed(1)), baseTuition,
-                    addName, add, discName, disc, grandTotal, isPaidText
+                    s.name, groupName, h.eng, h.math, h.spec, h.oneonone, h.supp,
+                    parseFloat(totalHours.toFixed(1)), baseTuition,
+                    addName, add, discName, disc, grandTotal, isPaidText, partialAmt
                 ].join(',');
 
                 csvContent += row + "\n";
