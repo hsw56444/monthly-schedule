@@ -728,6 +728,27 @@
             .subject-tab { min-width: 58px; padding: 7px 10px; font-size: 0.68rem; }
             #plannerModal .pb-40 { padding-bottom: 280px !important; }
         }
+
+        /* ─── 이미지 저장 정규화: 모바일/데스크톱 어디서 저장해도 항상 동일한 레이아웃 ───
+           캡처는 760px 고정폭 오프스크린 스테이지에서 수행되므로, 모바일 media query가
+           줄여놓은 폰트·패딩을 데스크톱 기준값으로 되돌린다. (media query 뒤에 배치 + !important) */
+        .exporting .calendar-grid { gap: 4px !important; }
+        .exporting .calendar-day { min-height: 122px !important; border-radius: 10px !important; }
+        .exporting .day-number { font-size: 0.8rem !important; }
+        .exporting .day-header-strip { padding: 4px !important; }
+        .exporting .badge-container { padding: 4px 4px 6px !important; gap: 3px !important; }
+        .exporting .badge { padding: 6px 8px 8px !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(15,23,42,0.06) !important; }
+        .exporting .badge-label { font-size: 12px !important; line-height: 1.7 !important; }
+        .exporting .badge-time { font-size: 12px !important; line-height: 1.55 !important; margin-top: 1px !important; }
+        .exporting .badge-solo .badge-label { font-size: 12.5px !important; }
+        .exporting .badge-label.size-sm  { font-size: 11px !important; }
+        .exporting .badge-label.size-xs  { font-size: 10px !important; }
+        .exporting .badge-label.size-2xs { font-size: 9px !important; }
+        .exporting .badge-label.size-3xs { font-size: 8.5px !important; }
+        .exporting .calendar-day .text-\[10px\] { font-size: 10px !important; }
+        .exporting .important-label { font-size: 10px !important; }
+        .exporting .makeup-pill { font-size: 10.5px !important; padding: 1.5px 7px 3px !important; }
+        .exporting .makeup-banner { font-size: 11.5px !important; }
     </style>
 </head>
 <body class="text-slate-700 min-h-screen flex flex-col">
@@ -3474,7 +3495,8 @@
                     viewSchedule.style.cssText = '';
                 }
             }
-            if (!targetWidth) targetWidth = 750; // 최종 폴백
+            // 모바일 등 좁은 화면에서 측정된 폭이 작으면 고정폭으로 승격 → 시간 잘림 방지
+            if (!targetWidth || targetWidth < 760) targetWidth = 760;
 
             const clone = orig.cloneNode(true);
             clone.id = 'schedule-export-card';
@@ -3526,7 +3548,8 @@
                 useCORS: true,
                 logging: false,
                 letterRendering: true,
-                windowWidth: card.scrollWidth,
+                // 라이브 스테이지와 html2canvas 내부 iframe이 같은 media query를 타도록 폭 통일
+                windowWidth: Math.max(card.scrollWidth, window.innerWidth),
                 onclone: (clonedDoc) => {
                     const c = clonedDoc.getElementById(card.id);
                     if (c) c.classList.add('exporting');
@@ -5134,51 +5157,66 @@
 
             const element = document.getElementById('capture-target-apr');
             const student = studentList.find(s => s.id === currentStudentId);
-            const printNameEl = document.querySelector('.print-student-name');
             const btn = document.getElementById('btn-image-save');
             const origBtnHTML = btn.innerHTML;
 
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>저장 중...</span>`;
             btn.disabled = true;
 
+            // ★ 모바일에서도 시간이 잘리지 않도록, 화면 폭과 무관한 760px 고정폭
+            //   오프스크린 스테이지에 클론을 만들어 캡처한다. (라이브 DOM은 건드리지 않음)
+            const EXPORT_W = 760;
+            const clone = element.cloneNode(true);
+            clone.id = 'saveimg-export-card';
+            clone.classList.add('exporting');
+
+            // 편집 영역 제거 — 학부모 미리보기 카드(달력 상단)만 남김
+            const editSection = clone.querySelector('#notice-edit-section');
+            if (editSection) editSection.remove();
+
+            // 학생 이름 뱃지 표시
+            const printNameEl = clone.querySelector('.print-student-name');
             if (printNameEl) {
                 printNameEl.textContent = `${student.name} (${currentOption})`;
                 printNameEl.classList.remove('hidden');
             }
 
-            // ★ 캡처 직전 전처리: .exporting 클래스 부여 → 한글 받침/배지 정렬 안정화
-            element.classList.add('exporting');
+            const stage = document.createElement('div');
+            stage.id = 'saveimg-export-stage';
+            stage.style.cssText = `position:fixed; left:-99999px; top:0; width:${EXPORT_W}px; background:#ffffff; z-index:-1;`;
+            stage.appendChild(clone);
+            document.body.appendChild(stage);
 
             // 폰트 로드 완료 후 레이아웃 안정화를 위해 두 프레임 대기
             try { await document.fonts.ready; } catch(e) {}
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             // 강제 reflow로 .exporting 스타일이 확실히 반영되도록
-            void element.offsetHeight;
+            void clone.offsetHeight;
             await new Promise(r => setTimeout(r, 50));
 
             const cleanup = () => {
-                element.classList.remove('exporting');
-                if (printNameEl) printNameEl.classList.add('hidden');
+                stage.remove();
                 btn.innerHTML = origBtnHTML;
                 btn.disabled = false;
             };
 
-            html2canvas(element, {
+            html2canvas(clone, {
                 scale: 3,
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 logging: false,
                 letterRendering: true,
-                windowWidth: element.scrollWidth,
+                // 라이브 스테이지와 html2canvas 내부 iframe이 같은 media query를 타도록 폭 통일
+                windowWidth: Math.max(EXPORT_W, window.innerWidth),
                 onclone: (clonedDoc) => {
                     // 클론 문서에도 .exporting 적용 (보강)
-                    const clonedTarget = clonedDoc.getElementById('capture-target-apr');
-                    if (clonedTarget) clonedTarget.classList.add('exporting');
-                    // 편집 영역 제거 — 학부모 미리보기 카드(달력 상단)만 남김
-                    const editSection = clonedDoc.getElementById('notice-edit-section');
-                    if (editSection) editSection.remove();
-                    // NOTICE 카드/배지 inline padding 강제 보정 (한글 ascent 보정)
-                    _applyNoticeCardCaptureFix(clonedDoc.getElementById('notice-preview-card'));
+                    const clonedTarget = clonedDoc.getElementById('saveimg-export-card');
+                    if (clonedTarget) {
+                        clonedTarget.classList.add('exporting');
+                        // NOTICE 카드/배지 inline padding 강제 보정 (한글 ascent 보정)
+                        // ※ 원본 문서와 ID가 중복되므로 반드시 스테이지 클론 내부에서 탐색
+                        _applyNoticeCardCaptureFix(clonedTarget.querySelector('#notice-preview-card'));
+                    }
                 }
             }).then(canvas => {
                 const link = document.createElement('a');
