@@ -1272,6 +1272,19 @@
             </div>
             <div class="p-4 overflow-y-auto bg-white custom-scrollbar flex-grow">
                 <p class="text-sm text-slate-500 mb-3 text-center">현재 학생(<span id="sourceStudentName" class="font-bold text-indigo-600"></span>)의 <span class="font-bold text-slate-800">현재 옵션</span> 스케줄을<br>적용할 학생들을 선택하세요.</p>
+                <div class="mb-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">붙여넣을 옵션 <span class="font-normal normal-case tracking-normal text-slate-400">— 받는 학생의 어느 옵션에 넣을까요?</span></div>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="copyAllTargetOption" value="A" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 font-bold text-sm transition">A</div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="copyAllTargetOption" value="B" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 font-bold text-sm transition">B</div>
+                        </label>
+                    </div>
+                </div>
                 <div class="flex justify-end gap-2 mb-3 text-xs">
                     <button onclick="selectAllStudents(true)" class="text-indigo-600 hover:underline">전체 선택</button>
                     <span class="text-slate-300">|</span>
@@ -1298,7 +1311,20 @@
                     <i class="fa-solid fa-clone text-teal-500"></i>
                     <span id="entryCopySummary" class="font-bold"></span>
                 </div>
-                <p class="text-xs text-slate-500 mb-3 text-center">위 시간을 동일 날짜·동일 옵션으로 적용할 학생들을 선택하세요.<br>(같은 항목이 있으면 덮어쓰기 됩니다)</p>
+                <p class="text-xs text-slate-500 mb-3 text-center">위 시간을 동일 날짜로 적용할 학생들을 선택하세요.<br>(같은 항목이 있으면 덮어쓰기 됩니다)</p>
+                <div class="mb-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">붙여넣을 옵션 <span class="font-normal normal-case tracking-normal text-slate-400">— 받는 학생의 어느 옵션에 넣을까요?</span></div>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="copyEntryTargetOption" value="A" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-teal-50 peer-checked:border-teal-500 peer-checked:text-teal-700 font-bold text-sm transition">A</div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="copyEntryTargetOption" value="B" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-teal-50 peer-checked:border-teal-500 peer-checked:text-teal-700 font-bold text-sm transition">B</div>
+                        </label>
+                    </div>
+                </div>
                 <div class="flex justify-end gap-2 mb-3 text-xs">
                     <button onclick="selectAllEntryCopy(true)" class="text-indigo-600 hover:underline">전체 선택</button>
                     <span class="text-slate-300">|</span>
@@ -1325,7 +1351,20 @@
                     <i class="fa-solid fa-clone text-teal-500"></i>
                     <span id="bulkCopySummary" class="font-bold"></span>
                 </div>
-                <p class="text-xs text-slate-500 mb-3 text-center">선택한 일정들을 그대로 적용할 학생들을 선택하세요.<br>(같은 날짜·같은 항목이 있으면 덮어쓰기 됩니다 · <span id="bulkCopyOptionLabel"></span>)</p>
+                <p class="text-xs text-slate-500 mb-3 text-center">선택한 일정들을 그대로 적용할 학생들을 선택하세요.<br>(같은 날짜·같은 항목이 있으면 덮어쓰기 됩니다 · 원본 <span id="bulkCopyOptionLabel"></span>)</p>
+                <div class="mb-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">붙여넣을 옵션 <span class="font-normal normal-case tracking-normal text-slate-400">— 받는 학생의 어느 옵션에 넣을까요?</span></div>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="bulkCopyTargetOption" value="A" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-teal-50 peer-checked:border-teal-500 peer-checked:text-teal-700 font-bold text-sm transition">A</div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="bulkCopyTargetOption" value="B" class="peer hidden">
+                            <div class="text-center py-2 rounded-lg border border-slate-200 bg-white text-slate-500 peer-checked:bg-teal-50 peer-checked:border-teal-500 peer-checked:text-teal-700 font-bold text-sm transition">B</div>
+                        </label>
+                    </div>
+                </div>
                 <div class="flex justify-end gap-2 mb-3 text-xs">
                     <button onclick="selectAllBulkCopy(true)" class="text-indigo-600 hover:underline">전체 선택</button>
                     <span class="text-slate-300">|</span>
@@ -4566,12 +4605,25 @@
             }
         }
 
+        // ===== 다른 학생에게 복사할 때 붙여넣을 옵션(A/B) 선택 =====
+        // 기본값은 현재 보고 있는 옵션. 사용자가 모달에서 다른 옵션으로 바꿀 수 있다.
+        function _setCopyTargetOption(radioName, defaultOption) {
+            const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+            radios.forEach(r => { r.checked = (r.value === defaultOption); });
+        }
+
+        function _getCopyTargetOption(radioName) {
+            const checked = document.querySelector(`input[name="${radioName}"]:checked`);
+            return checked ? checked.value : currentOption;
+        }
+
         function openCopyToModal() {
             // 다른 모달 열릴 때 방어 코드
             closeInputOverlay();
             cancelMultiSelect();
             if (isBulkCardMode) cancelBulkCardMode();
 
+            _setCopyTargetOption('copyAllTargetOption', currentOption);
             const modal = document.getElementById('copyToOthersModal');
             const sourceStudent = studentList.find(s => s.id === currentStudentId);
             document.getElementById('sourceStudentName').textContent = `${sourceStudent.name} (${currentOption})`;
@@ -4611,20 +4663,21 @@
         function applyCopyToOthers() {
             const checkboxes = document.querySelectorAll('.student-checkbox:checked');
             if (checkboxes.length === 0) return alert('적용할 학생을 선택해주세요.');
-            if(!confirm(`선택한 ${checkboxes.length}명의 학생에게 [${currentOption}] 스케줄을 적용하시겠습니까?`)) return;
-            
+            const targetOption = _getCopyTargetOption('copyAllTargetOption');
+            if(!confirm(`선택한 ${checkboxes.length}명의 학생 [${targetOption}]에\n현재 학생의 [${currentOption}] 스케줄을 적용합니다.\n\n대상 학생의 기존 [${targetOption}] 스케줄은 덮어씌워집니다. 진행할까요?`)) return;
+
             const sourceSchedule = attendanceData[currentStudentId][currentOption] || {};
             checkboxes.forEach(cb => {
                 const targetId = parseInt(cb.value);
                 if (!attendanceData[targetId]) attendanceData[targetId] = { 'A': {}, 'B': {} };
-                attendanceData[targetId][currentOption] = JSON.parse(JSON.stringify(sourceSchedule));
+                attendanceData[targetId][targetOption] = JSON.parse(JSON.stringify(sourceSchedule));
             });
-            
+
             saveLocal();
 
             renderStudentList(currentFilter);
             closeCopyToModal();
-            alert('적용되었습니다.');
+            alert(`${checkboxes.length}명의 학생 [${targetOption}]에 적용되었습니다.`);
         }
 
         // ===== 특정 날짜·특정 시간 1건을 다른 학생에게 복사 =====
@@ -4690,6 +4743,7 @@
                 listContainer.appendChild(div);
             });
 
+            _setCopyTargetOption('copyEntryTargetOption', currentOption);
             const modal = document.getElementById('copyEntryModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -4710,11 +4764,12 @@
             const checked = document.querySelectorAll('.entry-copy-checkbox:checked');
             if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
             const p = entryCopyPayload;
+            const targetOption = _getCopyTargetOption('copyEntryTargetOption');
             checked.forEach(cb => {
                 const sid = parseInt(cb.value);
                 if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
-                if (!attendanceData[sid][currentOption]) attendanceData[sid][currentOption] = {};
-                const opt = attendanceData[sid][currentOption];
+                if (!attendanceData[sid][targetOption]) attendanceData[sid][targetOption] = {};
+                const opt = attendanceData[sid][targetOption];
                 if (!opt[p.date]) opt[p.date] = {};
                 const data = { status: 'present', start: p.start, end: p.end, hours: p.hours };
                 if (p.subject === 'custom') data.label = p.label;
@@ -4722,7 +4777,7 @@
             });
             saveLocal();
             closeCopyEntryModal();
-            alert(`${checked.length}명의 학생에게 복사되었습니다. (${currentOption})`);
+            alert(`${checked.length}명의 학생 [${targetOption}]에 복사되었습니다.`);
         }
 
         // ===== 다중선택한 여러 시간 카드를 다른 학생에게 일괄 복사 =====
@@ -4772,6 +4827,7 @@
                 listContainer.appendChild(div);
             });
 
+            _setCopyTargetOption('bulkCopyTargetOption', currentOption);
             const modal = document.getElementById('bulkCopyToOthersModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -4791,12 +4847,13 @@
             if (!bulkCopyPayload) return;
             const checked = document.querySelectorAll('.bulk-copy-checkbox:checked');
             if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
-            const { option, entries } = bulkCopyPayload;
+            const { entries } = bulkCopyPayload;
+            const targetOption = _getCopyTargetOption('bulkCopyTargetOption');
             checked.forEach(cb => {
                 const sid = parseInt(cb.value);
                 if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
-                if (!attendanceData[sid][option]) attendanceData[sid][option] = {};
-                const opt = attendanceData[sid][option];
+                if (!attendanceData[sid][targetOption]) attendanceData[sid][targetOption] = {};
+                const opt = attendanceData[sid][targetOption];
                 entries.forEach(e => {
                     if (!opt[e.date]) opt[e.date] = {};
                     opt[e.date][e.subject] = JSON.parse(JSON.stringify(e.data));
@@ -4805,7 +4862,7 @@
             saveLocal();
             closeBulkCopyToOthersModal();
             cancelBulkCardMode();
-            alert(`${checked.length}명의 학생에게 ${entries.length}건의 일정이 복사되었습니다. (${option})`);
+            alert(`${checked.length}명의 학생 [${targetOption}]에 ${entries.length}건의 일정이 복사되었습니다.`);
         }
 
         // --- Add/Delete Student ---
@@ -5246,13 +5303,20 @@
 
             const targetDates = _getVisibleMonthDates();
 
+            // 공휴일·학원 휴무일(월별 설정)은 템플릿이 적용되지 않는 날 → 삭제 대상에서도 제외해
+            // 해당 날짜에 수동으로 넣어둔 보강 등은 그대로 보존한다.
+            const isProtectedDate = (dateStr) => HOLIDAYS.includes(dateStr) || CLOSURE_DAYS.includes(dateStr);
+
             // [전체 덮어쓰기] 이번 달의 기존 일정을 전부 지우고 템플릿만 남긴다.
             // (미리 확인 — 취소하면 템플릿 저장도 하지 않고 아무것도 바꾸지 않음)
             let clearedCount = 0;
             if (applyMode === 'overwrite') {
                 const existing = attendanceData[currentStudentId]?.[currentOption] || {};
-                targetDates.forEach(dateStr => { clearedCount += countDayEntries(existing[dateStr]); });
-                const warn = `[전체 덮어쓰기]\n\n${window.APP_CONFIG.monthTitle} 달력의 기존 일정 ${clearedCount}건이 모두 삭제되고,\n정기 시간표로 입력한 내용만 남습니다.\n(보강·특강·직접입력 등 수동으로 넣은 일정도 함께 삭제됩니다)\n\n계속할까요?`;
+                targetDates.forEach(dateStr => {
+                    if (isProtectedDate(dateStr)) return;
+                    clearedCount += countDayEntries(existing[dateStr]);
+                });
+                const warn = `[전체 덮어쓰기]\n\n${window.APP_CONFIG.monthTitle} 달력의 기존 일정 ${clearedCount}건이 모두 삭제되고,\n정기 시간표로 입력한 내용만 남습니다.\n(보강·특강·직접입력 등 수동으로 넣은 일정도 함께 삭제됩니다)\n\n※ 공휴일·학원 휴무일에 입력된 일정은 그대로 유지됩니다.\n\n계속할까요?`;
                 if (!confirm(warn)) return;
             }
 
@@ -5268,6 +5332,7 @@
             // 기존 일정 비우기 (__notice 등 메타키는 날짜키가 아니므로 그대로 보존)
             if (applyMode === 'overwrite') {
                 targetDates.forEach(dateStr => {
+                    if (isProtectedDate(dateStr)) return; // 공휴일·학원 휴무일은 보존
                     if (!optionData[dateStr]) return;
                     delete optionData[dateStr];
                     ALL_SUBJECT_KEYS.forEach(k => selectedCards.delete(dateStr + '|' + k));
@@ -5280,7 +5345,7 @@
             targetDates.forEach(dateStr => {
                 const dateObj = new Date(dateStr);
                 const dow = dateObj.getDay();
-                if (HOLIDAYS.includes(dateStr) || CLOSURE_DAYS.includes(dateStr)) return; // 공휴일/학원 휴무일 건너뜀
+                if (isProtectedDate(dateStr)) return; // 공휴일/학원 휴무일 건너뜀
 
                 currentTplEntries.forEach(entry => {
                     if (!entry.dows.includes(dow)) return;
