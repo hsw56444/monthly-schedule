@@ -422,6 +422,14 @@
         .bill-hr-input { width: 42px; text-align: center; border: 1px solid #cbd5e1; border-radius: 5px; padding: 1px 3px; font-size: 11px; font-weight: 700; color: #4f46e5; background: #fff; outline: none; transition: border-color 0.15s; }
         .bill-hr-input:focus { border-color: #818cf8; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
         .tuition-row { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+
+        /* 10원 미만 절사 표시 — 관리자만 알아볼 수 있게 아주 작고 흐리게. 청구서 이미지에는 미포함 */
+        .trunc-note {
+            font-size: 8px; font-weight: 700; color: #cbd5e1;
+            margin-left: 3px; vertical-align: super;
+            letter-spacing: -0.3px; font-variant-numeric: tabular-nums;
+            white-space: nowrap; cursor: help;
+        }
         .mode-edit .input-group { display: flex; } .mode-edit .static-group { display: none; }
         .mode-view .input-group { display: none; } .mode-view .static-group { display: flex; }
         .view-section { display: none; } .view-section.active { display: block; }
@@ -2677,6 +2685,26 @@
             renderTuitionList();
         }
 
+        // ─── 수업료 10원 미만 절사 ───
+        // 총 청구액은 항상 10원 단위로 내려서 표시/저장한다. (소계·기본 수업료는 원 단위 그대로)
+        function truncTo10(amount) {
+            const n = Math.round(Number(amount) || 0);
+            return Math.trunc(n / 10) * 10; // 음수(할인 초과)도 0원 방향으로 절사
+        }
+
+        // 절사된 자투리 금액(0~9원)
+        function truncCutOf(amount) {
+            const n = Math.round(Number(amount) || 0);
+            return n - truncTo10(n);
+        }
+
+        // 절사 표시 마커 — 아주 작은 회색 글씨, 청구서 이미지 캡처 시엔 숨김
+        function truncMarkHtml(cut) {
+            const c = Number(cut) || 0;
+            if (!c) return '';
+            return `<span class="trunc-note" title="10원 미만 ${c}원 절사">▾${c}</span>`;
+        }
+
         // 청구서 확정: 현재 시점의 청구서 상태를 스냅샷으로 저장
         function _confirmBillSnapshot(id) {
             const s = studentList.find(x => x.id === id);
@@ -2698,7 +2726,9 @@
                 add_name: t.add_name || '', add_amount: add,
                 disc_name: t.disc_name || '', disc_amount: disc,
                 baseTuition: baseTuition,
-                grandTotal: Math.floor((baseTuition + add - disc) / 10) * 10
+                grandTotal: truncTo10(baseTuition + add - disc),
+                grandTotalRaw: baseTuition + add - disc,
+                truncCut: truncCutOf(baseTuition + add - disc)
             };
         }
         function toggleSentKakao(id, event) {
@@ -2771,10 +2801,12 @@
             const add = Number(t.add_amount) || 0;
             const disc = Number(t.disc_amount) || 0;
             const baseTuition = Math.round(h.eng * rEng + h.math * rMath + h.spec * rSpec + h.oneonone * rOne + h.supp * rSupp);
-            const grandTotal = baseTuition + add - disc;
+            const grandTotalRaw = baseTuition + add - disc;
+            const grandTotal = truncTo10(grandTotalRaw);   // 10원 미만 절사
+            const truncCut = grandTotalRaw - grandTotal;
             const totalHours = h.eng + h.math + h.spec + h.oneonone + h.supp;
             const hasRates = t && (rEng > 0 || rMath > 0 || rSpec > 0 || rOne > 0 || rSupp > 0 || add > 0);
-            return { h, t, rEng, rMath, rSpec, rOne, rSupp, add, disc, baseTuition, grandTotal, totalHours, hasRates };
+            return { h, t, rEng, rMath, rSpec, rOne, rSupp, add, disc, baseTuition, grandTotal, grandTotalRaw, truncCut, totalHours, hasRates };
         }
 
         // ─── 상태 pill HTML 생성 ───
@@ -2972,7 +3004,7 @@
         }
 
         function _renderSummaryRow(s, calc, idx) {
-            const { h, t, add, disc, baseTuition, grandTotal, totalHours, hasRates } = calc;
+            const { h, t, add, disc, baseTuition, grandTotal, truncCut, totalHours, hasRates } = calc;
             const trSum = document.createElement('tr');
             trSum.className = "hover:bg-slate-50 cursor-pointer transition border-b border-slate-100";
             trSum.onclick = () => openTuitionModal(s.id);
@@ -2990,7 +3022,7 @@
                 <td class="px-3 py-4 text-center font-medium text-slate-600">${parseFloat(totalHours.toFixed(1))}h</td>
                 <td class="px-3 py-4 text-right font-medium text-slate-700">${formatNumber(baseTuition)}원</td>
                 <td class="px-3 py-4 text-right leading-tight text-[11px]">${addDiscStr}</td>
-                <td class="px-3 py-4 text-right font-black text-base text-slate-800">${formatNumber(grandTotal)}원</td>
+                <td class="px-3 py-4 text-right font-black text-base text-slate-800">${formatNumber(grandTotal)}원${truncMarkHtml(truncCut)}</td>
                 <td class="px-3 py-4 text-center">${kakaoPill}</td>
                 <td class="px-3 py-4 text-center">${payappPill}</td>
                 <td class="px-3 py-4 text-center">${paidPill}</td>
@@ -3015,7 +3047,7 @@
                 const disc = Number(t.disc_amount) || 0;
                 
                 const baseTuition = Math.round(h.eng * rEng + h.math * rMath + h.spec * rSpec + h.oneonone * rOne + h.supp * rSupp);
-                const grandTotal = baseTuition + add - disc;
+                const grandTotal = truncTo10(baseTuition + add - disc); // 10원 미만 절사
                 const totalHours = h.eng + h.math + h.spec + h.oneonone + h.supp;
                 
                 const groupName = s.group === 'Elementary' ? '초등' : '중등';
@@ -3273,8 +3305,10 @@
             document.getElementById('bill-hr-one').textContent = hOne + 'h';
             document.getElementById('bill-hr-supp').textContent = hSupp + 'h';
 
-            const total = Math.round(hEng * rEng + hMath * rMath + hSpec * rSpec + hOne * rOne + hSupp * rSupp + add - disc);
-            document.getElementById('bill-grand-total').textContent = formatNumber(total) + "원";
+            // 총 납부 금액은 10원 미만 절사 (절사된 자투리는 작은 마커로만 표시 · 이미지엔 미포함)
+            const rawTotal = Math.round(hEng * rEng + hMath * rMath + hSpec * rSpec + hOne * rOne + hSupp * rSupp + add - disc);
+            const total = truncTo10(rawTotal);
+            document.getElementById('bill-grand-total').innerHTML = formatNumber(total) + "원" + truncMarkHtml(rawTotal - total);
 
             // 시수 override: 달력값과 다른 항목만 저장 → 미수정 항목은 달력 시수를 계속 추종
             const hours = {};
@@ -3344,6 +3378,8 @@
                 onclone: (clonedDoc) => {
                     const closeBtn = clonedDoc.querySelector('#tuitionBillContent .bg-slate-800 button');
                     if(closeBtn) closeBtn.style.display = 'none';
+                    // 10원 절사 마커는 내부 확인용 → 학부모 전달 이미지에서는 제거
+                    clonedDoc.querySelectorAll('#tuitionBillContent .trunc-note').forEach(el => el.remove());
                     // footer의 '총 납부 금액' 행만 남기고 나머지 버튼 영역 모두 숨김
                     const footer = clonedDoc.getElementById('bill-footer');
                     if (footer) {
@@ -6122,7 +6158,7 @@
             // 총 청구액 (강조)
             html += `<div class="mt-2 pt-2 border-t-2 border-indigo-300 bg-indigo-50 -mx-3 px-3 py-2 flex justify-between items-center">
                 <span class="text-xs font-bold text-indigo-700">💰 총 청구액</span>
-                <span class="text-base font-black text-indigo-700">${formatNumber(c.grandTotal || 0)}원</span>
+                <span class="text-base font-black text-indigo-700">${formatNumber(c.grandTotal || 0)}원${truncMarkHtml(c.truncCut)}</span>
             </div>`;
 
             content.innerHTML = html;
