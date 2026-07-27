@@ -378,6 +378,22 @@
         .status-pill.disabled { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
         .status-pill.disabled:hover { transform: none; box-shadow: none; }
 
+        /* ─── 정산 기준 시간표 A/B 토글 ─── */
+        .bill-opt-toggle {
+            display: inline-flex; gap: 2px;
+            background: #f1f5f9; border: 1px solid #e2e8f0;
+            border-radius: 999px; padding: 2px;
+        }
+        .bill-opt-toggle button {
+            min-width: 24px; padding: 2px 8px;
+            border-radius: 999px; border: none; background: transparent;
+            font-size: 11px; font-weight: 800; color: #94a3b8;
+            cursor: pointer; transition: all .15s;
+        }
+        .bill-opt-toggle button:hover { color: #475569; background: #e2e8f0; }
+        .bill-opt-toggle button.sel { background: #4f46e5; color: #fff; box-shadow: 0 1px 3px rgba(79,70,229,.35); }
+        .bill-opt-toggle button.sel:hover { background: #4338ca; color: #fff; }
+
         /* ─── 납부 방법 드롭다운 ─── */
         .pay-select {
             font-size: 0.72rem; font-weight: 700; color: #64748b;
@@ -903,6 +919,7 @@
                                     <th class="px-3 py-3 text-center" style="width:48px">#</th>
                                     <th class="px-4 py-3">학생 이름<span class="sort-arrow sort-arrow-name" onclick="toggleTuitionSort('name')" title="가나다순 정렬">⇅</span></th>
                                     <th class="px-3 py-3">구분</th>
+                                    <th class="px-3 py-3 text-center" title="정산 기준이 되는 시간표(A/B). 클릭해서 언제든 변경할 수 있습니다">시간표</th>
                                     <th class="px-3 py-3 text-center">영어</th>
                                     <th class="px-3 py-3 text-center">수학</th>
                                     <th class="px-3 py-3 text-center">기타</th>
@@ -1160,8 +1177,14 @@
 
             <div class="p-5 bg-white overflow-y-auto relative flex-1 min-h-0">
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div class="flex justify-between items-center mb-2 border-b border-slate-200 pb-1">
-                        <h4 class="text-xs font-bold text-slate-500 uppercase">수업 시수 (A)</h4>
+                    <div class="flex justify-between items-center mb-2 border-b border-slate-200 pb-1 gap-2 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase" id="bill-hr-title">수업 시수 (A)</h4>
+                            <div class="input-group flex gap-1 bg-slate-100 p-0.5 rounded-full border border-slate-200" title="정산 기준 시간표 선택 (언제든 변경 가능)">
+                                <button onclick="switchBillOption('A')" id="bill-opt-btn-A" class="option-tab active">A</button>
+                                <button onclick="switchBillOption('B')" id="bill-opt-btn-B" class="option-tab inactive">B</button>
+                            </div>
+                        </div>
                         <button onclick="resetBillHours()" class="input-group text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded transition" title="정산 시수를 달력 값으로 되돌립니다"><i class="fa-solid fa-rotate-left mr-1"></i>달력값으로 초기화</button>
                     </div>
                     <div class="space-y-1 text-sm">
@@ -2666,9 +2689,11 @@
         // ─── 발송/결제선생/납부 상태 토글 ───
         function _ensureTuitionRecord(id) {
             if (!tuitionData[id]) {
-                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false, pay_method: '', partial_amount: 0, is_confirmed: true };
+                tuitionData[id] = { rate_eng: 0, rate_math: 0, rate_spec: 0, rate_oneonone: 0, rate_supp: 0, add_name: '', add_amount: 0, disc_name: '', disc_amount: 0, is_paid: false, is_sent_kakao: false, is_sent_payapp: false, pay_method: '', partial_amount: 0, is_confirmed: true, bill_option: 'A' };
             }
             const t = tuitionData[id];
+            // 정산 기준 시간표: 미지정이면 A
+            if (t.bill_option !== 'A' && t.bill_option !== 'B') t.bill_option = 'A';
             // 납부방법 도입 이전 데이터 보정: 납부완료였으나 방법이 없으면 '방법 미기재'로 표기
             if (t.pay_method === undefined) t.pay_method = t.is_paid ? 'etc' : '';
             if (t.partial_amount === undefined) t.partial_amount = 0;
@@ -2684,6 +2709,58 @@
             t.is_confirmed = (t.is_confirmed === false);
             saveLocal();
             renderTuitionList();
+        }
+
+        // 정산 기준 시간표(A/B) 변경 — 언제든 다시 바꿀 수 있다.
+        // 시간표를 바꾸면 시수 기준이 달라지므로 직접 수정한 정산 시수(override)는 초기화한다.
+        function setBillOption(id, opt, event) {
+            if (event) event.stopPropagation();
+            const t = _ensureTuitionRecord(id);
+            const next = (opt === 'B') ? 'B' : 'A';
+            if (getBillOption(id) === next) return;
+            t.bill_option = next;
+            delete t.hours;   // 새 시간표의 달력 시수를 그대로 따르도록 초기화
+            saveLocal();
+            renderTuitionList();
+            // 정산서 모달이 열려 있는 학생이면 모달 내용도 갱신
+            const billModal = document.getElementById('tuitionModal');
+            if (currentStudentId === id && billModal && !billModal.classList.contains('hidden')) {
+                _syncBillOptionUI(id);
+                _applyCalHoursToBillInputs(id);
+            }
+        }
+
+        // 정산서 모달 안에서 A/B 전환
+        function switchBillOption(opt) {
+            if (!currentStudentId) return;
+            setBillOption(currentStudentId, opt);
+            _syncBillOptionUI(currentStudentId);
+            _applyCalHoursToBillInputs(currentStudentId);
+        }
+
+        // 모달의 A/B 버튼·라벨 상태 동기화
+        function _syncBillOptionUI(id) {
+            const cur = getBillOption(id);
+            ['A', 'B'].forEach(o => {
+                const btn = document.getElementById(`bill-opt-btn-${o}`);
+                if (!btn) return;
+                btn.classList.toggle('active', o === cur);
+                btn.classList.toggle('inactive', o !== cur);
+            });
+            const label = document.getElementById('bill-hr-title');
+            if (label) label.textContent = `수업 시수 (${cur})`;
+        }
+
+        // 선택된 시간표의 달력 시수를 정산 시수 입력칸에 반영
+        function _applyCalHoursToBillInputs(id) {
+            const cal = getBillableHours(id).cal;
+            const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v; };
+            set('bill-hr-input-eng', cal.eng);
+            set('bill-hr-input-math', cal.math);
+            set('bill-hr-input-spec', cal.spec);
+            set('bill-hr-input-one', cal.oneonone);
+            set('bill-hr-input-supp', cal.supp);
+            calcBillTotal();
         }
 
         // ─── 납부 방법 ───
@@ -2966,7 +3043,7 @@
                         // 그룹 헤더 행
                         const trH = document.createElement('tr');
                         trH.className = 'family-group-row';
-                        trH.innerHTML = `<td colspan="13" class="text-xs font-bold text-indigo-700">
+                        trH.innerHTML = `<td colspan="14" class="text-xs font-bold text-indigo-700">
                             <i class="fa-solid fa-people-roof mr-1"></i> 형제 묶음 (${members.length}명)
                             <button onclick="saveFamilyBillImage('${item.fid}')" class="ml-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded font-bold transition">
                                 <i class="fa-solid fa-camera mr-1"></i>통합 청구서 이미지
@@ -2988,7 +3065,7 @@
                         const trT = document.createElement('tr');
                         trT.className = 'family-total-row';
                         trT.innerHTML = `
-                            <td colspan="3" class="text-indigo-700">💰 가족 합계</td>
+                            <td colspan="4" class="text-indigo-700">💰 가족 합계</td>
                             <td colspan="3" class="text-center text-slate-700">총 ${parseFloat(famHours.toFixed(1))}h</td>
                             <td colspan="2"></td>
                             <td class="text-right text-lg text-indigo-700">${formatNumber(famTotal)}원</td>
@@ -3014,6 +3091,13 @@
             if (h.oneonone > 0) parts.push(`<span class="text-teal-600">1:1 ${h.oneonone}h</span>`);
             if (h.supp > 0)     parts.push(`<span class="text-amber-600">보강 ${h.supp}h</span>`);
             return parts.length ? parts.join('<br>') : '<span class="text-slate-300">-</span>';
+        }
+
+        // '시간표' 칼럼: 정산 기준 시간표(A/B) 토글 — 이미 선택했어도 다시 바꿀 수 있다
+        function _billOptionCellHtml(id) {
+            const cur = getBillOption(id);
+            const btn = (o) => `<button class="${o === cur ? 'sel' : ''}" onclick="setBillOption(${id}, '${o}', event)" title="${o} 시간표 기준으로 정산">${o}</button>`;
+            return `<div class="bill-opt-toggle" onclick="event.stopPropagation()">${btn('A')}${btn('B')}</div>`;
         }
 
         // 납부 방법 드롭다운 (+ 부분납부 금액 입력)
@@ -3063,6 +3147,7 @@
                 <td class="px-3 py-4 text-center tuition-row-num">${idx}</td>
                 <td class="px-4 py-4 font-bold text-slate-800">${s.name}${familyIcon}</td>
                 <td class="px-3 py-4 text-xs text-slate-500">${s.group === 'Elementary' ? '초등' : '중등'}</td>
+                <td class="px-3 py-4 text-center">${_billOptionCellHtml(s.id)}</td>
                 <td class="px-3 py-4 text-center font-medium text-indigo-600">${h.eng ? h.eng + 'h' : '<span class="text-slate-300">-</span>'}</td>
                 <td class="px-3 py-4 text-center font-medium text-orange-600">${h.math ? h.math + 'h' : '<span class="text-slate-300">-</span>'}</td>
                 <td class="px-3 py-4 text-center text-[11px] leading-tight font-bold">${_etcHoursHtml(h)}</td>
@@ -3079,7 +3164,7 @@
         
         function downloadTuitionExcel() {
             let csvContent = "\uFEFF"; 
-            csvContent += "학생 이름,구분,영어(h),수학(h),특강(h),1:1(h),보강(h),총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태,부분납부액\n";
+            csvContent += "학생 이름,구분,시간표,영어(h),수학(h),특강(h),1:1(h),보강(h),총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태,부분납부액\n";
 
             studentList.forEach(s => {
                 const h = getBillableHours(s.id);
@@ -3105,7 +3190,7 @@
                 const discName = (t.disc_name || '').replace(/,/g, ' ');
 
                 const row = [
-                    s.name, groupName, h.eng, h.math, h.spec, h.oneonone, h.supp,
+                    s.name, groupName, getBillOption(s.id), h.eng, h.math, h.spec, h.oneonone, h.supp,
                     parseFloat(totalHours.toFixed(1)), baseTuition,
                     addName, add, discName, disc, grandTotal, isPaidText, partialAmt
                 ].join(',');
@@ -3182,6 +3267,9 @@
             
             const bh = getBillableHours(id);
 
+            // 정산 기준 시간표(A/B) 버튼 상태
+            _syncBillOptionUI(id);
+
             // 상단 요약 박스: 실제 정산 시수(override 우선, 없으면 달력값) 표시
             document.getElementById('bill-hr-eng').textContent = bh.eng + 'h';
             document.getElementById('bill-hr-math').textContent = bh.math + 'h';
@@ -3224,7 +3312,9 @@
                         add_amount: 0,
                         disc_name: '',
                         disc_amount: 0,
-                        is_paid: false
+                        is_paid: false,
+                        // 정산 기준 시간표 선택은 단가 이월과 무관하게 유지
+                        bill_option: t.bill_option || 'A'
                     };
                     tuitionData[id] = t;
                     saveLocal();
@@ -3466,10 +3556,10 @@
             // 현재 학생을 임시로 대상 학생으로 바꿔서 capture-target-apr를 그 학생 기준으로 다시 렌더
             const prevId = currentStudentId, prevOpt = currentOption;
             currentStudentId = studentId;
-            currentOption = 'A';
+            currentOption = getBillOption(studentId);   // 정산 기준으로 선택한 시간표(A/B)를 그대로 캡처
             // 학생 시간표 텍스트영역 동기화 (notice/personalNotice가 미리보기 카드에 반영되도록)
             try {
-                const logsA = (attendanceData[studentId] && attendanceData[studentId]['A']) ? attendanceData[studentId]['A'] : {};
+                const logsA = (attendanceData[studentId] && attendanceData[studentId][currentOption]) ? attendanceData[studentId][currentOption] : {};
                 const noticeEl = document.getElementById('student-notice');
                 const personalEl = document.getElementById('student-personal-notice');
                 if (noticeEl) noticeEl.value = (logsA.__notice !== undefined && logsA.__notice !== null) ? logsA.__notice : getGlobalNoticeForStudent(studentId);
@@ -3612,10 +3702,16 @@
             };
         }
 
+        // 정산 기준 시간표(A/B) — 학생별로 선택, 미지정이면 A
+        function getBillOption(id) {
+            return (tuitionData[id] && tuitionData[id].bill_option === 'B') ? 'B' : 'A';
+        }
+
         // 정산용 시수: 달력 시수가 기본값이며, 사용자가 직접 수정한 값(override)이 있으면 그 값을 사용.
         // 반환 객체의 .cal 에는 항상 달력 원본 시수가 들어있어 "기본값" 비교/리셋에 사용한다.
         function getBillableHours(id) {
-            const logs = (attendanceData[id] && attendanceData[id]['A']) ? attendanceData[id]['A'] : {};
+            const opt = getBillOption(id);
+            const logs = (attendanceData[id] && attendanceData[id][opt]) ? attendanceData[id][opt] : {};
             const cal = getHoursFromLogs(logs);
             const ov = (tuitionData[id] && tuitionData[id].hours) || {};
             const pick = (k) => (ov[k] !== undefined && ov[k] !== null && ov[k] !== '') ? Number(ov[k]) : cal[k];
@@ -6099,7 +6195,9 @@
                 rate_supp: prevT.rate_supp || 0,
                 add_name: '', add_amount: 0,
                 disc_name: '', disc_amount: 0,
-                is_paid: false
+                is_paid: false,
+                // 정산 기준 시간표 선택은 단가 이월과 무관하게 유지
+                bill_option: (tuitionData[studentId] && tuitionData[studentId].bill_option) || 'A'
             };
             tuitionData[studentId] = t;
             document.getElementById('bill-rate-eng').value = formatNumber(t.rate_eng);
