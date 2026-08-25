@@ -279,6 +279,17 @@
             line-height: 1 !important;
         }
 
+        /* 같은 날 같은 과목의 1교시/2교시 전환 칩 */
+        .slot-chip { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; transition: all .15s; white-space: nowrap; }
+        .slot-chip:hover { border-color: #c7d2fe; color: #4f46e5; }
+        .slot-chip.active { background: #4f46e5; border-color: #4f46e5; color: #fff; box-shadow: 0 1px 4px rgba(79,70,229,.35); }
+        .slot-chip.empty { border-style: dashed; color: #94a3b8; }
+        .slot-chip.empty.active { background: #eef2ff; border-color: #818cf8; color: #4f46e5; box-shadow: none; }
+
+        /* 같은 날 수업 사이의 시간 텀 표시 — 아주 미세한 점선 */
+        .badge-gap { height: 0; margin: 3px 8px 2px; border-top: 1px dashed #d8dee9; }
+        .exporting .badge-gap { margin: 2px 8px 1px; border-top: 1px dashed #d8dee9; }
+
         /* Subject Colors — Present (A안: 흰 바탕 + 과목색 왼쪽 바 3px + 과목색 라벨) */
         .badge-eng-present, .badge-math-present, .badge-supp-present,
         .badge-supp-eng-present, .badge-supp-math-present, .badge-spec-present,
@@ -1048,6 +1059,8 @@
                         <div class="subject-tab border-l border-slate-200 ml-1" id="tab-custom" onclick="setOverlaySubject('custom')"><span><i class="fa-solid fa-pen text-[10px] mr-1"></i>직접입력</span></div>
                     </div>
 
+                    <div id="subjectSlotBar" class="hidden flex items-center gap-1.5 mb-3 flex-wrap"></div>
+
                     <div id="customInputWrapper" class="hidden mb-3 animate-fade-in">
                         <label class="text-[10px] font-bold text-red-500 uppercase block mb-1"><i class="fa-solid fa-tag"></i> 달력에 표시될 내용 (예: 중간고사, 휴강)</label>
                         <input type="text" id="customSubjectName" class="w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="내용을 입력하세요">
@@ -1655,7 +1668,7 @@
 
             <div class="p-5 overflow-y-auto flex-grow">
                 <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs text-slate-500"><i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> 한 번 저장한 템플릿은 <b class="text-slate-600">모든 달에 그대로 유지</b>됩니다. 달력에는 <b class="text-slate-600">[이번 달 전체에 적용]</b>을 눌렀을 때만 입력됩니다.</p>
+                    <p class="text-xs text-slate-500"><i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> 한 번 저장한 템플릿은 <b class="text-slate-600">모든 달에 그대로 유지</b>됩니다. 달력에는 <b class="text-slate-600">[이번 달 전체에 적용]</b>을 눌렀을 때만 입력됩니다.<br><span class="text-[11px] text-slate-400">같은 요일에 같은 과목을 2개까지 넣을 수 있습니다 (예: 월 수학 14:00~15:00 + 월 수학 17:30~18:30).</span></p>
                     <button onclick="addTemplateEntry()" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shrink-0 transition">
                         <i class="fa-solid fa-plus"></i> 항목 추가
                     </button>
@@ -2165,7 +2178,83 @@
         // 날짜 통째로 덮어쓰기 모드 (특정 날짜의 모든 일정 → 다른 날짜에 전체 교체)
         var isDayPasteMode = false;
         var dayClipboard = null; // { date, data: {subj: entry,...}, count }
-        var ALL_SUBJECT_KEYS = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
+        // ── 같은 날 · 같은 과목을 2회까지 입력(1교시 / 2교시) ────────────────────────
+        // 저장 키: 1교시 = 'math', 2교시 = 'math#2'
+        // 라벨·색상·정산 시수는 모두 '#' 앞의 기본 과목 키를 따르므로 2교시도 정규 수업으로 집계된다.
+        // (기존 데이터는 전부 1교시 키라 그대로 호환된다)
+        var SUBJECT_SLOT_MAX = 2;
+        var BASE_SUBJECT_KEYS = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
+
+        function baseSubject(key) {
+            const k = String(key);
+            const i = k.indexOf('#');
+            return i === -1 ? k : k.slice(0, i);
+        }
+        function subjectSlot(key) {
+            const k = String(key);
+            const i = k.indexOf('#');
+            if (i === -1) return 1;
+            const n = parseInt(k.slice(i + 1), 10);
+            return (n >= 1 && n <= SUBJECT_SLOT_MAX) ? n : 1;
+        }
+        function slotKey(base, slot) {
+            return slot > 1 ? `${base}#${slot}` : base;
+        }
+        // 한 과목의 전체 슬롯 키 ['math', 'math#2']
+        function subjectSlotKeys(key) {
+            const base = baseSubject(key);
+            const keys = [];
+            for (let i = 1; i <= SUBJECT_SLOT_MAX; i++) keys.push(slotKey(base, i));
+            return keys;
+        }
+        // 이 과목의 비어있는 슬롯 키 (다 차있으면 null)
+        function findFreeSlotKey(dayData, key) {
+            const d = dayData || {};
+            return subjectSlotKeys(key).find(k => !d[k]) || null;
+        }
+        // 붙여넣기·복사·이동의 대상 슬롯 결정
+        //  1) 같은 과목·같은 시간이 이미 있으면 그 자리를 덮어씀 (같은 걸 두 번 붙여넣어도 중복이 안 쌓이도록)
+        //  2) 비어있는 슬롯이 있으면 거기에 추가
+        //  3) 슬롯이 다 차있으면 null → 호출부에서 건너뜀
+        function resolveTargetSlotKey(dayData, key, start, end) {
+            const d = dayData || {};
+            const keys = subjectSlotKeys(key);
+            const same = keys.find(k => d[k] && d[k].start === start && d[k].end === end);
+            if (same) return same;
+            return keys.find(k => !d[k]) || null;
+        }
+
+        var ALL_SUBJECT_KEYS = BASE_SUBJECT_KEYS.reduce((acc, b) => acc.concat(subjectSlotKeys(b)), []);
+        var SUBJECT_KEYS_NO_CUSTOM = ALL_SUBJECT_KEYS.filter(k => baseSubject(k) !== 'custom');
+
+        // 라벨·색상은 슬롯과 무관하게 기본 과목 키로 결정된다
+        function subjectLabelOf(key, customLabel) {
+            switch (baseSubject(key)) {
+                case 'math': return '수학';
+                case 'supp': return '보강';
+                case 'supp_eng': return '보강(영)';
+                case 'supp_math': return '보강(수)';
+                case 'spec': return '특강';
+                case 'spec_eng': return '특강(영)';
+                case 'spec_math': return '특강(수)';
+                case 'oneonone': return '1:1수업';
+                case 'custom': return customLabel || '기타';
+                default: return '영어';
+            }
+        }
+        function subjectBadgeStyle(key, status) {
+            return `badge-${baseSubject(key).replace(/_/g, '-')}-${status === 'absent' ? 'absent' : 'present'}`;
+        }
+        function subjectBgClass(key) {
+            const base = baseSubject(key);
+            return base === 'oneonone' ? 'bg-one' : 'bg-' + base.replace(/_/g, '-');
+        }
+        // 'HH:MM' → 분
+        function _toMin(t) {
+            if (!t) return null;
+            const [h, m] = String(t).split(':').map(Number);
+            return (h * 60) + (m || 0);
+        }
 
         function hasDayEntries(dayData) {
             if (!dayData) return false;
@@ -2416,20 +2505,13 @@
             studentList.forEach(s => {
                 const logA = attendanceData[s.id]?.['A']?.[dateStr];
                 if (logA) {
-                    const subjects = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone'];
-                    subjects.forEach(subj => {
+                    SUBJECT_KEYS_NO_CUSTOM.forEach(subj => {
                         if (logA[subj] && logA[subj].status === 'present') {
-                            let label = '영어'; let color = 'bg-eng';
-                            if (subj === 'math') { label = '수학'; color = 'bg-math'; }
-                            else if (subj === 'supp') { label = '보강'; color = 'bg-supp'; }
-                            else if (subj === 'supp_eng') { label = '보강(영)'; color = 'bg-supp-eng'; }
-                            else if (subj === 'supp_math') { label = '보강(수)'; color = 'bg-supp-math'; }
-                            else if (subj === 'spec') { label = '특강'; color = 'bg-spec'; }
-                            else if (subj === 'spec_eng') { label = '특강(영)'; color = 'bg-spec-eng'; }
-                            else if (subj === 'spec_math') { label = '특강(수)'; color = 'bg-spec-math'; }
-                            else if (subj === 'oneonone') { label = '1:1수업'; color = 'bg-one'; }
-                            
-                            events.push({ student: s.name, group: s.group, subject: label, style: color, start: logA[subj].start, end: logA[subj].end });
+                            events.push({
+                                student: s.name, group: s.group,
+                                subject: subjectLabelOf(subj), style: subjectBgClass(subj),
+                                start: logA[subj].start, end: logA[subj].end
+                            });
                         }
                     });
                 }
@@ -2664,8 +2746,12 @@
                 Object.keys(logs).forEach(d => {
                     if (d.startsWith('__')) return;
                     if (typeof logs[d] !== 'object' || logs[d] === null) return;
-                    if (logs[d].eng && logs[d].eng.status === 'present') engHours += (logs[d].eng.hours || 0);
-                    if (logs[d].math && logs[d].math.status === 'present') mathHours += (logs[d].math.hours || 0);
+                    subjectSlotKeys('eng').forEach(k => {
+                        if (logs[d][k] && logs[d][k].status === 'present') engHours += (logs[d][k].hours || 0);
+                    });
+                    subjectSlotKeys('math').forEach(k => {
+                        if (logs[d][k] && logs[d][k].status === 'present') mathHours += (logs[d][k].hours || 0);
+                    });
                 });
                 
                 let groupColor = s.group === 'Elementary' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
@@ -3712,21 +3798,26 @@
             }
         }
 
+        // 과목 키 → 정산 시수 버킷 (2교시 슬롯도 기본 과목으로 합산된다)
+        function _billBucketOf(key) {
+            const base = baseSubject(key);
+            if (base === 'eng' || base === 'math' || base === 'oneonone') return base;
+            if (base === 'supp' || base === 'supp_eng' || base === 'supp_math') return 'supp';
+            if (base === 'spec' || base === 'spec_eng' || base === 'spec_math') return 'spec';
+            return null; // 커스텀(직접입력)은 수업료 시수에 포함하지 않음
+        }
+
         function getHoursFromLogs(logs) {
             let h = { eng: 0, math: 0, supp: 0, spec: 0, oneonone: 0 };
             for(let d in logs) {
                 if (d.startsWith('__')) continue; // __notice 등 메타키 제외
                 if (typeof logs[d] !== 'object' || logs[d] === null) continue;
-                if(logs[d].eng && logs[d].eng.status === 'present') h.eng += logs[d].eng.hours;
-                if(logs[d].math && logs[d].math.status === 'present') h.math += logs[d].math.hours;
-                if(logs[d].supp && logs[d].supp.status === 'present') h.supp += logs[d].supp.hours;
-                if(logs[d].supp_eng && logs[d].supp_eng.status === 'present') h.supp += logs[d].supp_eng.hours;
-                if(logs[d].supp_math && logs[d].supp_math.status === 'present') h.supp += logs[d].supp_math.hours;
-                if(logs[d].spec && logs[d].spec.status === 'present') h.spec += logs[d].spec.hours;
-                if(logs[d].spec_eng && logs[d].spec_eng.status === 'present') h.spec += logs[d].spec_eng.hours;
-                if(logs[d].spec_math && logs[d].spec_math.status === 'present') h.spec += logs[d].spec_math.hours;
-                if(logs[d].oneonone && logs[d].oneonone.status === 'present') h.oneonone += logs[d].oneonone.hours;
-                // 커스텀은 기본 수업료 시수에 포함시키지 않음 (필요시 추가)
+                ALL_SUBJECT_KEYS.forEach(key => {
+                    const e = logs[d][key];
+                    if (!e || e.status !== 'present') return;
+                    const bucket = _billBucketOf(key);
+                    if (bucket) h[bucket] += (e.hours || 0);
+                });
             }
             return {
                 eng: parseFloat(h.eng.toFixed(1)),
@@ -3966,11 +4057,10 @@
             
             days.forEach(d => {
                 const dayData = logs[d.dateStr] || {};
-                const subjs = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
-                subjs.forEach(key => {
+                ALL_SUBJECT_KEYS.forEach(key => {
                     if(dayData[key] && dayData[key].status === 'present') {
                         hasEvents = true;
-                        if (key !== 'custom') {
+                        if (baseSubject(key) !== 'custom') {
                             const sh = parseInt(dayData[key].start.split(':')[0]);
                             const eh = parseInt(dayData[key].end.split(':')[0]);
                             if(sh < minHour) minHour = sh;
@@ -4009,11 +4099,10 @@
                     
                     let cellContent = `<div class="badge-container h-full min-h-[40px]">`;
                     
-                    const subjs = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
                     const entries = [];
-                    subjs.forEach(key => {
+                    ALL_SUBJECT_KEYS.forEach(key => {
                         if(dayData[key] && dayData[key].status === 'present') {
-                            if (key === 'custom') {
+                            if (baseSubject(key) === 'custom') {
                                 if (h === minHour) {
                                     entries.push({ type: key, ...dayData[key], label: dayData[key].label || '기타' });
                                 }
@@ -4024,17 +4113,7 @@
                                 const endVal = eh + em/60;
                                 
                                 if (startVal < h + 1 && endVal > h) {
-                                    let label = '영어';
-                                    if(key==='math') label='수학';
-                                    else if(key==='supp') label='보강';
-                                    else if(key==='supp_eng') label='보강(영)';
-                                    else if(key==='supp_math') label='보강(수)';
-                                    else if(key==='spec') label='특강';
-                                    else if(key==='spec_eng') label='특강(영)';
-                                    else if(key==='spec_math') label='특강(수)';
-                                    else if(key==='oneonone') label='1:1수업';
-
-                                    entries.push({ type: key, ...dayData[key], label: label });
+                                    entries.push({ type: key, ...dayData[key], label: subjectLabelOf(key, dayData[key].label) });
                                 }
                             }
                         }
@@ -4042,22 +4121,12 @@
                     
                     entries.sort((a,b) => a.start.localeCompare(b.start));
                     entries.forEach(entry => {
-                        let style = '';
-                        if (entry.type === 'eng') style = 'badge-eng-present';
-                        else if (entry.type === 'math') style = 'badge-math-present';
-                        else if (entry.type === 'supp') style = 'badge-supp-present';
-                        else if (entry.type === 'supp_eng') style = 'badge-supp-eng-present';
-                        else if (entry.type === 'supp_math') style = 'badge-supp-math-present';
-                        else if (entry.type === 'spec') style = 'badge-spec-present';
-                        else if (entry.type === 'spec_eng') style = 'badge-spec-eng-present';
-                        else if (entry.type === 'spec_math') style = 'badge-spec-math-present';
-                        else if (entry.type === 'oneonone') style = 'badge-oneonone-present';
-                        else if (entry.type === 'custom') style = 'badge-custom-present';
+                        const style = subjectBadgeStyle(entry.type, 'present');
                         
-                        const timeText2 = entry.type !== 'custom' ? `${entry.start}–${entry.end}` : '';
+                        const timeText2 = baseSubject(entry.type) !== 'custom' ? `${entry.start}–${entry.end}` : '';
                         const soloCls2 = timeText2 ? '' : ' badge-solo';
                         const timeHtml2 = timeText2 ? `<div class="badge-time">${timeText2}</div>` : '';
-                        const labelCls2 = entry.type === 'custom' ? customLabelClass(entry.label) : 'badge-label';
+                        const labelCls2 = baseSubject(entry.type) === 'custom' ? customLabelClass(entry.label) : 'badge-label';
                         cellContent += `<div class="badge ${style}${soloCls2} mb-1"><div class="${labelCls2}">${entry.label}</div>${timeHtml2}</div>`;
                     });
                     
@@ -4171,22 +4240,9 @@
 
                 // 모든 날짜(휴일/공휴일/일요일 포함)에 대해 entries 렌더링 — 특수 보강 등 입력 가능
                 const entries = [];
-                const subjs = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
-
-                subjs.forEach(key => {
+                ALL_SUBJECT_KEYS.forEach(key => {
                     if(dayData[key]) {
-                        let label = '영어';
-                        if(key==='math') label='수학';
-                        else if(key==='supp') label='보강';
-                        else if(key==='supp_eng') label='보강(영)';
-                        else if(key==='supp_math') label='보강(수)';
-                        else if(key==='spec') label='특강';
-                        else if(key==='spec_eng') label='특강(영)';
-                        else if(key==='spec_math') label='특강(수)';
-                        else if(key==='oneonone') label='1:1수업';
-                        else if(key==='custom') label = dayData[key].label || '기타';
-
-                        entries.push({ type: key, ...dayData[key], label: label });
+                        entries.push({ type: key, ...dayData[key], label: subjectLabelOf(key, dayData[key].label) });
                     }
                 });
 
@@ -4197,28 +4253,29 @@
                     return 0;
                 });
 
+                let prevEndMin = null; // 앞 수업의 종료 시각 — 텀이 있으면 미세 구분선을 넣는다
                 entries.forEach(entry => {
-                    let style = '';
-                    if (entry.type === 'eng') style = entry.status === 'present' ? 'badge-eng-present' : 'badge-eng-absent';
-                    else if (entry.type === 'math') style = entry.status === 'present' ? 'badge-math-present' : 'badge-math-absent';
-                    else if (entry.type === 'supp') style = entry.status === 'present' ? 'badge-supp-present' : 'badge-supp-absent';
-                    else if (entry.type === 'supp_eng') style = entry.status === 'present' ? 'badge-supp-eng-present' : 'badge-supp-eng-absent';
-                    else if (entry.type === 'supp_math') style = entry.status === 'present' ? 'badge-supp-math-present' : 'badge-supp-math-absent';
-                    else if (entry.type === 'spec') style = entry.status === 'present' ? 'badge-spec-present' : 'badge-spec-absent';
-                    else if (entry.type === 'spec_eng') style = entry.status === 'present' ? 'badge-spec-eng-present' : 'badge-spec-eng-absent';
-                    else if (entry.type === 'spec_math') style = entry.status === 'present' ? 'badge-spec-math-present' : 'badge-spec-math-absent';
-                    else if (entry.type === 'oneonone') style = entry.status === 'present' ? 'badge-oneonone-present' : 'badge-oneonone-absent';
-                    else if (entry.type === 'custom') style = entry.status === 'present' ? 'badge-custom-present' : 'badge-custom-absent';
+                    const style = subjectBadgeStyle(entry.type, entry.status);
+
+                    // 이어서 하는 수업(앞 수업 종료 = 뒤 수업 시작)에는 넣지 않고, 사이가 뜬 경우에만 표시
+                    if (entry.status === 'present' && baseSubject(entry.type) !== 'custom') {
+                        const startMin = _toMin(entry.start);
+                        if (prevEndMin !== null && startMin !== null && startMin > prevEndMin) {
+                            content += `<div class="badge-gap"></div>`;
+                        }
+                        const endMin = _toMin(entry.end);
+                        if (endMin !== null) prevEndMin = endMin;
+                    }
 
                     let timeText = '';
-                    if (entry.status === 'present' && entry.type !== 'custom') {
+                    if (entry.status === 'present' && baseSubject(entry.type) !== 'custom') {
                         timeText = `${entry.start}–${entry.end}`;
                     } else if (entry.status === 'absent') {
                         timeText = '결석';
                     }
                     const soloCls = timeText ? '' : ' badge-solo';
                     const timeHtml = timeText ? `<div class="badge-time">${timeText}</div>` : '';
-                    const labelCls = entry.type === 'custom' ? customLabelClass(entry.label) : 'badge-label';
+                    const labelCls = baseSubject(entry.type) === 'custom' ? customLabelClass(entry.label) : 'badge-label';
                     const cardKey = dateStr + '|' + entry.type;
                     const isCardSel = selectedCards.has(cardKey);
                     const dragAttr = (isBulkCardMode || isDayPasteMode) ? '' : ' draggable="true"';
@@ -4281,8 +4338,7 @@
             const dayData = attendanceData[currentStudentId]?.[currentOption]?.[dateStr];
             let defaultSubj = 'eng'; // 기본값
             if (dayData) {
-                const subjs = ['eng', 'math', 'supp', 'supp_eng', 'supp_math', 'spec', 'spec_eng', 'spec_math', 'oneonone', 'custom'];
-                for (let subj of subjs) {
+                for (let subj of ALL_SUBJECT_KEYS) {
                     if (dayData[subj]) {
                         defaultSubj = subj;
                         break;
@@ -4317,14 +4373,15 @@
                 el.classList.remove(...classesToRemove);
             });
             
-            const tabId = 'tab-' + subj.replace('_', '-');
+            const base = baseSubject(subj);
+            const tabId = 'tab-' + base.replace('_', '-');
             const tab = document.getElementById(tabId);
             if(tab) {
-                tab.classList.add(`active-${subj.replace('_', '-')}`);
+                tab.classList.add(`active-${base.replace('_', '-')}`);
             }
 
             // 커스텀 입력창 토글
-            if(subj === 'custom') {
+            if(base === 'custom') {
                 document.getElementById('customInputWrapper').classList.remove('hidden');
                 document.getElementById('timeInputWrapper').classList.add('hidden');
                 // [버그 수정] 자동 focus 제거: 브라우저가 focus된 입력창을 화면에 보이게 하려고
@@ -4336,19 +4393,71 @@
             }
             
             // 기존 데이터가 있다면 입력창에 값 세팅
-            if (currentStudentId && selectedDate) {
-                const dayData = attendanceData[currentStudentId]?.[currentOption]?.[selectedDate];
-                if (dayData && dayData[subj]) {
-                    if (subj === 'custom') {
-                        document.getElementById('customSubjectName').value = dayData[subj].label || '';
-                    } else {
-                        if (dayData[subj].start) document.getElementById('inpStart').value = dayData[subj].start;
-                        if (dayData[subj].end) document.getElementById('inpEnd').value = dayData[subj].end;
-                    }
+            _fillOverlayInputsFor(subj);
+            renderSubjectSlotBar();
+        }
+
+        // 선택된 슬롯(1교시/2교시)의 저장값을 입력창에 반영
+        function _fillOverlayInputsFor(key) {
+            if (!currentStudentId || !selectedDate) return;
+            const isCustom = baseSubject(key) === 'custom';
+            const dayData = attendanceData[currentStudentId]?.[currentOption]?.[selectedDate];
+            const entry = dayData && dayData[key];
+            if (entry) {
+                if (isCustom) {
+                    document.getElementById('customSubjectName').value = entry.label || '';
                 } else {
-                    if (subj === 'custom') document.getElementById('customSubjectName').value = '';
+                    if (entry.start) document.getElementById('inpStart').value = entry.start;
+                    if (entry.end) document.getElementById('inpEnd').value = entry.end;
                 }
+            } else if (isCustom) {
+                document.getElementById('customSubjectName').value = '';
             }
+            // 비어있는 슬롯은 입력창 값을 그대로 두어 바로 새 시간을 넣을 수 있게 한다
+        }
+
+        // 같은 날 같은 과목의 1교시/2교시 전환 칩
+        function renderSubjectSlotBar() {
+            const bar = document.getElementById('subjectSlotBar');
+            if (!bar) return;
+            const base = baseSubject(currentSubject);
+            const dayData = (currentStudentId && selectedDate)
+                ? (attendanceData[currentStudentId]?.[currentOption]?.[selectedDate] || {})
+                : {};
+            const keys = subjectSlotKeys(base);
+            const hasAny = keys.some(k => dayData[k]);
+
+            // 이 날 이 과목에 아직 아무것도 없으면 칩을 숨겨 예전처럼 단순하게 쓴다
+            if (!hasAny && subjectSlot(currentSubject) === 1) {
+                bar.innerHTML = '';
+                bar.classList.add('hidden');
+                return;
+            }
+
+            let html = `<span class="text-[10px] font-bold text-slate-400 tracking-wide mr-0.5">${subjectLabelOf(base)}</span>`;
+            keys.forEach((k, i) => {
+                const e = dayData[k];
+                const slotNo = i + 1;
+                let label;
+                if (!e) label = `<i class="fa-solid fa-plus text-[9px] mr-1"></i>시간 추가`;
+                else if (e.status === 'absent') label = `${slotNo}교시 · 결석`;
+                else if (base === 'custom') label = `${slotNo}교시`;
+                else label = `${slotNo}교시 · ${e.start}~${e.end}`;
+                const cls = `slot-chip${k === currentSubject ? ' active' : ''}${e ? '' : ' empty'}`;
+                html += `<button type="button" onclick="selectSubjectSlot('${k}')" class="${cls}">${label}</button>`;
+            });
+            // 보강/특강이 아닌 정규 과목일 때만, 2교시도 정규 시수로 잡힌다는 점을 알려준다
+            if (['eng', 'math', 'oneonone'].includes(base)) {
+                html += `<span class="text-[10px] text-slate-400 ml-1">보강이 아닌 <b class="text-slate-500">정규 ${subjectLabelOf(base)} 시수</b>로 집계됩니다</span>`;
+            }
+            bar.innerHTML = html;
+            bar.classList.remove('hidden');
+        }
+
+        function selectSubjectSlot(key) {
+            currentSubject = key;
+            _fillOverlayInputsFor(key);
+            renderSubjectSlotBar();
         }
 
         function saveAttendance(status) {
@@ -4361,7 +4470,7 @@
             if (status === 'absent') {
                 dayEntry[currentSubject] = { status: 'absent' };
             } else {
-                if (currentSubject === 'custom') {
+                if (baseSubject(currentSubject) === 'custom') {
                     const customLabel = document.getElementById('customSubjectName').value.trim() || '일정';
                     dayEntry[currentSubject] = { status: 'present', start: '00:00', end: '23:59', hours: 0, label: customLabel };
                 } else {
@@ -4408,19 +4517,23 @@
                     if (d.startsWith('__')) continue;
                     if (typeof logs[d] !== 'object' || logs[d] === null) continue;
 
-                    if(logs[d].eng?.status === 'present') eng += logs[d].eng.hours;
-                    if(logs[d].math?.status === 'present') math += logs[d].math.hours;
-
-                    if(logs[d].supp?.status === 'present') supp_other += logs[d].supp.hours;
-                    if(logs[d].supp_eng?.status === 'present') supp_eng += logs[d].supp_eng.hours;
-                    if(logs[d].supp_math?.status === 'present') supp_math += logs[d].supp_math.hours;
-
-                    if(logs[d].spec?.status === 'present') spec_other += logs[d].spec.hours;
-                    if(logs[d].spec_eng?.status === 'present') spec_eng += logs[d].spec_eng.hours;
-                    if(logs[d].spec_math?.status === 'present') spec_math += logs[d].spec_math.hours;
-
-                    if(logs[d].oneonone?.status === 'present') oneonone += logs[d].oneonone.hours;
-                    // 커스텀(직접입력)은 상단 통계표에 띄우지 않음. 필요시 추가 가능
+                    // 2교시 슬롯도 기본 과목 시수에 합산 (커스텀은 상단 통계표에 띄우지 않음)
+                    ALL_SUBJECT_KEYS.forEach(key => {
+                        const e = logs[d][key];
+                        if (!e || e.status !== 'present') return;
+                        const hrs = e.hours || 0;
+                        switch (baseSubject(key)) {
+                            case 'eng': eng += hrs; break;
+                            case 'math': math += hrs; break;
+                            case 'supp': supp_other += hrs; break;
+                            case 'supp_eng': supp_eng += hrs; break;
+                            case 'supp_math': supp_math += hrs; break;
+                            case 'spec': spec_other += hrs; break;
+                            case 'spec_eng': spec_eng += hrs; break;
+                            case 'spec_math': spec_math += hrs; break;
+                            case 'oneonone': oneonone += hrs; break;
+                        }
+                    });
                 }
                 return { 
                     eng: parseFloat(eng.toFixed(1)), 
@@ -4470,29 +4583,20 @@
             const end = document.getElementById('inpEnd').value;
             
             let customLabel = '';
-            if (currentSubject === 'custom') {
+            if (baseSubject(currentSubject) === 'custom') {
                 customLabel = document.getElementById('customSubjectName').value.trim() || '일정';
             }
 
+            const isCustomSubj = baseSubject(currentSubject) === 'custom';
             entryClipboard = { 
                 subject: currentSubject, 
-                start: currentSubject === 'custom' ? '00:00' : start, 
-                end: currentSubject === 'custom' ? '23:59' : end, 
+                start: isCustomSubj ? '00:00' : start, 
+                end: isCustomSubj ? '23:59' : end, 
                 label: customLabel 
             };
-            let subjName = '영어';
-            
-            if (currentSubject === 'math') subjName = '수학';
-            else if (currentSubject === 'supp') subjName = '보강';
-            else if (currentSubject === 'supp_eng') subjName = '보강(영)';
-            else if (currentSubject === 'supp_math') subjName = '보강(수)';
-            else if (currentSubject === 'spec') subjName = '특강';
-            else if (currentSubject === 'spec_eng') subjName = '특강(영)';
-            else if (currentSubject === 'spec_math') subjName = '특강(수)';
-            else if (currentSubject === 'oneonone') subjName = '1:1 수업';
-            else if (currentSubject === 'custom') subjName = `[${customLabel}]`;
-            
-            document.getElementById('pasteInfo').textContent = currentSubject === 'custom' ? subjName : `${subjName} ${start} ~ ${end}`;
+            const subjName = isCustomSubj ? `[${customLabel}]` : subjectLabelOf(currentSubject);
+
+            document.getElementById('pasteInfo').textContent = isCustomSubj ? subjName : `${subjName} ${start} ~ ${end}`;
 
             // [상호배제] 오버레이를 완전히 닫는다 (클래스 제거 + selectedDate null)
             closeInputOverlay();
@@ -4523,19 +4627,26 @@
             const optionData = attendanceData[currentStudentId][currentOption];
             const [h1, m1] = entryClipboard.start.split(':').map(Number);
             const [h2, m2] = entryClipboard.end.split(':').map(Number);
-            const isCustom = entryClipboard.subject === 'custom';
+            const isCustom = baseSubject(entryClipboard.subject) === 'custom';
             const hours = isCustom ? 0 : parseFloat(((h2 + m2/60) - (h1 + m1/60)).toFixed(1));
             
+            let fullCount = 0;
             selectedDates.forEach(date => {
                 if (!optionData[date]) optionData[date] = {};
                 const entryData = { status: 'present', start: entryClipboard.start, end: entryClipboard.end, hours: hours };
                 if (isCustom) entryData.label = entryClipboard.label;
 
-                optionData[date][entryClipboard.subject] = entryData;
+                // 같은 과목이 이미 있으면 빈 슬롯(2교시)에 추가 — 같은 시간이면 그 자리를 갱신
+                const key = resolveTargetSlotKey(optionData[date], entryClipboard.subject, entryData.start, entryData.end);
+                if (!key) { fullCount++; return; }
+                optionData[date][key] = entryData;
             });
-            
+
             saveLocal();
             cancelMultiSelect();
+            if (fullCount > 0) {
+                alert(`${fullCount}일은 이미 이 과목이 ${SUBJECT_SLOT_MAX}개 입력되어 있어 건너뛰었습니다.`);
+            }
         }
 
         // ==================== 날짜 통째로 복사 → 다른 날짜에 덮어쓰기 ====================
@@ -4708,12 +4819,19 @@
             const opt = attendanceData[currentStudentId]?.[currentOption];
             if (!opt || !opt[srcDate] || !opt[srcDate][subj]) return;
             if (!opt[dstDate]) opt[dstDate] = {};
-            opt[dstDate][subj] = opt[srcDate][subj]; // 같은 과목이 있으면 덮어쓰기
+            const src = opt[srcDate][subj];
+            // 옮길 자리에 같은 과목이 있으면 덮어쓰지 않고 빈 슬롯(2교시)에 넣는다
+            const dstKey = resolveTargetSlotKey(opt[dstDate], subj, src.start, src.end);
+            if (!dstKey) {
+                alert(`${fmtDayLabel(dstDate)}에는 이미 ${subjectLabelOf(subj)} 수업이 ${SUBJECT_SLOT_MAX}개 있습니다.`);
+                return;
+            }
+            opt[dstDate][dstKey] = src;
             delete opt[srcDate][subj];
             if (Object.keys(opt[srcDate]).length === 0) delete opt[srcDate];
             if (selectedCards.has(srcDate + '|' + subj)) {
                 selectedCards.delete(srcDate + '|' + subj);
-                selectedCards.add(dstDate + '|' + subj);
+                selectedCards.add(dstDate + '|' + dstKey);
             }
             saveLocal();
             renderCalendars();
@@ -4795,7 +4913,7 @@
                 const subj = key.slice(sep + 1);
                 const entry = opt[date] && opt[date][subj];
                 if (!entry) return;
-                if (subj === 'custom') return; // 직접입력은 시간 변경 제외
+                if (baseSubject(subj) === 'custom') return; // 직접입력은 시간 변경 제외
                 entry.status = 'present';
                 entry.start = start;
                 entry.end = end;
@@ -4902,26 +5020,15 @@
         var entryCopyPayload = null;
 
         function _subjectLabel(subj, customLabel) {
-            switch (subj) {
-                case 'eng': return '영어';
-                case 'math': return '수학';
-                case 'supp': return '보강';
-                case 'supp_eng': return '보강(영)';
-                case 'supp_math': return '보강(수)';
-                case 'spec': return '특강';
-                case 'spec_eng': return '특강(영)';
-                case 'spec_math': return '특강(수)';
-                case 'oneonone': return '1:1수업';
-                case 'custom': return customLabel || '직접입력';
-                default: return subj;
-            }
+            if (baseSubject(subj) === 'custom') return customLabel || '직접입력';
+            return subjectLabelOf(subj, customLabel);
         }
 
         function openCopyEntryModal() {
             if (!currentStudentId || !selectedDate) return alert('먼저 날짜와 시간을 선택해주세요.');
             const subj = currentSubject;
             let start, end, label = '', hours = 0;
-            if (subj === 'custom') {
+            if (baseSubject(subj) === 'custom') {
                 label = document.getElementById('customSubjectName').value.trim() || '일정';
                 start = '00:00'; end = '23:59'; hours = 0;
             } else {
@@ -4939,7 +5046,7 @@
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             const dateLabel = `${dObj.getMonth() + 1}/${dObj.getDate()}(${days[dObj.getDay()]})`;
             const subjLabel = _subjectLabel(subj, label);
-            const timeLabel = subj === 'custom' ? '' : ` ${start}~${end}`;
+            const timeLabel = baseSubject(subj) === 'custom' ? '' : ` ${start}~${end}`;
             document.getElementById('entryCopySummary').textContent = `${dateLabel} · ${subjLabel}${timeLabel}`;
 
             const listContainer = document.getElementById('entryCopyCheckList');
@@ -4983,6 +5090,7 @@
             if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
             const p = entryCopyPayload;
             const targetOption = _getCopyTargetOption('copyEntryTargetOption');
+            let skipped = 0; // 대상 학생의 해당 과목 슬롯이 이미 다 찬 경우
             checked.forEach(cb => {
                 const sid = parseInt(cb.value);
                 if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
@@ -4990,12 +5098,15 @@
                 const opt = attendanceData[sid][targetOption];
                 if (!opt[p.date]) opt[p.date] = {};
                 const data = { status: 'present', start: p.start, end: p.end, hours: p.hours };
-                if (p.subject === 'custom') data.label = p.label;
-                opt[p.date][p.subject] = data;
+                if (baseSubject(p.subject) === 'custom') data.label = p.label;
+                const key = resolveTargetSlotKey(opt[p.date], p.subject, data.start, data.end);
+                if (!key) { skipped++; return; }
+                opt[p.date][key] = data;
             });
             saveLocal();
             closeCopyEntryModal();
-            alert(`${checked.length}명의 학생 [${targetOption}]에 복사되었습니다.`);
+            const skipMsg = skipped > 0 ? `\n(${skipped}명은 해당 과목이 이미 ${SUBJECT_SLOT_MAX}개라 건너뛰었습니다)` : '';
+            alert(`${checked.length}명의 학생 [${targetOption}]에 복사되었습니다.${skipMsg}`);
         }
 
         // ===== 다중선택한 여러 시간 카드를 다른 학생에게 일괄 복사 =====
@@ -5067,6 +5178,7 @@
             if (checked.length === 0) return alert('복사할 학생을 선택해주세요.');
             const { entries } = bulkCopyPayload;
             const targetOption = _getCopyTargetOption('bulkCopyTargetOption');
+            let skipped = 0; // 대상 학생의 해당 과목 슬롯이 이미 다 찬 경우
             checked.forEach(cb => {
                 const sid = parseInt(cb.value);
                 if (!attendanceData[sid]) attendanceData[sid] = { 'A': {}, 'B': {} };
@@ -5074,13 +5186,16 @@
                 const opt = attendanceData[sid][targetOption];
                 entries.forEach(e => {
                     if (!opt[e.date]) opt[e.date] = {};
-                    opt[e.date][e.subject] = JSON.parse(JSON.stringify(e.data));
+                    const key = resolveTargetSlotKey(opt[e.date], e.subject, e.data.start, e.data.end);
+                    if (!key) { skipped++; return; }
+                    opt[e.date][key] = JSON.parse(JSON.stringify(e.data));
                 });
             });
             saveLocal();
             closeBulkCopyToOthersModal();
             cancelBulkCardMode();
-            alert(`${checked.length}명의 학생 [${targetOption}]에 ${entries.length}건의 일정이 복사되었습니다.`);
+            const skipMsg2 = skipped > 0 ? `\n(${skipped}건은 해당 과목이 이미 ${SUBJECT_SLOT_MAX}개라 건너뛰었습니다)` : '';
+            alert(`${checked.length}명의 학생 [${targetOption}]에 ${entries.length}건의 일정이 복사되었습니다.${skipMsg2}`);
         }
 
         // --- Add/Delete Student ---
@@ -5499,6 +5614,20 @@
                 const [h2, m2] = entry.end.split(':').map(Number);
                 if ((h2 + m2/60) <= (h1 + m1/60)) { alert('종료 시간이 시작 시간보다 늦어야 합니다.'); return false; }
             }
+            // 같은 요일 · 같은 과목은 하루 최대 SUBJECT_SLOT_MAX건까지만 달력에 들어간다
+            const dowCount = {};
+            for (const entry of currentTplEntries) {
+                for (const dow of entry.dows) {
+                    const base = baseSubject(entry.subject);
+                    const k = `${dow}|${base}`;
+                    dowCount[k] = (dowCount[k] || 0) + 1;
+                    if (dowCount[k] > SUBJECT_SLOT_MAX) {
+                        const dowName = ['일','월','화','수','목','금','토'][dow];
+                        alert(`${dowName}요일 ${subjectLabelOf(base)} 항목이 ${dowCount[k]}개입니다.\n같은 요일 · 같은 과목은 하루 최대 ${SUBJECT_SLOT_MAX}개까지 넣을 수 있습니다.`);
+                        return false;
+                    }
+                }
+            }
             return true;
         }
 
@@ -5584,11 +5713,21 @@
                 const dow = dateObj.getDay();
                 if (isProtectedDate(dateStr)) return; // 공휴일/학원 휴무일 건너뜀
 
-                currentTplEntries.forEach(entry => {
-                    if (!entry.dows.includes(dow)) return;
+                // 같은 요일에 같은 과목이 여러 건이면 시간 순서대로 1교시 → 2교시에 배정
+                const dayEntries = currentTplEntries
+                    .filter(e => e.dows.includes(dow))
+                    .slice()
+                    .sort((a, b) => a.start.localeCompare(b.start));
+                const slotUsed = {};
 
-                    // 덮어쓰기 모드가 아니면 이미 해당 과목 데이터가 있는 날은 건너뜀
-                    if (applyMode === 'skip' && optionData[dateStr]?.[entry.subject]) return;
+                dayEntries.forEach(entry => {
+                    const base = baseSubject(entry.subject);
+                    const slot = (slotUsed[base] = (slotUsed[base] || 0) + 1);
+                    if (slot > SUBJECT_SLOT_MAX) return;
+                    const key = slotKey(base, slot);
+
+                    // 덮어쓰기 모드가 아니면 이미 해당 자리에 데이터가 있는 날은 건너뜀
+                    if (applyMode === 'skip' && optionData[dateStr]?.[key]) return;
 
                     if (!optionData[dateStr]) optionData[dateStr] = {};
 
@@ -5596,7 +5735,7 @@
                     const [h2, m2] = entry.end.split(':').map(Number);
                     const hours = parseFloat(((h2 + m2/60) - (h1 + m1/60)).toFixed(1));
 
-                    optionData[dateStr][entry.subject] = {
+                    optionData[dateStr][key] = {
                         status: 'present',
                         start: entry.start,
                         end: entry.end,
@@ -6124,8 +6263,8 @@
             const prevLogs = prevStudent[currentOption];
             const dowEntries = {}; // { 0: [{subject, start, end, label, hours}, ...], ... }
 
-            // 보강 / 특강 / 직접입력은 반복 가능성이 낮으므로 정기 과목만 이월
-            const subjs = ['eng','math','oneonone'];
+            // 보강 / 특강 / 직접입력은 반복 가능성이 낮으므로 정기 과목만 이월 (2교시 슬롯 포함)
+            const subjs = ['eng','math','oneonone'].reduce((acc, b) => acc.concat(subjectSlotKeys(b)), []);
             Object.keys(prevLogs).forEach(dateStr => {
                 if (dateStr.startsWith('__')) return; // __notice 등 제외
                 const dayData = prevLogs[dateStr];
@@ -6178,9 +6317,17 @@
                 const dow = dateObj.getDay();
                 const entries = dowEntries[dow] || [];
 
-                entries.forEach(entry => {
+                // 같은 과목이 여러 건이면 시간 순서대로 1교시 → 2교시에 배정
+                const sorted = entries.slice().sort((a, b) => a.start.localeCompare(b.start));
+                const slotUsed = {};
+
+                sorted.forEach(entry => {
                     if (!optionData[dateStr]) optionData[dateStr] = {};
-                    if (mode === 'skip' && optionData[dateStr][entry.subject]) return;
+                    const base = baseSubject(entry.subject);
+                    const slot = (slotUsed[base] = (slotUsed[base] || 0) + 1);
+                    if (slot > SUBJECT_SLOT_MAX) return;
+                    const key = slotKey(base, slot);
+                    if (mode === 'skip' && optionData[dateStr][key]) return;
 
                     const newEntry = {
                         status: 'present',
@@ -6189,7 +6336,7 @@
                         hours: entry.hours
                     };
                     if (entry.label) newEntry.label = entry.label;
-                    optionData[dateStr][entry.subject] = newEntry;
+                    optionData[dateStr][key] = newEntry;
                     appliedCount++;
                 });
             });
