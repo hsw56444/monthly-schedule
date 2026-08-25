@@ -223,7 +223,10 @@
         #bulkCardBar.active { transform: translateY(0); }
 
         /* ─── 주요일정: 학교별 방학/개학/시험기간 등 (공휴일/휴무일처럼 작은 글씨) ─── */
-        .important-label { display: block; font-size: 10px; line-height: 1.25; color: #a78bfa; font-weight: 700; margin-top: 1px; text-align: center; word-break: keep-all; letter-spacing: -0.2px; }
+        /* 기본(= 이 학생에게 표시되는 일정): 보라색 — 이미지 저장에도 그대로 나간다 */
+        .important-label { display: block; font-size: 10px; line-height: 1.25; color: #7c3aed; font-weight: 700; margin-top: 1px; text-align: center; word-break: keep-all; letter-spacing: -0.2px; }
+        /* 관리자만 보는 일정(표시 학생 미지정 또는 다른 학생 지정): 회색 + 점선 밑줄로 구분 */
+        .important-label.important-hidden { color: #94a3b8; font-weight: 600; border-bottom: 1px dotted #dbe1ea; }
 
         /* 캡처(이미지 저장) 시 편집 컨트롤 숨김 */
         .exporting .day-add-btn,
@@ -1028,6 +1031,11 @@
                             <div id="notice-edit-section" class="mt-auto pt-4 border-t border-slate-100">
                                 <div class="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
                                     <i class="fa-solid fa-pen-to-square"></i> 편집 영역 <span class="font-normal normal-case tracking-normal text-slate-300">(이미지 저장 시 자동 제외)</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-[11px] text-slate-400">
+                                    <span class="font-bold text-slate-500">주요일정 색 구분</span>
+                                    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:#7c3aed"></span> 이 학생에게 표시 <span class="text-slate-300">(이미지에 포함)</span></span>
+                                    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:#94a3b8"></span> 나만 보기 <span class="text-slate-300">(이미지에서 제외)</span></span>
                                 </div>
                                 <h4 class="text-sm font-bold text-amber-600 mb-2 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Notice (공지사항)</h4>
                                 <textarea id="student-notice" class="notice-textarea w-full text-sm text-slate-700 p-3 rounded-lg border resize-none outline-none transition" rows="3" placeholder="학부모님께 전달할 내용을 입력하세요. (한 줄에 하나씩, '제목 : 내용' 형태 권장)" oninput="saveNotice()"></textarea>
@@ -4371,11 +4379,17 @@
                     content += `<div class="makeup-banner"><i class="fa-solid fa-bell"></i><span>${_escapeHtml(makeupLabel)}</span></div>`;
                 }
                 // 주요일정: 달력엔 항상 보이되, 이미지 저장 시엔 '표시 학생'으로 지정된 경우에만 유지 (같은 날짜에 여러 건 가능)
-                IMPORTANT_DAYS.filter(e => e.date === dateStr).forEach(entry => {
-                    const impLabel = (entry.label && entry.label.trim()) || '주요일정';
+                const _impOfDay = IMPORTANT_DAYS.filter(e => e.date === dateStr).map(entry => {
                     const visList = Array.isArray(entry.visible) ? entry.visible : [];
-                    const shownOnExport = currentStudentId != null && visList.includes(currentStudentId);
-                    content += `<span class="important-label${shownOnExport ? '' : ' important-hidden'}">${_escapeHtml(impLabel)}</span>`;
+                    return {
+                        label: (entry.label && entry.label.trim()) || '주요일정',
+                        shownOnExport: currentStudentId != null && visList.includes(currentStudentId)
+                    };
+                });
+                // 이 학생에게 나가는 일정(보라)을 위로, 관리자만 보는 일정(회색)을 아래로
+                _impOfDay.sort((a, b) => (b.shownOnExport ? 1 : 0) - (a.shownOnExport ? 1 : 0));
+                _impOfDay.forEach(e => {
+                    content += `<span class="important-label${e.shownOnExport ? '' : ' important-hidden'}">${_escapeHtml(e.label)}</span>`;
                 });
 
                 // 모든 날짜(휴일/공휴일/일요일 포함)에 대해 entries 렌더링 — 특수 보강 등 입력 가능
@@ -6094,10 +6108,14 @@
                     ? `<span class="text-violet-400 text-xs">${_formatKDate(first)} ~ ${_formatKDate(last)}</span><span class="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded text-[10px] font-bold">${entry.dates.length}일</span>`
                     : `<span class="text-violet-400 text-xs">${_formatKDate(first)}</span>`;
                 const raw = (entry.label || '').trim();
-                const labelHtml = raw
-                    ? `<span class="px-1.5 py-0.5 bg-violet-200 text-violet-800 rounded text-[11px]">${_escapeHtml(raw)}</span>`
-                    : `<span class="text-violet-400 text-[11px] italic">주요일정</span>`;
                 const visList = Array.isArray(entry.visible) ? entry.visible : [];
+                // 달력과 같은 기준으로 색을 맞춘다: 학생 지정 = 보라, 나만 보기 = 회색
+                const isSharedWithStudents = visList.length > 0;
+                const chipCls = isSharedWithStudents ? 'bg-violet-200 text-violet-800' : 'bg-slate-200 text-slate-600';
+                const emptyCls = isSharedWithStudents ? 'text-violet-400' : 'text-slate-400';
+                const labelHtml = raw
+                    ? `<span class="px-1.5 py-0.5 ${chipCls} rounded text-[11px]">${_escapeHtml(raw)}</span>`
+                    : `<span class="${emptyCls} text-[11px] italic">주요일정</span>`;
                 const visNames = visList
                     .map(id => (studentList.find(s => s.id === id) || {}).name)
                     .filter(Boolean);
