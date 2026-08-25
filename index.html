@@ -510,6 +510,7 @@
         .day-cb.sat:checked + span { background: #3b82f6; border-color: #3b82f6; }
         .tpl-select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; font-weight: 700; color: #334155; outline: none; background: white; cursor: pointer; transition: border-color 0.15s; }
         .tpl-select:focus { border-color: #818cf8; }
+        .tpl-select.tpl-time { padding: 4px 5px; }
 
         /* ============================================ */
         /* 📱 모바일 대응 (≤ 768px)                       */
@@ -1067,8 +1068,24 @@
                     </div>
 
                     <div id="timeInputWrapper" class="grid grid-cols-2 gap-3 mb-4">
-                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">시작(등원) 시간</label><select id="inpStart" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
-                        <div><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료(하원) 시간</label><select id="inpEnd" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">시작(등원) 시간</label>
+                            <div class="flex items-center gap-1">
+                                <select id="inpStart-h" onchange="onTimePartChange('inpStart')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <span class="text-slate-400 font-bold text-sm">:</span>
+                                <select id="inpStart-m" onchange="onTimePartChange('inpStart')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <input type="hidden" id="inpStart" value="16:00">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료(하원) 시간</label>
+                            <div class="flex items-center gap-1">
+                                <select id="inpEnd-h" onchange="onTimePartChange('inpEnd')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <span class="text-slate-400 font-bold text-sm">:</span>
+                                <select id="inpEnd-m" onchange="onTimePartChange('inpEnd')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <input type="hidden" id="inpEnd" value="18:00">
+                            </div>
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="saveAttendance('present')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg text-sm font-bold shadow-md transition">저장</button>
@@ -1093,8 +1110,24 @@
                     </div>
                     <div class="text-xs text-slate-500 bg-indigo-50 p-2 rounded border border-indigo-100"><i class="fa-solid fa-circle-info mr-1 text-indigo-400"></i> 달력의 시간 카드를 눌러 선택한 뒤, 시간 변경 또는 삭제하세요.</div>
                     <div class="flex items-end gap-2">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">시작</label><select id="bulkStart" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료</label><select id="bulkEnd" class="time-select w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select></div>
+                        <div class="flex-1 min-w-0">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">시작</label>
+                            <div class="flex items-center gap-1">
+                                <select id="bulkStart-h" onchange="onTimePartChange('bulkStart')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <span class="text-slate-400 font-bold text-sm">:</span>
+                                <select id="bulkStart-m" onchange="onTimePartChange('bulkStart')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <input type="hidden" id="bulkStart" value="16:00">
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">종료</label>
+                            <div class="flex items-center gap-1">
+                                <select id="bulkEnd-h" onchange="onTimePartChange('bulkEnd')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <span class="text-slate-400 font-bold text-sm">:</span>
+                                <select id="bulkEnd-m" onchange="onTimePartChange('bulkEnd')" class="time-select flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                                <input type="hidden" id="bulkEnd" value="18:00">
+                            </div>
+                        </div>
                         <button onclick="applyBulkEdit()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition shrink-0">시간 변경</button>
                     </div>
                     <button onclick="openBulkCopyToOthersModal()" class="w-full bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2"><i class="fa-solid fa-user-group"></i> 선택 항목을 다른 학생에게 복사</button>
@@ -2249,6 +2282,14 @@
             const base = baseSubject(key);
             return base === 'oneonone' ? 'bg-one' : 'bg-' + base.replace(/_/g, '-');
         }
+        // 두 시각 사이의 수업 시수. 10분 단위 입력에서 1.1666… 같은 값이 나오므로
+        // 소수 2자리로 보관한다. (화면에 보이는 합계는 기존처럼 소수 1자리로 반올림)
+        function _calcHours(start, end) {
+            const s = _toMin(start), e = _toMin(end);
+            if (s === null || e === null) return 0;
+            return parseFloat(((e - s) / 60).toFixed(2));
+        }
+
         // 'HH:MM' → 분
         function _toMin(t) {
             if (!t) return null;
@@ -3848,24 +3889,76 @@
             };
         }
 
-        function populateTimeSelects() {
-            const startSelect = document.getElementById('inpStart');
-            const endSelect = document.getElementById('inpEnd');
-            const times = [];
-            for (let h = 8; h <= 22; h++) {
-                const hour = String(h).padStart(2, '0');
-                times.push(`${hour}:00`);
-                times.push(`${hour}:30`);
-            }
-            times.push("23:00");
-            const options = times.map(t => `<option value="${t}">${t}</option>`).join('');
-            startSelect.innerHTML = options;
-            endSelect.innerHTML = options;
+        // ── 시간 선택 (시 + 분 분리, 10분 단위) ─────────────────────────────────
+        // 한 개의 긴 목록(09:00~23:00을 10분 단위로 = 85개)을 스크롤하지 않도록
+        // '시'(15개)와 '분'(6개) 두 개의 짧은 목록으로 나눈다.
+        // 실제 값은 같은 id의 hidden input에 'HH:MM'으로 합쳐 저장되므로,
+        // 값을 읽는 기존 코드(document.getElementById('inpStart').value)는 그대로 동작한다.
+        var TIME_START_HOUR = 9;   // 가장 이른 시간 09:00
+        var TIME_END_HOUR = 23;    // 가장 늦은 시간 23:00 (밤 11시)
+        var TIME_STEP_MIN = 10;    // 10분 단위
 
-            const bulkStart = document.getElementById('bulkStart');
-            const bulkEnd = document.getElementById('bulkEnd');
-            if (bulkStart) bulkStart.innerHTML = options;
-            if (bulkEnd) bulkEnd.innerHTML = options;
+        function _hourOptsHtml(selected) {
+            const sel = String(selected || '').padStart(2, '0');
+            const hours = [];
+            for (let h = TIME_START_HOUR; h <= TIME_END_HOUR; h++) hours.push(String(h).padStart(2, '0'));
+            // 예전에 저장된 범위 밖 시간(예: 08시)도 그대로 보이도록 목록에 끼워 넣는다
+            if (sel && !hours.includes(sel)) hours.push(sel);
+            hours.sort();
+            return hours.map(h => `<option value="${h}" ${h === sel ? 'selected' : ''}>${h}</option>`).join('');
+        }
+
+        function _minuteOptsHtml(hour, selected) {
+            const sel = String(selected || '').padStart(2, '0');
+            // 마지막 시각은 23:00까지만
+            const mins = Number(hour) >= TIME_END_HOUR ? ['00'] : [];
+            if (mins.length === 0) {
+                for (let m = 0; m < 60; m += TIME_STEP_MIN) mins.push(String(m).padStart(2, '0'));
+            }
+            if (sel && !mins.includes(sel)) mins.push(sel); // 예전 데이터의 어중간한 분 보존
+            mins.sort();
+            return mins.map(m => `<option value="${m}" ${m === sel ? 'selected' : ''}>${m}</option>`).join('');
+        }
+
+        // hidden input(id)의 'HH:MM' 값을 시/분 선택기에 반영
+        function setTimePickerValue(id, val) {
+            const hEl = document.getElementById(id + '-h');
+            const mEl = document.getElementById(id + '-m');
+            const hidden = document.getElementById(id);
+            if (!hEl || !mEl || !hidden) return;
+            let [hh, mm] = String(val || hidden.value || '16:00').split(':');
+            hh = String(hh || '16').padStart(2, '0');
+            mm = String(mm || '00').padStart(2, '0');
+            if (Number(hh) >= TIME_END_HOUR) mm = '00';
+            hEl.innerHTML = _hourOptsHtml(hh);
+            mEl.innerHTML = _minuteOptsHtml(hh, mm);
+            hEl.value = hh;
+            mEl.value = mm;
+            hidden.value = `${hh}:${mm}`;
+        }
+
+        // 시 또는 분을 바꿨을 때 hidden input 갱신
+        function onTimePartChange(id) {
+            const hEl = document.getElementById(id + '-h');
+            const mEl = document.getElementById(id + '-m');
+            const hidden = document.getElementById(id);
+            if (!hEl || !mEl || !hidden) return;
+            let mm = mEl.value;
+            // 23시로 바꾸면 00분만 남기고, 23시에서 벗어나면 분 목록을 되살린다
+            const needMinuteRefresh = (Number(hEl.value) >= TIME_END_HOUR) !== (mEl.options.length === 1);
+            if (needMinuteRefresh) {
+                if (Number(hEl.value) >= TIME_END_HOUR) mm = '00';
+                mEl.innerHTML = _minuteOptsHtml(hEl.value, mm);
+                mEl.value = mm;
+            }
+            hidden.value = `${hEl.value}:${mEl.value}`;
+        }
+
+        function populateTimeSelects() {
+            setTimePickerValue('inpStart', '16:00');
+            setTimePickerValue('inpEnd', '18:00');
+            setTimePickerValue('bulkStart', '16:00');
+            setTimePickerValue('bulkEnd', '18:00');
         }
 
         function formatNumber(num) {
@@ -4407,8 +4500,8 @@
                 if (isCustom) {
                     document.getElementById('customSubjectName').value = entry.label || '';
                 } else {
-                    if (entry.start) document.getElementById('inpStart').value = entry.start;
-                    if (entry.end) document.getElementById('inpEnd').value = entry.end;
+                    if (entry.start) setTimePickerValue('inpStart', entry.start);
+                    if (entry.end) setTimePickerValue('inpEnd', entry.end);
                 }
             } else if (isCustom) {
                 document.getElementById('customSubjectName').value = '';
@@ -4481,7 +4574,7 @@
                     const diff = (h2 + m2/60) - (h1 + m1/60);
                     if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
                     
-                    dayEntry[currentSubject] = { status: 'present', start: start, end: end, hours: parseFloat(diff.toFixed(1)) };
+                    dayEntry[currentSubject] = { status: 'present', start: start, end: end, hours: _calcHours(start, end) };
                 }
             }
             saveLocal();
@@ -4628,7 +4721,7 @@
             const [h1, m1] = entryClipboard.start.split(':').map(Number);
             const [h2, m2] = entryClipboard.end.split(':').map(Number);
             const isCustom = baseSubject(entryClipboard.subject) === 'custom';
-            const hours = isCustom ? 0 : parseFloat(((h2 + m2/60) - (h1 + m1/60)).toFixed(1));
+            const hours = isCustom ? 0 : _calcHours(entryClipboard.start, entryClipboard.end);
             
             let fullCount = 0;
             selectedDates.forEach(date => {
@@ -4903,7 +4996,7 @@
             const [h2, m2] = end.split(':').map(Number);
             const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
             if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
-            const hours = parseFloat(diff.toFixed(1));
+            const hours = _calcHours(start, end);
             const opt = attendanceData[currentStudentId]?.[currentOption];
             if (!opt) return;
             let applied = 0;
@@ -5038,7 +5131,7 @@
                 const [h2, m2] = end.split(':').map(Number);
                 const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
                 if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
-                hours = parseFloat(diff.toFixed(1));
+                hours = _calcHours(start, end);
             }
             entryCopyPayload = { date: selectedDate, subject: subj, start, end, label, hours };
 
@@ -5543,6 +5636,19 @@
             if (currentTplEntries[idx]) currentTplEntries[idx][field] = value;
         }
 
+        // 템플릿 행의 시/분 선택 — 값은 'HH:MM'으로 합쳐 보관한다
+        function updateTplTime(idx, field, part, value) {
+            const e = currentTplEntries[idx];
+            if (!e) return;
+            let [hh, mm] = String(e[field] || '16:00').split(':');
+            const prevHour = Number(hh);
+            if (part === 'h') hh = value; else mm = value;
+            if (Number(hh) >= TIME_END_HOUR) mm = '00'; // 마지막 시각은 23:00까지
+            e[field] = `${hh}:${mm}`;
+            // 23시로 들어오거나 23시에서 빠져나올 때만 '분' 목록이 달라지므로 그때만 다시 그린다
+            if (part === 'h' && (Number(hh) >= TIME_END_HOUR || prevHour >= TIME_END_HOUR)) renderTplEntries();
+        }
+
         function renderTplEntries() {
             const container = document.getElementById('tpl-entries-list');
             const empty = document.getElementById('tpl-empty');
@@ -5569,17 +5675,6 @@
                 { name: '수', cls: '' }, { name: '목', cls: '' }, { name: '금', cls: '' }, { name: '토', cls: 'sat' }
             ];
 
-            const times = [];
-            for (let h = 8; h <= 22; h++) {
-                times.push(`${String(h).padStart(2,'0')}:00`);
-                times.push(`${String(h).padStart(2,'0')}:30`);
-            }
-            times.push('23:00');
-
-            const timeOpts = (selected) => times.map(t =>
-                `<option value="${t}" ${t === selected ? 'selected' : ''}>${t}</option>`
-            ).join('');
-
             container.innerHTML = currentTplEntries.map((entry, idx) => {
                 const dayBoxes = dayInfo.map((d, dow) => {
                     const checked = entry.dows.includes(dow) ? 'checked' : '';
@@ -5590,15 +5685,22 @@
                     `<option value="${s.val}" ${entry.subject === s.val ? 'selected' : ''} style="color:${s.color}">${s.label}</option>`
                 ).join('');
 
+                const [sh, sm] = String(entry.start || '16:00').split(':');
+                const [eh, em] = String(entry.end || '18:00').split(':');
+
                 return `
                 <div class="template-entry-row">
                     <div class="flex gap-1 flex-shrink-0">${dayBoxes}</div>
                     <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block flex-shrink-0"></div>
                     <select class="tpl-select flex-shrink-0" onchange="updateTplField(${idx},'subject',this.value)">${subjOpts}</select>
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                        <select class="tpl-select" onchange="updateTplField(${idx},'start',this.value)">${timeOpts(entry.start)}</select>
-                        <span class="text-slate-400 font-bold text-sm">~</span>
-                        <select class="tpl-select" onchange="updateTplField(${idx},'end',this.value)">${timeOpts(entry.end)}</select>
+                    <div class="flex items-center gap-0.5 flex-shrink-0">
+                        <select class="tpl-select tpl-time" onchange="updateTplTime(${idx},'start','h',this.value)">${_hourOptsHtml(sh)}</select>
+                        <span class="text-slate-400 font-bold text-xs">:</span>
+                        <select class="tpl-select tpl-time" onchange="updateTplTime(${idx},'start','m',this.value)">${_minuteOptsHtml(sh, sm)}</select>
+                        <span class="text-slate-400 font-bold text-sm mx-1">~</span>
+                        <select class="tpl-select tpl-time" onchange="updateTplTime(${idx},'end','h',this.value)">${_hourOptsHtml(eh)}</select>
+                        <span class="text-slate-400 font-bold text-xs">:</span>
+                        <select class="tpl-select tpl-time" onchange="updateTplTime(${idx},'end','m',this.value)">${_minuteOptsHtml(eh, em)}</select>
                     </div>
                     <button onclick="removeTplEntry(${idx})" class="ml-auto text-slate-300 hover:text-red-500 transition p-1 rounded flex-shrink-0" title="삭제">
                         <i class="fa-solid fa-xmark"></i>
@@ -5731,9 +5833,7 @@
 
                     if (!optionData[dateStr]) optionData[dateStr] = {};
 
-                    const [h1, m1] = entry.start.split(':').map(Number);
-                    const [h2, m2] = entry.end.split(':').map(Number);
-                    const hours = parseFloat(((h2 + m2/60) - (h1 + m1/60)).toFixed(1));
+                    const hours = _calcHours(entry.start, entry.end);
 
                     optionData[dateStr][key] = {
                         status: 'present',
