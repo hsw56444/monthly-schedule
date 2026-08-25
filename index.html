@@ -1655,7 +1655,7 @@
 
             <div class="p-5 overflow-y-auto flex-grow">
                 <div class="flex justify-between items-center mb-3">
-                    <p class="text-xs text-slate-500"><i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> 요일·과목·시간을 설정하면 해당 요일의 모든 날짜에 자동 입력됩니다.</p>
+                    <p class="text-xs text-slate-500"><i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> 한 번 저장한 템플릿은 <b class="text-slate-600">모든 달에 그대로 유지</b>됩니다. 달력에는 <b class="text-slate-600">[이번 달 전체에 적용]</b>을 눌렀을 때만 입력됩니다.</p>
                     <button onclick="addTemplateEntry()" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shrink-0 transition">
                         <i class="fa-solid fa-plus"></i> 항목 추가
                     </button>
@@ -1680,6 +1680,11 @@
                         <span class="text-slate-700 font-medium">전체 덮어쓰기 <span class="text-[11px] text-rose-500 font-bold">(이번 달 기존 일정 모두 삭제)</span></span>
                     </label>
                 </div>
+                <p class="text-[11px] text-slate-500 mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-check text-indigo-400"></i>
+                    적용 범위: <b class="text-indigo-600">수업 기준일 <span id="tpl-range-label">-</span></b>
+                    <span class="text-slate-400">(월별 설정에서 지정한 범위. 앞뒤 인접 달 날짜에는 입력되지 않습니다)</span>
+                </p>
                 <div class="flex gap-2">
                     <button onclick="saveTemplateOnly()" class="flex-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 py-2.5 rounded-xl font-bold transition text-sm">
                         <i class="fa-regular fa-floppy-disk mr-1"></i> 저장만
@@ -1794,6 +1799,15 @@
                         try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(window.studentList)); } catch(e) {}
                         window.sortStudentList && window.sortStudentList();
                         window.refreshUI && window.refreshUI();
+                    }
+                    // 정기 시간표 템플릿 — 월과 무관하게 계속 유지되며 기기 간에도 공유
+                    const cloudTpl = (data.templates && typeof data.templates === 'object') ? data.templates : null;
+                    if (cloudTpl && Object.keys(cloudTpl).length > 0) {
+                        window.templateData = cloudTpl;
+                        try { localStorage.setItem('regularClassTemplates', JSON.stringify(cloudTpl)); } catch(e) {}
+                    } else if (window.templateData && Object.keys(window.templateData).length > 0) {
+                        // 클라우드에 아직 없으면 이 기기에 저장된 템플릿을 1회 올려둔다
+                        window.triggerTemplatesSave && window.triggerTemplatesSave();
                     }
                     rosterInitialized = true;
                 } else if (!rosterInitialized) {
@@ -1914,6 +1928,19 @@
                 });
             } catch (error) {
                 console.error("월 저장 실패", error);
+            }
+        };
+
+        // 정기 시간표 템플릿 저장 — 월과 무관(roster 문서에 병합 저장)
+        window.triggerTemplatesSave = async () => {
+            if (!window.isCloudOnline) return;
+            try {
+                await setDoc(rosterDocRef(), {
+                    templates: window.templateData || {},
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (error) {
+                console.error("정기 시간표 저장 실패", error);
             }
         };
 
@@ -5344,11 +5371,14 @@
             if (saved) {
                 try { templateData = JSON.parse(saved); } catch(e) { templateData = {}; }
             }
+            window.templateData = templateData;
         }
 
         function saveTemplates() {
             localStorage.setItem('regularClassTemplates', JSON.stringify(templateData));
-            if (window.triggerCloudSave) window.triggerCloudSave();
+            // 템플릿은 월별 문서가 아니라 roster 문서에 저장 — 달을 바꿔도 그대로 유지된다
+            window.templateData = templateData;
+            if (window.triggerTemplatesSave) window.triggerTemplatesSave();
         }
 
         function openTemplateModal() {
@@ -5359,6 +5389,13 @@
 
             const saved = templateData[currentStudentId]?.[currentOption] || [];
             currentTplEntries = JSON.parse(JSON.stringify(saved));
+
+            // 적용 대상 = 이번 달 수업 기준일 범위
+            const rangeLabelEl = document.getElementById('tpl-range-label');
+            if (rangeLabelEl) {
+                const rd = _getSessionRangeDates();
+                rangeLabelEl.textContent = rd.length ? `${_fmtMD(rd[0])} ~ ${_fmtMD(rd[rd.length - 1])}` : '미설정';
+            }
 
             renderTplEntries();
             document.getElementById('templateModal').classList.remove('hidden');
@@ -5476,27 +5513,16 @@
             closeTemplateModal();
         }
 
-        // 현재 달력에 보이는 전체 날짜(앞/뒤 주의 이월·다음달 포함) 배열 반환
-        function _getVisibleMonthDates() {
-            if (!SESSION_DATES || SESSION_DATES.length === 0) return [];
-            const firstDateObj = new Date(SESSION_DATES[0]);
-            const firstDayOfWeek = firstDateObj.getDay();
-            const lastDateObj = new Date(SESSION_DATES[SESSION_DATES.length - 1]);
-            const lastDayOfWeek = lastDateObj.getDay();
+        // 'YYYY-MM-DD' → 'M/D'
+        function _fmtMD(dateStr) {
+            if (!dateStr) return '';
+            const [, m, d] = dateStr.split('-');
+            return `${Number(m)}/${Number(d)}`;
+        }
 
-            const dates = [];
-            for (let i = firstDayOfWeek; i > 0; i--) {
-                const d = new Date(firstDateObj);
-                d.setDate(d.getDate() - i);
-                dates.push(d.toISOString().split('T')[0]);
-            }
-            dates.push(...SESSION_DATES);
-            for (let i = 1; i <= 6 - lastDayOfWeek; i++) {
-                const d = new Date(lastDateObj);
-                d.setDate(d.getDate() + i);
-                dates.push(d.toISOString().split('T')[0]);
-            }
-            return dates;
+        // 템플릿 적용 대상 = [월별 설정]의 수업 기준일 범위 (앞/뒤 인접 달 채움일은 제외)
+        function _getSessionRangeDates() {
+            return (SESSION_DATES && SESSION_DATES.length) ? SESSION_DATES.slice() : [];
         }
 
         function applyTemplateToMonth() {
@@ -5507,7 +5533,12 @@
 
             const applyMode = document.querySelector('input[name="tplApplyMode"]:checked').value;
 
-            const targetDates = _getVisibleMonthDates();
+            // 수업 기준일(월별 설정) 범위 안에만 적용 — 인접 달 채움일에는 입력하지 않는다
+            const targetDates = _getSessionRangeDates();
+            if (targetDates.length === 0) {
+                return alert('수업 기준일이 설정되지 않았습니다.\n[월별 설정]에서 수업 기준일을 확인해주세요.');
+            }
+            const rangeLabel = `${_fmtMD(targetDates[0])} ~ ${_fmtMD(targetDates[targetDates.length - 1])}`;
 
             // 공휴일·학원 휴무일(월별 설정)은 템플릿이 적용되지 않는 날 → 삭제 대상에서도 제외해
             // 해당 날짜에 수동으로 넣어둔 보강 등은 그대로 보존한다.
@@ -5522,7 +5553,7 @@
                     if (isProtectedDate(dateStr)) return;
                     clearedCount += countDayEntries(existing[dateStr]);
                 });
-                const warn = `[전체 덮어쓰기]\n\n${window.APP_CONFIG.monthTitle} 달력의 기존 일정 ${clearedCount}건이 모두 삭제되고,\n정기 시간표로 입력한 내용만 남습니다.\n(보강·특강·직접입력 등 수동으로 넣은 일정도 함께 삭제됩니다)\n\n※ 공휴일·학원 휴무일에 입력된 일정은 그대로 유지됩니다.\n\n계속할까요?`;
+                const warn = `[전체 덮어쓰기]\n\n수업 기준일 ${rangeLabel} 범위의 기존 일정 ${clearedCount}건이 모두 삭제되고,\n정기 시간표로 입력한 내용만 남습니다.\n(보강·특강·직접입력 등 수동으로 넣은 일정도 함께 삭제됩니다)\n\n※ 공휴일·학원 휴무일에 입력된 일정과\n※ 수업 기준일 범위 밖(흐린 날짜)의 일정은 그대로 유지됩니다.\n\n계속할까요?`;
                 if (!confirm(warn)) return;
             }
 
@@ -5580,7 +5611,7 @@
             closeTemplateModal();
 
             const clearedMsg = applyMode === 'overwrite' ? `\n기존 일정 ${clearedCount}건은 삭제되었습니다.` : '';
-            alert(`✅ 적용 완료!\n총 ${appliedCount}개 수업이 ${window.APP_CONFIG.monthTitle} 달력에 입력되었습니다.${clearedMsg}`);
+            alert(`✅ 적용 완료!\n총 ${appliedCount}개 수업이 ${window.APP_CONFIG.monthTitle} 수업 기준일(${rangeLabel})에 입력되었습니다.${clearedMsg}`);
         }
 
         // ==================== /정기 시간표 템플릿 ====================
