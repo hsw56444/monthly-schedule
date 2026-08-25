@@ -2282,8 +2282,49 @@
             const base = baseSubject(key);
             return base === 'oneonone' ? 'bg-one' : 'bg-' + base.replace(/_/g, '-');
         }
-        // 두 시각 사이의 수업 시수. 10분 단위 입력에서 1.1666… 같은 값이 나오므로
-        // 소수 2자리로 보관한다. (화면에 보이는 합계는 기존처럼 소수 1자리로 반올림)
+        // 수업 '시간'(길이)은 반드시 30분 단위여야 한다.
+        // 시작·종료 '시각'은 5분 단위로 잡을 수 있지만(예: 17:15~18:45),
+        // 그 차이가 30분의 배수가 아니면 시수·청구액이 어중간해지므로 입력을 막는다.
+        var LESSON_STEP_MIN = 30;
+
+        // 분 → 'N시간 M분'
+        function _fmtDuration(mins) {
+            const h = Math.floor(mins / 60), m = mins % 60;
+            if (h && m) return `${h}시간 ${m}분`;
+            if (h) return `${h}시간`;
+            return `${m}분`;
+        }
+
+        // 'HH:MM' + 분 → 'HH:MM'
+        function _addMin(t, add) {
+            const v = _toMin(t);
+            if (v === null) return t;
+            const n = Math.max(0, v + add);
+            return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
+        }
+
+        // 수업 길이 검증 — 통과하면 true, 아니면 안내창을 띄우고 false
+        function validateLessonSpan(start, end, prefix) {
+            const s = _toMin(start), e = _toMin(end);
+            const head = prefix ? prefix + '\n\n' : '';
+            if (s === null || e === null) { alert(head + '시간을 다시 선택해주세요.'); return false; }
+            const diff = e - s;
+            if (diff <= 0) { alert(head + '종료 시간이 시작 시간보다 늦어야 합니다.'); return false; }
+            if (diff % LESSON_STEP_MIN !== 0) {
+                const down = Math.floor(diff / LESSON_STEP_MIN) * LESSON_STEP_MIN;
+                const up = down + LESSON_STEP_MIN;
+                const hint = down > 0
+                    ? `예) ${start} ~ ${_addMin(start, down)} (${_fmtDuration(down)})\n     ${start} ~ ${_addMin(start, up)} (${_fmtDuration(up)})`
+                    : `예) ${start} ~ ${_addMin(start, up)} (${_fmtDuration(up)})`;
+                alert(`${head}수업 시간은 30분 단위여야 합니다.\n\n선택한 시간: ${start} ~ ${end} (${_fmtDuration(diff)})\n\n${hint}`);
+                return false;
+            }
+            return true;
+        }
+
+        // 두 시각 사이의 수업 시수. 수업 길이를 30분 단위로 강제하므로 항상 .0 / .5로 떨어지지만,
+        // 예전에 저장된 어중간한 길이의 수업도 정확히 합산되도록 소수 2자리로 보관한다.
+        // (화면에 보이는 합계는 기존처럼 소수 1자리로 반올림)
         function _calcHours(start, end) {
             const s = _toMin(start), e = _toMin(end);
             if (s === null || e === null) return 0;
@@ -3889,14 +3930,14 @@
             };
         }
 
-        // ── 시간 선택 (시 + 분 분리, 10분 단위) ─────────────────────────────────
-        // 한 개의 긴 목록(09:00~23:00을 10분 단위로 = 85개)을 스크롤하지 않도록
-        // '시'(15개)와 '분'(6개) 두 개의 짧은 목록으로 나눈다.
+        // ── 시간 선택 (시 + 분 분리, 5분 단위) ──────────────────────────────────
+        // 한 개의 긴 목록(09:00~23:00을 5분 단위로 = 169개)을 스크롤하지 않도록
+        // '시'(15개)와 '분'(12개) 두 개의 짧은 목록으로 나눈다.
         // 실제 값은 같은 id의 hidden input에 'HH:MM'으로 합쳐 저장되므로,
         // 값을 읽는 기존 코드(document.getElementById('inpStart').value)는 그대로 동작한다.
         var TIME_START_HOUR = 9;   // 가장 이른 시간 09:00
         var TIME_END_HOUR = 23;    // 가장 늦은 시간 23:00 (밤 11시)
-        var TIME_STEP_MIN = 10;    // 10분 단위
+        var TIME_STEP_MIN = 5;     // 시각은 5분 단위로 선택
 
         function _hourOptsHtml(selected) {
             const sel = String(selected || '').padStart(2, '0');
@@ -4569,11 +4610,8 @@
                 } else {
                     const start = document.getElementById('inpStart').value;
                     const end = document.getElementById('inpEnd').value;
-                    const [h1, m1] = start.split(':').map(Number);
-                    const [h2, m2] = end.split(':').map(Number);
-                    const diff = (h2 + m2/60) - (h1 + m1/60);
-                    if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
-                    
+                    if (!validateLessonSpan(start, end)) return;
+
                     dayEntry[currentSubject] = { status: 'present', start: start, end: end, hours: _calcHours(start, end) };
                 }
             }
@@ -4674,13 +4712,15 @@
 
             const start = document.getElementById('inpStart').value;
             const end = document.getElementById('inpEnd').value;
-            
+
             let customLabel = '';
             if (baseSubject(currentSubject) === 'custom') {
                 customLabel = document.getElementById('customSubjectName').value.trim() || '일정';
             }
 
             const isCustomSubj = baseSubject(currentSubject) === 'custom';
+            // 직접입력(종일 일정)이 아니면 30분 단위인지 확인
+            if (!isCustomSubj && !validateLessonSpan(start, end)) return;
             entryClipboard = { 
                 subject: currentSubject, 
                 start: isCustomSubj ? '00:00' : start, 
@@ -4992,10 +5032,7 @@
             if (selectedCards.size === 0) return alert('수정할 시간을 선택해주세요.');
             const start = document.getElementById('bulkStart').value;
             const end = document.getElementById('bulkEnd').value;
-            const [h1, m1] = start.split(':').map(Number);
-            const [h2, m2] = end.split(':').map(Number);
-            const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
-            if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
+            if (!validateLessonSpan(start, end)) return;
             const hours = _calcHours(start, end);
             const opt = attendanceData[currentStudentId]?.[currentOption];
             if (!opt) return;
@@ -5127,10 +5164,7 @@
             } else {
                 start = document.getElementById('inpStart').value;
                 end = document.getElementById('inpEnd').value;
-                const [h1, m1] = start.split(':').map(Number);
-                const [h2, m2] = end.split(':').map(Number);
-                const diff = (h2 + m2 / 60) - (h1 + m1 / 60);
-                if (diff <= 0) return alert('종료 시간이 시작 시간보다 빨라야 합니다.');
+                if (!validateLessonSpan(start, end)) return;
                 hours = _calcHours(start, end);
             }
             entryCopyPayload = { date: selectedDate, subject: subj, start, end, label, hours };
@@ -5712,9 +5746,7 @@
         function _validateTplEntries() {
             for (const entry of currentTplEntries) {
                 if (entry.dows.length === 0) { alert('요일을 하나 이상 선택해주세요.'); return false; }
-                const [h1, m1] = entry.start.split(':').map(Number);
-                const [h2, m2] = entry.end.split(':').map(Number);
-                if ((h2 + m2/60) <= (h1 + m1/60)) { alert('종료 시간이 시작 시간보다 늦어야 합니다.'); return false; }
+                if (!validateLessonSpan(entry.start, entry.end, `[${subjectLabelOf(entry.subject)}] 항목`)) return false;
             }
             // 같은 요일 · 같은 과목은 하루 최대 SUBJECT_SLOT_MAX건까지만 달력에 들어간다
             const dowCount = {};
