@@ -1224,7 +1224,7 @@
             <!-- 이전 달 단가 자동 승계 안내 -->
             <div id="prev-rate-notice" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center gap-2">
                 <i class="fa-solid fa-circle-info text-amber-500"></i>
-                <span>이전 달(<span id="prev-month-label">3월</span>) 단가가 자동 적용되었습니다. 변경 시 직접 수정해주세요.</span>
+                <span>이전 달(<span id="prev-month-label">3월</span>) 청구 내용이 자동 적용되었습니다.<b id="prev-rate-detail" class="ml-1"></b> 변경 시 직접 수정해주세요.</span>
                 <button onclick="dismissPrevRateNotice()" class="ml-auto text-amber-600 hover:text-amber-800"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
@@ -3513,29 +3513,15 @@
             document.getElementById('prev-rate-notice').classList.add('hidden');
             document.getElementById('prev-bill-popover').classList.add('hidden');
 
-            // 단가가 비어있으면(미작성) 직전 달의 단가를 자동으로 이월
-            const noRates = !(t.rate_eng || t.rate_math || t.rate_spec || t.rate_oneonone || t.rate_supp);
+            // 이번 달 청구서를 아직 안 만들었으면 직전 달의 단가 + 추가/할인 항목을 자동 이월
+            const noRates = !_hasBillContent(t);
             if (noRates) {
                 const prevT = _getPreviousMonthTuition(id);
-                if (prevT && (prevT.rate_eng || prevT.rate_math || prevT.rate_spec || prevT.rate_oneonone || prevT.rate_supp)) {
-                    // 단가만 가져오고, 추가/할인/납부 상태는 초기화
-                    t = {
-                        rate_eng: prevT.rate_eng || 0,
-                        rate_math: prevT.rate_math || 0,
-                        rate_spec: prevT.rate_spec || 0,
-                        rate_oneonone: prevT.rate_oneonone || 0,
-                        rate_supp: prevT.rate_supp || 0,
-                        add_name: '',
-                        add_amount: 0,
-                        disc_name: '',
-                        disc_amount: 0,
-                        is_paid: false,
-                        // 정산 기준 시간표 선택은 단가 이월과 무관하게 유지
-                        bill_option: t.bill_option || 'A'
-                    };
+                if (_hasBillContent(prevT)) {
+                    t = _carryOverBill(prevT, t);
                     tuitionData[id] = t;
                     saveLocal();
-                    _showPrevRateNotice();
+                    _showPrevRateNotice(t);
                 } else {
                     // 로컬에 직전 달 단가 없음 → 클라우드에서 1회 조회 후 폼에 반영
                     _fetchAndApplyPrevTuition(id);
@@ -6572,6 +6558,34 @@
         }
 
         // ==================== 수업료 자동 이월 ====================
+        // 이월할 내용이 있는 청구서인가 (단가 또는 추가/할인 항목)
+        function _hasBillContent(t) {
+            if (!t) return false;
+            return !!(t.rate_eng || t.rate_math || t.rate_spec || t.rate_oneonone || t.rate_supp
+                || t.add_amount || t.disc_amount
+                || (t.add_name || '').trim() || (t.disc_name || '').trim());
+        }
+
+        // 직전 달 청구서에서 이월할 항목만 추린다.
+        // 교재비·형제할인·2과목할인처럼 매월 반복되는 항목은 그대로 가져오고,
+        // 납부 상태(납부방법/부분납부/발송여부)는 절대 이월하지 않는다.
+        function _carryOverBill(prevT, currentT) {
+            return {
+                rate_eng: prevT.rate_eng || 0,
+                rate_math: prevT.rate_math || 0,
+                rate_spec: prevT.rate_spec || 0,
+                rate_oneonone: prevT.rate_oneonone || 0,
+                rate_supp: prevT.rate_supp || 0,
+                add_name: prevT.add_name || '',
+                add_amount: Number(prevT.add_amount) || 0,
+                disc_name: prevT.disc_name || '',
+                disc_amount: Number(prevT.disc_amount) || 0,
+                is_paid: false,
+                // 정산 기준 시간표 선택은 이월과 무관하게 유지
+                bill_option: (currentT && currentT.bill_option) || 'A'
+            };
+        }
+
         function _getPreviousMonthTuition(studentId) {
             const prevConfig = _getPreviousMonthConfig();
             if (!prevConfig) return null;
@@ -6590,48 +6604,51 @@
             const data = await window.fetchMonthDataOnce(prevConfig.dbName);
             if (!data || !data.tuition) return;
             const prevT = data.tuition[studentId];
-            if (!prevT) return;
-            if (!(prevT.rate_eng || prevT.rate_math || prevT.rate_spec || prevT.rate_oneonone || prevT.rate_supp)) return;
+            if (!_hasBillContent(prevT)) return;
 
             // 모달이 같은 학생에 대해 여전히 열려 있을 때만 반영
             if (currentStudentId !== studentId) return;
             const modal = document.getElementById('tuitionModal');
             if (!modal || modal.classList.contains('hidden')) return;
 
-            const t = {
-                rate_eng: prevT.rate_eng || 0,
-                rate_math: prevT.rate_math || 0,
-                rate_spec: prevT.rate_spec || 0,
-                rate_oneonone: prevT.rate_oneonone || 0,
-                rate_supp: prevT.rate_supp || 0,
-                add_name: '', add_amount: 0,
-                disc_name: '', disc_amount: 0,
-                is_paid: false,
-                // 정산 기준 시간표 선택은 단가 이월과 무관하게 유지
-                bill_option: (tuitionData[studentId] && tuitionData[studentId].bill_option) || 'A'
-            };
+            const t = _carryOverBill(prevT, tuitionData[studentId]);
             tuitionData[studentId] = t;
             document.getElementById('bill-rate-eng').value = formatNumber(t.rate_eng);
             document.getElementById('bill-rate-math').value = formatNumber(t.rate_math);
             document.getElementById('bill-rate-spec').value = formatNumber(t.rate_spec);
             document.getElementById('bill-rate-one').value = formatNumber(t.rate_oneonone);
             document.getElementById('bill-rate-supp').value = formatNumber(t.rate_supp);
+            document.getElementById('bill-add-name').value = t.add_name;
+            document.getElementById('bill-add-amt').value = formatNumber(t.add_amount);
+            document.getElementById('bill-disc-name').value = t.disc_name;
+            document.getElementById('bill-disc-amt').value = formatNumber(t.disc_amount);
             calcBillTotal();
             saveLocal();
-            _showPrevRateNotice();
+            _showPrevRateNotice(t);
             // 이전 달 청구서 버튼도 활성화
             const prevBtn = document.getElementById('btn-prev-bill');
             if (prevBtn) prevBtn.classList.remove('hidden');
         }
 
-        // 이전 달 단가 자동 승계 안내 배너 표시
-        function _showPrevRateNotice() {
+        // 이전 달 청구 내용(단가 + 추가/할인) 자동 승계 안내 배너 표시
+        function _showPrevRateNotice(t) {
             const notice = document.getElementById('prev-rate-notice');
             if (!notice) return;
             const prevConfig = _getPreviousMonthConfig();
             if (!prevConfig) return;
             const label = document.getElementById('prev-month-label');
             if (label) label.textContent = prevConfig.monthTitle;
+
+            // 매월 반복되는 추가/할인 항목은 무엇이 넘어왔는지 명시한다
+            const detail = document.getElementById('prev-rate-detail');
+            if (detail) {
+                const parts = [];
+                const addAmt = Number(t && t.add_amount) || 0;
+                const discAmt = Number(t && t.disc_amount) || 0;
+                if (addAmt) parts.push(`${(t.add_name || '추가').trim()} +${formatNumber(addAmt)}원`);
+                if (discAmt) parts.push(`${(t.disc_name || '할인').trim()} -${formatNumber(discAmt)}원`);
+                detail.textContent = parts.length ? `(${parts.join(' · ')})` : '';
+            }
             notice.classList.remove('hidden');
         }
         function dismissPrevRateNotice() {
