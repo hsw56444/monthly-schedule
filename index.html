@@ -1594,6 +1594,7 @@
                             <input type="date" id="customEndDateInput" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] outline-none focus:ring-2 focus:ring-violet-300">
                         </div>
                         <button onclick="resetCustomSessionDates()" class="text-xs bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200 px-3 py-2 rounded-lg font-bold transition" title="기본값으로 되돌리기"><i class="fa-solid fa-rotate-left"></i> 기본값</button>
+                        <button id="saveSessionDatesBtn" onclick="saveSessionDates()" class="text-xs bg-violet-600 text-white hover:bg-violet-700 border border-violet-600 px-3 py-2 rounded-lg font-bold transition" title="수업 기준일만 바로 저장"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
                     </div>
                     <p class="text-[11px] text-slate-400 mt-2"><i class="fa-solid fa-circle-info text-violet-400 mr-1"></i>기본값: <span id="defaultSessionDatesLabel" class="font-bold text-slate-500"></span></p>
                 </div>
@@ -6392,11 +6393,8 @@
             });
         }
 
-        function saveMonthSettings() {
-            globalNotice = document.getElementById('globalNoticeInput').value;
-            window.globalNotice = globalNotice;
-
-            // 사용자 지정 시작/종료일 검증 + 저장
+        // 수업 기준일 입력값을 검증해 APP_CONFIG에 반영 (검증 실패 시 false)
+        function _applySessionDatesFromInputs() {
             const customStart = document.getElementById('customStartDateInput').value || '';
             const customEnd = document.getElementById('customEndDateInput').value || '';
             const monthKey = window.APP_CONFIG.__autoPickedKey || Object.keys(window.MONTHS_CONFIG).find(k => window.MONTHS_CONFIG[k].dbName === window.APP_CONFIG.dbName);
@@ -6404,7 +6402,8 @@
 
             if (customStart && customEnd) {
                 if (new Date(customStart) > new Date(customEnd)) {
-                    return alert('수업 시작일이 종료일보다 늦을 수 없습니다.');
+                    alert('수업 시작일이 종료일보다 늦을 수 없습니다.');
+                    return false;
                 }
             }
 
@@ -6416,6 +6415,27 @@
             window.APP_CONFIG.startDate = customStart || (defCfg ? defCfg.startDate : window.APP_CONFIG.startDate);
             window.APP_CONFIG.endDate = customEnd || (defCfg ? defCfg.endDate : window.APP_CONFIG.endDate);
             generateSessionDates();
+            return true;
+        }
+
+        // 수업 기준일만 저장 (모달은 열어둔 채로)
+        function saveSessionDates() {
+            if (!_applySessionDatesFromInputs()) return;
+            saveLocal();
+            refreshUI();
+            const btn = document.getElementById('saveSessionDatesBtn');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장됨';
+                clearTimeout(btn._resetTimer);
+                btn._resetTimer = setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 저장'; }, 1500);
+            }
+        }
+
+        function saveMonthSettings() {
+            globalNotice = document.getElementById('globalNoticeInput').value;
+            window.globalNotice = globalNotice;
+
+            if (!_applySessionDatesFromInputs()) return;
 
             saveLocal(); // 모든 글로벌 데이터 저장
             refreshUI();
