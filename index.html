@@ -428,10 +428,21 @@
         .pay-partial-rest { font-size: 9.5px; font-weight: 700; color: #94a3b8; margin-top: 2px; }
 
         /* Family group row */
-        .family-group-row { background: linear-gradient(90deg, #eef2ff 0%, #f5f3ff 100%); }
-        .family-group-row td { padding: 8px 16px; }
-        .family-total-row { background: #eef2ff; }
-        .family-total-row td { font-weight: 900; padding: 10px 16px; border-top: 2px solid #c7d2fe; }
+        /* ─── 형제 묶음: 진한 헤더 띠 + 왼쪽 굵은 바 + 들여쓴 형제 행 + 앞뒤 여백으로 카드처럼 분리 ─── */
+        .family-gap td { height: 12px; padding: 0 !important; border: 0; background: transparent; }
+        .family-group-row td { background: linear-gradient(90deg, #4338ca 0%, #6366f1 100%); color: #fff; padding: 9px 16px; }
+        .family-group-row .fam-names { font-weight: 900; font-size: 13px; letter-spacing: -0.2px; }
+        .family-group-row .fam-count { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+        .family-group-row .fam-img-btn { margin-left: 12px; font-size: 10px; font-weight: 700; background: #fff; color: #4338ca; padding: 4px 8px; border-radius: 6px; transition: background .15s; }
+        .family-group-row .fam-img-btn:hover { background: #e0e7ff; }
+        .family-member-row { background: #f8f8ff; }
+        .family-member-row td:first-child,
+        .family-total-row td:first-child { box-shadow: inset 6px 0 0 #6366f1; }
+        .family-member-row td:last-child,
+        .family-total-row td:last-child { box-shadow: inset -2px 0 0 #c7d2fe; }
+        .family-member-row .fam-branch { display: inline-block; width: 12px; height: 12px; margin: 0 8px 0 -4px; border-left: 2px solid #a5b4fc; border-bottom: 2px solid #a5b4fc; border-bottom-left-radius: 4px; vertical-align: 4px; }
+        .family-total-row { background: #e0e7ff; }
+        .family-total-row td { font-weight: 900; padding: 10px 16px; border-top: 2px solid #a5b4fc; border-bottom: 2px solid #a5b4fc; }
 
         /* Overlays */
         .time-input-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.99); border-top: 1px solid #e2e8f0; padding: 1rem; box-shadow: 0 -8px 24px rgba(0,0,0,0.08); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 50; border-radius: 16px 16px 0 0; }
@@ -3287,12 +3298,17 @@
                         });
                         if (filteredMembers.length === 0) return;
 
+                        const trGapTop = document.createElement('tr');
+                        trGapTop.className = 'family-gap';
+                        trGapTop.innerHTML = '<td colspan="14"></td>';
+                        tbodySummary.appendChild(trGapTop);
+
                         // 그룹 헤더 행
                         const trH = document.createElement('tr');
                         trH.className = 'family-group-row';
-                        trH.innerHTML = `<td colspan="14" class="text-xs font-bold text-indigo-700">
-                            <i class="fa-solid fa-people-roof mr-1"></i> 형제 묶음 (${members.length}명)
-                            <button onclick="saveFamilyBillImage('${item.fid}')" class="ml-3 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded font-bold transition">
+                        trH.innerHTML = `<td colspan="14">
+                            <i class="fa-solid fa-people-roof mr-1.5"></i><span class="fam-names">형제 · ${members.map(m => _escapeHtml(m.name || '')).join(' · ')}</span><span class="fam-count">${members.length}명</span>
+                            <button onclick="saveFamilyBillImage('${item.fid}')" class="fam-img-btn">
                                 <i class="fa-solid fa-camera mr-1"></i>통합 청구서 이미지
                             </button>
                         </td>`;
@@ -3305,7 +3321,10 @@
                             famHours += calc.totalHours;
                             if (filteredMembers.includes(s)) {
                                 summaryIdx++;
-                                tbodySummary.appendChild(_renderSummaryRow(s, calc, summaryIdx));
+                                const tr = _renderSummaryRow(s, calc, summaryIdx);
+                                tr.classList.add('family-member-row');
+                                tr.children[1].insertAdjacentHTML('afterbegin', '<span class="fam-branch"></span>');
+                                tbodySummary.appendChild(tr);
                             }
                         });
 
@@ -3319,6 +3338,11 @@
                             <td colspan="4"></td>
                         `;
                         tbodySummary.appendChild(trT);
+
+                        const trGapBottom = document.createElement('tr');
+                        trGapBottom.className = 'family-gap';
+                        trGapBottom.innerHTML = '<td colspan="14"></td>';
+                        tbodySummary.appendChild(trGapBottom);
                     }
                 });
             } else {
