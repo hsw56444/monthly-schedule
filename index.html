@@ -2387,6 +2387,31 @@
             }
         }
 
+        // 달력에 표시할 날짜 = (수업 기준일 ∪ 그 달 1일~말일)을 일~토 주 단위로 채운 범위
+        // 수업 기준일이 달 끝보다 일찍 끝나도(예: 11/27) 말일(11/30)까지는 보이게 한다
+        function getMonthDisplayDates() {
+            let first = SESSION_DATES[0];
+            let last = SESSION_DATES[SESSION_DATES.length - 1];
+            const monthKey = window.APP_CONFIG.__autoPickedKey || Object.keys(window.MONTHS_CONFIG).find(k => window.MONTHS_CONFIG[k].dbName === window.APP_CONFIG.dbName);
+            if (monthKey) {
+                const [y, m] = monthKey.split('-').map(Number);
+                const monthFirst = `${monthKey}-01`;
+                const monthLast = `${monthKey}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
+                if (monthFirst < first) first = monthFirst;
+                if (monthLast > last) last = monthLast;
+            }
+            const d = new Date(first);
+            d.setDate(d.getDate() - d.getDay());
+            const endD = new Date(last);
+            endD.setDate(endD.getDate() + (6 - endD.getDay()));
+            const dates = [];
+            while (d <= endD) {
+                dates.push(d.toISOString().split('T')[0]);
+                d.setDate(d.getDate() + 1);
+            }
+            return dates;
+        }
+
         // 월 선택 드롭다운 이벤트 핸들러
         function changeMonth(monthKey) {
             // 얕은 복사로 기본값 보호 (월별 사용자 지정 시작/종료일 적용 가능하도록)
@@ -2756,24 +2781,7 @@
             const grid = document.createElement('div');
             grid.className = "calendar-grid";
             
-            const firstDateObj = new Date(SESSION_DATES[0]);
-            const firstDayOfWeek = firstDateObj.getDay();
-            const lastDateObj = new Date(SESSION_DATES[SESSION_DATES.length - 1]);
-            const lastDayOfWeek = lastDateObj.getDay();
-
-            const allDisplayDates = [];
-            
-            for(let i = firstDayOfWeek; i > 0; i--) {
-                const d = new Date(firstDateObj);
-                d.setDate(d.getDate() - i);
-                allDisplayDates.push(d.toISOString().split('T')[0]);
-            }
-            allDisplayDates.push(...SESSION_DATES);
-            for(let i = 1; i <= 6 - lastDayOfWeek; i++) {
-                const d = new Date(lastDateObj);
-                d.setDate(d.getDate() + i);
-                allDisplayDates.push(d.toISOString().split('T')[0]);
-            }
+            const allDisplayDates = getMonthDisplayDates();
 
             allDisplayDates.forEach(dStr => {
                 const dateObj = new Date(dStr);
@@ -4283,24 +4291,7 @@
             container.classList.toggle('bulk-card-mode', isBulkCardMode);
             container.classList.toggle('day-paste-mode', isDayPasteMode);
 
-            const firstDateObj = new Date(SESSION_DATES[0]);
-            const firstDayOfWeek = firstDateObj.getDay();
-            const lastDateObj = new Date(SESSION_DATES[SESSION_DATES.length - 1]);
-            const lastDayOfWeek = lastDateObj.getDay();
-
-            const allDisplayDates = [];
-            
-            for(let i = firstDayOfWeek; i > 0; i--) {
-                const d = new Date(firstDateObj);
-                d.setDate(d.getDate() - i);
-                allDisplayDates.push(d.toISOString().split('T')[0]);
-            }
-            allDisplayDates.push(...SESSION_DATES);
-            for(let i = 1; i <= 6 - lastDayOfWeek; i++) {
-                const d = new Date(lastDateObj);
-                d.setDate(d.getDate() + i);
-                allDisplayDates.push(d.toISOString().split('T')[0]);
-            }
+            const allDisplayDates = getMonthDisplayDates();
             
             const logs = attendanceData[currentStudentId]?.[currentOption] || {};
             
