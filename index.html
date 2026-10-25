@@ -780,6 +780,10 @@
         .exporting .important-label { font-size: 10px !important; }
         .exporting .makeup-pill { font-size: 10.5px !important; padding: 1.5px 7px 3px !important; }
         .exporting .makeup-banner { font-size: 11.5px !important; }
+        /* ─── 월별 설정: 항목별 저장 버튼 (변경 있으면 진하게, 없으면 '저장됨'으로 흐리게) ─── */
+        .ms-save-btn { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: #4f46e5; color: #fff; border: 1px solid #4f46e5; white-space: nowrap; flex-shrink: 0; transition: background .15s; }
+        .ms-save-btn:hover:not(:disabled) { background: #4338ca; }
+        .ms-save-btn:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: default; }
     </style>
 </head>
 <body class="text-slate-700 min-h-screen flex flex-col">
@@ -1594,14 +1598,17 @@
                             <input type="date" id="customEndDateInput" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] outline-none focus:ring-2 focus:ring-violet-300">
                         </div>
                         <button onclick="resetCustomSessionDates()" class="text-xs bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200 px-3 py-2 rounded-lg font-bold transition" title="기본값으로 되돌리기"><i class="fa-solid fa-rotate-left"></i> 기본값</button>
-                        <button id="saveSessionDatesBtn" onclick="saveSessionDates()" class="text-xs bg-violet-600 text-white hover:bg-violet-700 border border-violet-600 px-3 py-2 rounded-lg font-bold transition" title="수업 기준일만 바로 저장"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+                        <button data-ms-sec="session" onclick="saveMonthSection('session')" class="ms-save-btn" style="padding:8px 12px"></button>
                     </div>
                     <p class="text-[11px] text-slate-400 mt-2"><i class="fa-solid fa-circle-info text-violet-400 mr-1"></i>기본값: <span id="defaultSessionDatesLabel" class="font-bold text-slate-500"></span></p>
                 </div>
 
                 <!-- 공휴일 -->
                 <div>
-                    <label class="block text-sm font-bold text-red-600 mb-2"><i class="fa-solid fa-calendar-xmark mr-1"></i> 공휴일 <span class="text-xs text-slate-400 font-normal ml-1">(달력에 표시되며 모든 학생의 입력이 차단됩니다. 텍스트 비워두면 "휴일"로 표시)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-red-600"><i class="fa-solid fa-calendar-xmark mr-1"></i> 공휴일 <span class="text-xs text-slate-400 font-normal ml-1">(달력에 표시되며 모든 학생의 입력이 차단됩니다. 텍스트 비워두면 "휴일"로 표시)</span></label>
+                        <button data-ms-sec="holiday" onclick="saveMonthSection('holiday')" class="ms-save-btn"></button>
+                    </div>
                     <div class="flex flex-wrap gap-2 mb-2">
                         <input type="date" id="newHolidayDate" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] shrink-0 outline-none focus:ring-2 focus:ring-red-300">
                         <input type="text" id="newHolidayLabel" maxlength="20" placeholder="표시할 텍스트 (예: 어린이날)" class="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-[120px] outline-none focus:ring-2 focus:ring-red-300">
@@ -1612,7 +1619,10 @@
 
                 <!-- 학원 휴무일 -->
                 <div>
-                    <label class="block text-sm font-bold text-slate-600 mb-2"><i class="fa-solid fa-store-slash mr-1"></i> 학원 휴무일 <span class="text-xs text-slate-400 font-normal ml-1">(달력에 표시되며 모든 학생의 입력이 차단됩니다. 텍스트 비워두면 "학원 휴무"로 표시)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-slate-600"><i class="fa-solid fa-store-slash mr-1"></i> 학원 휴무일 <span class="text-xs text-slate-400 font-normal ml-1">(달력에 표시되며 모든 학생의 입력이 차단됩니다. 텍스트 비워두면 "학원 휴무"로 표시)</span></label>
+                        <button data-ms-sec="closure" onclick="saveMonthSection('closure')" class="ms-save-btn"></button>
+                    </div>
                     <div class="flex flex-wrap gap-2 mb-2">
                         <input type="date" id="newClosureDate" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] shrink-0 outline-none focus:ring-2 focus:ring-slate-300">
                         <input type="text" id="newClosureLabel" maxlength="20" placeholder="표시할 텍스트 (예: 개원기념일)" class="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-[120px] outline-none focus:ring-2 focus:ring-slate-300">
@@ -1623,7 +1633,10 @@
 
                 <!-- 학원 보강일 (사전신청) -->
                 <div>
-                    <label class="block text-sm font-bold text-indigo-600 mb-2"><i class="fa-solid fa-calendar-check mr-1"></i> 학원 보강일 <span class="text-xs text-slate-400 font-normal ml-1">(모든 학생 달력에 "학원보강일 (사전신청)" 표시. 텍스트 입력 시 해당 텍스트 사용)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-indigo-600"><i class="fa-solid fa-calendar-check mr-1"></i> 학원 보강일 <span class="text-xs text-slate-400 font-normal ml-1">(모든 학생 달력에 "학원보강일 (사전신청)" 표시. 텍스트 입력 시 해당 텍스트 사용)</span></label>
+                        <button data-ms-sec="makeup" onclick="saveMonthSection('makeup')" class="ms-save-btn"></button>
+                    </div>
                     <div class="flex flex-wrap gap-2 mb-2">
                         <input type="date" id="newMakeupDate" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] shrink-0 outline-none focus:ring-2 focus:ring-indigo-300">
                         <input type="text" id="newMakeupLabel" maxlength="30" placeholder="표시할 텍스트 (비우면 '학원보강일 (사전신청)')" class="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-[120px] outline-none focus:ring-2 focus:ring-indigo-300">
@@ -1634,7 +1647,10 @@
 
                 <!-- 주요일정 (학교별 방학/개학/시험기간 등) -->
                 <div>
-                    <label class="block text-sm font-bold text-violet-600 mb-2"><i class="fa-solid fa-flag mr-1"></i> 주요일정 <span class="text-xs text-slate-400 font-normal ml-1">(학교별 방학·개학·시험기간 등. 기본은 <b class="text-violet-500">나만 보기</b> — 이미지 저장 시 제외됩니다. 학생을 지정하면 그 학생 이미지에만 표시)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-violet-600"><i class="fa-solid fa-flag mr-1"></i> 주요일정 <span class="text-xs text-slate-400 font-normal ml-1">(학교별 방학·개학·시험기간 등. 기본은 <b class="text-violet-500">나만 보기</b> — 이미지 저장 시 제외됩니다. 학생을 지정하면 그 학생 이미지에만 표시)</span></label>
+                        <button data-ms-sec="important" onclick="saveMonthSection('important')" class="ms-save-btn"></button>
+                    </div>
                     <div class="flex flex-wrap gap-2 mb-2">
                         <div class="flex items-center gap-1.5 shrink-0">
                             <input type="date" id="newImportantDate" onchange="onImportantStartChange()" class="border border-slate-300 rounded-lg p-2 text-sm w-[150px] shrink-0 outline-none focus:ring-2 focus:ring-violet-300">
@@ -1650,7 +1666,10 @@
 
                 <!-- 전체 공지사항 -->
                 <div>
-                    <label class="block text-sm font-bold text-amber-600 mb-2"><i class="fa-regular fa-comment-dots mr-1"></i> 전체 공지사항 <span class="text-xs text-slate-400 font-normal ml-1">(아래 <b class="text-amber-600">학생 지정 공지</b>에 포함되지 않은 학생에게 표시. 개별 학생 페이지에서 수정 가능)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-amber-600"><i class="fa-regular fa-comment-dots mr-1"></i> 전체 공지사항 <span class="text-xs text-slate-400 font-normal ml-1">(아래 <b class="text-amber-600">학생 지정 공지</b>에 포함되지 않은 학생에게 표시. 개별 학생 페이지에서 수정 가능)</span></label>
+                        <button data-ms-sec="notice" onclick="saveMonthSection('notice')" class="ms-save-btn"></button>
+                    </div>
                     <textarea id="globalNoticeInput" class="w-full border border-amber-200 bg-amber-50 focus:bg-white focus:border-amber-400 rounded-lg p-3 text-sm resize-none outline-none transition" rows="4" placeholder="모든 학생에게 일괄 적용할 공지사항을 입력하세요."></textarea>
                     <div class="flex gap-2 mt-2">
                         <button onclick="applyGlobalNoticeToAll()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition"><i class="fa-solid fa-bullhorn mr-1"></i> 모든 학생에게 일괄 적용</button>
@@ -1660,7 +1679,10 @@
 
                 <!-- 학생 지정 공지 (초등/중등 등 특정 학생에게만 다른 공지) -->
                 <div>
-                    <label class="block text-sm font-bold text-amber-700 mb-2"><i class="fa-solid fa-users-rectangle mr-1"></i> 학생 지정 공지 <span class="text-xs text-slate-400 font-normal ml-1">(특정 학생에게만 다른 공지. 예: 초등 / 중등 안내가 다를 때. 지정된 학생은 이 공지가 전체 공지 대신 표시됩니다)</span></label>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <label class="block text-sm font-bold text-amber-700"><i class="fa-solid fa-users-rectangle mr-1"></i> 학생 지정 공지 <span class="text-xs text-slate-400 font-normal ml-1">(특정 학생에게만 다른 공지. 예: 초등 / 중등 안내가 다를 때. 지정된 학생은 이 공지가 전체 공지 대신 표시됩니다)</span></label>
+                        <button data-ms-sec="noticeGroups" onclick="saveMonthSection('noticeGroups')" class="ms-save-btn"></button>
+                    </div>
                     <div class="flex flex-wrap gap-2 mb-2">
                         <textarea id="newNoticeGroupText" rows="2" placeholder="예: 초등부는 8/1~8/5 여름특강 진행합니다." class="border border-amber-200 bg-amber-50 focus:bg-white focus:border-amber-400 rounded-lg p-2 text-sm flex-1 min-w-[180px] resize-none outline-none transition"></textarea>
                         <button onclick="addNoticeGroup()" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold transition shrink-0 self-start"><i class="fa-solid fa-plus"></i> 추가</button>
@@ -1670,8 +1692,7 @@
             </div>
 
             <div class="p-4 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end gap-2">
-                <button onclick="closeMonthSettingsModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">닫기</button>
-                <button onclick="saveMonthSettings()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition"><i class="fa-solid fa-floppy-disk mr-1"></i> 저장</button>
+                <button onclick="closeMonthSettingsModal()" class="px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-bold shadow-md transition">닫기</button>
             </div>
         </div>
     </div>
@@ -1905,7 +1926,7 @@
                         window.tuitionData = data.tuition;
                         try { localStorage.setItem(`regularClassTuition_${dbName}`, JSON.stringify(data.tuition)); } catch(e) {}
                     }
-                    if (data.global) {
+                    if (data.global && !window.__monthSettingsOpen) {
                         // var 선언이므로 window.X 와 동일 바인딩
                         window.HOLIDAYS = Array.isArray(data.global.holidays) ? data.global.holidays : [];
                         window.CLOSURE_DAYS = Array.isArray(data.global.closureDays) ? data.global.closureDays : [];
@@ -1965,13 +1986,13 @@
         });
 
         // 월별 attendance/tuition/global 저장
-        window.triggerCloudSave = async () => {
+        window.triggerCloudSave = async (globalOverride) => {
             if (!window.isCloudOnline) return;
             try {
                 await setDoc(monthDocRef(window.APP_CONFIG.dbName), {
                     attendance: window.attendanceData,
                     tuition:    window.tuitionData,
-                    global: {
+                    global: globalOverride || {
                         holidays: window.HOLIDAYS || [],
                         closureDays: window.CLOSURE_DAYS || [],
                         holidayLabels: window.HOLIDAY_LABELS || {},
@@ -5410,11 +5431,12 @@
             }
         }
 
-        function saveLocal() {
+        // globalOverride: 월별 설정 창에서 항목별 저장 시, 아직 저장 안 한 다른 항목은 빼고 저장본만 보낸다
+        function saveLocal(globalOverride) {
             // 월별 데이터(출결/수업료/전역설정)만 로컬 백업
             localStorage.setItem(`regularClassData_${window.APP_CONFIG.dbName}`, JSON.stringify(attendanceData));
             localStorage.setItem(`regularClassTuition_${window.APP_CONFIG.dbName}`, JSON.stringify(tuitionData));
-            localStorage.setItem(`regularClassGlobal_${window.APP_CONFIG.dbName}`, JSON.stringify({
+            localStorage.setItem(`regularClassGlobal_${window.APP_CONFIG.dbName}`, JSON.stringify(globalOverride || {
                 holidays: HOLIDAYS,
                 closureDays: CLOSURE_DAYS,
                 holidayLabels: HOLIDAY_LABELS,
@@ -5441,7 +5463,7 @@
 
             // 클라우드(Firebase)에 월별 데이터 전송
             if (window.triggerCloudSave) {
-                window.triggerCloudSave();
+                window.triggerCloudSave(globalOverride);
             }
         }
 
@@ -5919,6 +5941,11 @@
             document.getElementById('newMakeupLabel').value = '';
             document.getElementById('newImportantLabel').value = '';
 
+            // 항목별 저장본 기록 → 이후 변경 여부(저장 버튼 상태) 판단 기준
+            msSaved = _msSnapshotAll();
+            window.__monthSettingsOpen = true;
+            _msRefreshSaveButtons();
+
             const modal = document.getElementById('monthSettingsModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -5931,9 +5958,19 @@
                 document.getElementById('customStartDateInput').value = defCfg.startDate;
                 document.getElementById('customEndDateInput').value = defCfg.endDate;
             }
+            _msRefreshSaveButtons();
         }
 
         function closeMonthSettingsModal() {
+            const dirty = MS_SECTIONS.filter(sec => _msIsDirty(sec));
+            if (dirty.length) {
+                const names = dirty.map(sec => MS_SECTION_NAMES[sec]).join(', ');
+                if (!confirm(`저장하지 않은 항목이 있습니다: ${names}\n\n저장하지 않고 닫을까요? (변경한 내용은 취소됩니다)`)) return;
+                dirty.forEach(sec => _msRestore(sec, msSaved[sec]));
+                refreshUI();
+            }
+            window.__monthSettingsOpen = false;
+            msSaved = null;
             const modal = document.getElementById('monthSettingsModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -6309,7 +6346,9 @@
                 });
             });
 
-            saveLocal();
+            // 월별 설정 창에서 누른 것이므로 전체 공지·학생 지정 공지도 저장된 것으로 확정
+            if (msSaved) _msCommit(['notice', 'noticeGroups']);
+            else saveLocal();
 
             // 현재 학생 모달이 열려 있으면 텍스트 영역 갱신
             if (currentStudentId && !document.getElementById('plannerModal').classList.contains('hidden')) {
@@ -6394,6 +6433,18 @@
         }
 
         // 수업 기준일 입력값을 검증해 APP_CONFIG에 반영 (검증 실패 시 false)
+        // 수업 기준일 입력값 읽기 (기본값과 같으면 '' = override 없음)
+        function _readSessionInputs() {
+            const customStart = document.getElementById('customStartDateInput').value || '';
+            const customEnd = document.getElementById('customEndDateInput').value || '';
+            const monthKey = window.APP_CONFIG.__autoPickedKey || Object.keys(window.MONTHS_CONFIG).find(k => window.MONTHS_CONFIG[k].dbName === window.APP_CONFIG.dbName);
+            const defCfg = monthKey ? window.MONTHS_CONFIG[monthKey] : null;
+            return {
+                customStartDate: (defCfg && customStart === defCfg.startDate) ? '' : customStart,
+                customEndDate: (defCfg && customEnd === defCfg.endDate) ? '' : customEnd
+            };
+        }
+
         function _applySessionDatesFromInputs() {
             const customStart = document.getElementById('customStartDateInput').value || '';
             const customEnd = document.getElementById('customEndDateInput').value || '';
@@ -6408,8 +6459,9 @@
             }
 
             // 기본값과 같으면 빈 문자열로 저장 (= override 없음)
-            window.customStartDate = (defCfg && customStart === defCfg.startDate) ? '' : customStart;
-            window.customEndDate = (defCfg && customEnd === defCfg.endDate) ? '' : customEnd;
+            const norm = _readSessionInputs();
+            window.customStartDate = norm.customStartDate;
+            window.customEndDate = norm.customEndDate;
 
             // APP_CONFIG에 즉시 반영
             window.APP_CONFIG.startDate = customStart || (defCfg ? defCfg.startDate : window.APP_CONFIG.startDate);
@@ -6418,30 +6470,111 @@
             return true;
         }
 
-        // 수업 기준일만 저장 (모달은 열어둔 채로)
-        function saveSessionDates() {
-            if (!_applySessionDatesFromInputs()) return;
-            saveLocal();
-            refreshUI();
-            const btn = document.getElementById('saveSessionDatesBtn');
-            if (btn) {
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장됨';
-                clearTimeout(btn._resetTimer);
-                btn._resetTimer = setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 저장'; }, 1500);
+        // ─── 월별 설정: 항목별 저장 ───
+        // 창 안에서 추가/삭제한 내용은 각 항목의 [저장]을 눌러야 저장된다.
+        // 저장할 때는 그 항목만 현재 값으로, 나머지 항목은 마지막 저장본으로 보낸다.
+        const MS_SECTIONS = ['session', 'holiday', 'closure', 'makeup', 'important', 'notice', 'noticeGroups'];
+        const MS_SECTION_NAMES = { session: '수업 기준일', holiday: '공휴일', closure: '학원 휴무일', makeup: '학원 보강일', important: '주요일정', notice: '전체 공지사항', noticeGroups: '학생 지정 공지' };
+        var msSaved = null; // { 항목: 저장본 } — 창을 열 때 / 항목 저장 때 갱신
+
+        function _msClone(v) { return JSON.parse(JSON.stringify(v)); }
+
+        function _msCurrent(sec) {
+            switch (sec) {
+                case 'session': return _readSessionInputs();
+                case 'holiday': return { days: HOLIDAYS, labels: HOLIDAY_LABELS };
+                case 'closure': return { days: CLOSURE_DAYS, labels: CLOSURE_LABELS };
+                case 'makeup': return { days: MAKEUP_DAYS, labels: MAKEUP_LABELS };
+                case 'important': return { days: IMPORTANT_DAYS };
+                case 'notice': return { text: document.getElementById('globalNoticeInput').value };
+                case 'noticeGroups': return { groups: NOTICE_GROUPS };
             }
         }
 
-        function saveMonthSettings() {
-            globalNotice = document.getElementById('globalNoticeInput').value;
-            window.globalNotice = globalNotice;
-
-            if (!_applySessionDatesFromInputs()) return;
-
-            saveLocal(); // 모든 글로벌 데이터 저장
-            refreshUI();
-            closeMonthSettingsModal();
-            alert('월별 설정이 저장되었습니다.');
+        function _msSnapshotAll() {
+            const o = {};
+            MS_SECTIONS.forEach(sec => { o[sec] = _msClone(_msCurrent(sec)); });
+            return o;
         }
+
+        function _msIsDirty(sec) {
+            return !!msSaved && JSON.stringify(_msCurrent(sec)) !== JSON.stringify(msSaved[sec]);
+        }
+
+        // 저장 안 하고 닫을 때: 그 항목을 마지막 저장본으로 되돌림
+        function _msRestore(sec, saved) {
+            const v = _msClone(saved);
+            switch (sec) {
+                case 'holiday': HOLIDAYS = v.days; HOLIDAY_LABELS = v.labels; break;
+                case 'closure': CLOSURE_DAYS = v.days; CLOSURE_LABELS = v.labels; break;
+                case 'makeup': MAKEUP_DAYS = v.days; MAKEUP_LABELS = v.labels; break;
+                case 'important': IMPORTANT_DAYS = v.days; break;
+                case 'noticeGroups': NOTICE_GROUPS = v.groups; break;
+                // session / notice 는 입력칸에만 있고 저장 전엔 전역값을 바꾸지 않으므로 되돌릴 것 없음
+            }
+        }
+
+        function _msGlobalFromSaved() {
+            const sv = msSaved;
+            return {
+                holidays: sv.holiday.days,
+                closureDays: sv.closure.days,
+                holidayLabels: sv.holiday.labels,
+                closureLabels: sv.closure.labels,
+                makeupDays: sv.makeup.days,
+                makeupLabels: sv.makeup.labels,
+                importantDays: sv.important.days,
+                customStartDate: sv.session.customStartDate,
+                customEndDate: sv.session.customEndDate,
+                globalNotice: sv.notice.text,
+                noticeGroups: sv.noticeGroups.groups
+            };
+        }
+
+        // 지정한 항목들의 현재 값을 저장본으로 확정하고 저장
+        function _msCommit(secs) {
+            secs.forEach(sec => { msSaved[sec] = _msClone(_msCurrent(sec)); });
+            saveLocal(_msGlobalFromSaved());
+            _msRefreshSaveButtons();
+        }
+
+        function saveMonthSection(sec) {
+            if (!msSaved) return;
+            if (sec === 'session') {
+                if (!_applySessionDatesFromInputs()) return;
+            } else if (sec === 'notice') {
+                globalNotice = document.getElementById('globalNoticeInput').value;
+            }
+            _msCommit([sec]);
+            refreshUI();
+        }
+
+        function _msRefreshSaveButtons() {
+            document.querySelectorAll('#monthSettingsModal [data-ms-sec]').forEach(btn => {
+                const dirty = _msIsDirty(btn.dataset.msSec);
+                btn.disabled = !dirty;
+                btn.innerHTML = dirty ? '<i class="fa-solid fa-floppy-disk"></i> 저장' : '<i class="fa-solid fa-check"></i> 저장됨';
+                btn.title = dirty ? `${MS_SECTION_NAMES[btn.dataset.msSec]} 저장` : '변경 사항 없음';
+            });
+        }
+
+        // 입력·목록 변경을 감지해 저장 버튼 상태 갱신
+        (function _msWatchChanges() {
+            const modal = document.getElementById('monthSettingsModal');
+            if (!modal) return;
+            let pending = false;
+            const schedule = () => {
+                if (pending || !msSaved) return;
+                pending = true;
+                setTimeout(() => { pending = false; if (msSaved) _msRefreshSaveButtons(); }, 0);
+            };
+            modal.addEventListener('input', schedule);
+            modal.addEventListener('change', schedule);
+            ['holidayList', 'closureList', 'makeupList', 'importantList', 'noticeGroupList'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) new MutationObserver(schedule).observe(el, { childList: true, subtree: true, characterData: true });
+            });
+        })();
 
         // ==================== 직전 달 스케줄 불러오기 ====================
         function _getPreviousMonthConfig() {
