@@ -354,6 +354,24 @@
         .sub-tab { padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 700; border-radius: 9999px; color: #64748b; cursor: pointer; transition: all 0.2s; }
         .sub-tab.active { background-color: #1e293b; color: white; }
 
+        /* 지도점검 */
+        .audit-tab { padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 700; border-radius: 9999px; color: #64748b; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .audit-tab.active { background-color: #1e293b; color: white; }
+        .audit-pill { padding: 0.3rem 0.75rem; border-radius: 9999px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-weight: 700; }
+        .audit-pill.active { background: #1e293b; border-color: #1e293b; color: #fff; }
+        .audit-tool-btn { padding: 0.4rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; background: #fff; color: #475569; font-weight: 700; transition: background .15s; }
+        .audit-tool-btn:hover { background: #f1f5f9; }
+        .audit-tool-btn.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .audit-tool-btn.primary:hover { background: #4338ca; }
+        .audit-select { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.3rem 0.5rem; background: #fff; font-weight: 700; color: #334155; outline: none; }
+        .audit-row-btn { font-size: 11px; font-weight: 700; color: #4f46e5; padding: 2px 8px; border-radius: 6px; border: 1px solid #c7d2fe; background: #fff; margin-left: 4px; }
+        .audit-row-btn:hover { background: #eef2ff; }
+        .audit-row-btn.danger { color: #e11d48; border-color: #fecdd3; }
+        .audit-row-btn.danger:hover { background: #fff1f2; }
+        .si-label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; }
+        .si-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 0.6rem; font-size: 0.85rem; outline: none; }
+        .si-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+
         /* Tuition Filter Buttons */
         .tuition-filter-btn { background: white; border-color: #e2e8f0; color: #64748b; }
         .tuition-filter-btn:hover { border-color: #c7d2fe; color: #4f46e5; }
@@ -426,6 +444,15 @@
         }
         .pay-partial-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
         .pay-partial-rest { font-size: 9.5px; font-weight: 700; color: #94a3b8; margin-top: 2px; }
+        /* 결제일 — 교육비 수납부·간편장부에 그대로 쓰인다 */
+        .pay-date-input {
+            display: block; width: 108px; margin: 4px auto 0;
+            font-size: 0.68rem; font-weight: 700; color: #475569;
+            border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 4px;
+            background: #fff; outline: none;
+        }
+        .pay-date-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .pay-date-input.missing { border-color: #fca5a5; background: #fef2f2; }
 
         /* Family group row */
         /* ─── 형제 묶음: 진한 헤더 띠 + 왼쪽 굵은 바 + 들여쓴 형제 행 + 앞뒤 여백으로 카드처럼 분리 ─── */
@@ -871,6 +898,7 @@
                     <button onclick="switchView('schedule')" id="nav-schedule" class="nav-tab rounded-lg active">📅 시간표</button>
                     <button onclick="switchView('director')" id="nav-director" class="nav-tab rounded-lg">👁️ 전체보기</button>
                     <button onclick="switchView('tuition')" id="nav-tuition" class="nav-tab rounded-lg">💰 수업료</button>
+                    <button onclick="switchView('audit')" id="nav-audit" class="nav-tab rounded-lg">🏛️ 지도점검</button>
                 </div>
 
                 <div class="flex gap-2 text-xs">
@@ -895,7 +923,8 @@
                     <div class="flex gap-2">
                         <button onclick="openMonthSettingsModal()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="공휴일 · 학원 휴무일 · 전체 공지사항 일괄 관리"><i class="fa-solid fa-gear"></i> 월별 설정</button>
                         <button onclick="openAddStudentModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200"><i class="fa-solid fa-plus"></i> 학생 추가</button>
-                        <button onclick="openDeleteStudentModal()" class="bg-white hover:bg-red-50 text-slate-500 hover:text-red-500 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                        <button onclick="openDeleteStudentModal()" class="bg-white hover:bg-red-50 text-slate-500 hover:text-red-500 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"><i class="fa-solid fa-user-minus"></i> 퇴원</button>
+                        <button onclick="openLeftStudents()" class="bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="퇴원한 학생 기록 보기"><i class="fa-solid fa-eye-slash"></i> 퇴원생</button>
                     </div>
                 </div>
                 <div id="student-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
@@ -980,6 +1009,25 @@
                 </div>
             </div>
 
+            <div id="view-audit" class="view-section">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">🏛️ 교육청 지도점검 서류</h2>
+                            <p class="text-xs text-slate-500">명단(퇴원생 포함)과 매달의 시간표·수업료 기록으로 자동 작성됩니다.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-full self-start">
+                            <button onclick="setAuditTab('students')" id="audit-tab-students" class="audit-tab active">👤 학생 정보</button>
+                            <button onclick="setAuditTab('register')" id="audit-tab-register" class="audit-tab">📋 수강생 대장</button>
+                            <button onclick="setAuditTab('receipts')" id="audit-tab-receipts" class="audit-tab">🧾 교육비 수납부</button>
+                            <button onclick="setAuditTab('ledger')" id="audit-tab-ledger" class="audit-tab">📒 간편장부</button>
+                        </div>
+                    </div>
+                    <div id="audit-toolbar" class="px-6 py-3 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-2 text-xs"></div>
+                    <div id="audit-content" class="p-4 md:p-6 bg-slate-100/60"></div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -990,6 +1038,7 @@
                     <div class="flex items-center gap-2">
                         <button onclick="closeModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition"><i class="fa-solid fa-arrow-left text-slate-400"></i></button>
                         <div><h2 id="modalName" class="text-xl font-black text-slate-800 leading-none">학생 이름</h2><span id="modalGroup" class="text-xs font-bold text-indigo-500">반 정보</span></div>
+                        <button onclick="openStudentInfoModal(currentStudentId)" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition text-slate-400 hover:text-indigo-600" title="학생 정보 (등록번호·생년월일·연락처·주소·입원/퇴원일)"><i class="fa-solid fa-id-card"></i></button>
                     </div>
                     
                     <div class="flex items-center gap-2 ml-4 flex-wrap">
@@ -1539,6 +1588,11 @@
                         </label>
                     </div>
                 </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">입원일 (등록일)</label>
+                    <input type="date" id="newStudentJoinDate" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <p class="text-[11px] text-slate-400 mt-1">등록번호는 자동으로 매겨져요. 생년월일·연락처·주소는 🏛️ 지도점검 › 학생 정보에서 입력하세요.</p>
+                </div>
                 <button onclick="addNewStudent()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold shadow-md transition">추가하기</button>
             </div>
         </div>
@@ -1578,16 +1632,21 @@
     <div id="deleteStudentModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-lg text-slate-800 text-red-600"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 학생 삭제</h3>
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-user-minus mr-1 text-rose-500"></i> 학생 퇴원 처리</h3>
                 <button onclick="closeDeleteStudentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-4 overflow-y-auto bg-white custom-scrollbar flex-grow">
-                <p class="text-sm text-slate-500 mb-3 text-center">삭제할 학생을 선택하세요.<br><span class="text-red-500 font-bold text-xs">※ 삭제 시 모든 데이터가 영구적으로 지워집니다.</span></p>
+                <p class="text-sm text-slate-600 mb-1 text-center font-bold">퇴원할 학생을 선택하세요.</p>
+                <p class="text-[11px] text-slate-500 mb-3 text-center leading-relaxed">기록은 지워지지 않고 🏛️ 지도점검 › 학생 정보에 보관돼요.<br>퇴원일이 속한 달까지는 시간표·수업료에 보이고, 다음 달부터 숨겨집니다.</p>
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <label for="leaveDateInput" class="text-xs font-bold text-slate-500">퇴원일</label>
+                    <input type="date" id="leaveDateInput" class="border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-400">
+                </div>
                 <div id="deleteStudentList" class="grid grid-cols-2 gap-2"></div>
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button onclick="closeDeleteStudentModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
-                <button onclick="deleteSelectedStudents()" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-md transition">삭제하기</button>
+                <button onclick="deleteSelectedStudents()" class="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-bold shadow-md transition">퇴원 처리</button>
             </div>
         </div>
     </div>
@@ -1877,8 +1936,8 @@
         // roster 문서가 없을 때: 기존 월 문서들을 모두 훑어 학생을 합치고(id/이름 기준 dedupe) 업로드
         async function migrateRosterFromMonths() {
             const collected = new Map(); // key: id(있으면) 또는 name
-            // 로컬 studentList 먼저 채택(현재 세션에서 편집 중일 수 있으므로)
-            (window.studentList || []).forEach(s => {
+            // 로컬 명단 먼저 채택(현재 세션에서 편집 중일 수 있으므로)
+            (window.allStudents || []).forEach(s => {
                 const k = s.id != null ? `id:${s.id}` : `nm:${s.name}`;
                 if (!collected.has(k)) collected.set(k, s);
             });
@@ -1916,10 +1975,11 @@
                 if (snap.exists()) {
                     const data = snap.data();
                     if (Array.isArray(data.students)) {
-                        window.studentList = data.students;
+                        // 전체 명단(퇴원생 포함) → 이번 달에 다닌 학생만 studentList로
+                        window.allStudents = data.students;
                         // 로컬 백업
-                        try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(window.studentList)); } catch(e) {}
-                        window.sortStudentList && window.sortStudentList();
+                        try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(window.allStudents)); } catch(e) {}
+                        window.applyStudentVisibility && window.applyStudentVisibility();
                         window.refreshUI && window.refreshUI();
                     }
                     // 정기 시간표 템플릿 — 월과 무관하게 계속 유지되며 기기 간에도 공유
@@ -2071,7 +2131,7 @@
             if (!window.isCloudOnline) return;
             try {
                 await setDoc(rosterDocRef(), {
-                    students: window.studentList,
+                    students: window.allStudents,
                     updatedAt: new Date().toISOString()
                 });
             } catch (error) {
@@ -2095,6 +2155,27 @@
             } catch(e) {
                 console.error('월 데이터 조회 실패', dbName, e);
                 return null;
+            }
+        };
+
+        // 간편장부에 직접 입력한 거래(비용·기타 수입) — 월과 무관한 별도 문서
+        const ledgerDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'academy_schedule', '_ledger');
+        window.fetchLedgerOnce = async () => {
+            if (!window.isCloudOnline) return null;
+            try {
+                const snap = await getDoc(ledgerDocRef());
+                return snap.exists() && Array.isArray(snap.data().entries) ? snap.data().entries : [];
+            } catch(e) {
+                console.error('간편장부 조회 실패', e);
+                return null;
+            }
+        };
+        window.triggerLedgerSave = async (entries) => {
+            if (!window.isCloudOnline) return;
+            try {
+                await setDoc(ledgerDocRef(), { entries: entries, updatedAt: new Date().toISOString() });
+            } catch(e) {
+                console.error('간편장부 저장 실패', e);
             }
         };
     </script>
@@ -2269,7 +2350,8 @@
 
         // 전역 변수 설정
         var attendanceData = {};
-        var studentList = [];
+        var studentList = [];  // 지금 보고 있는 달에 다닌 학생만 (화면용)
+        var allStudents = [];  // 전체 명단 — 퇴원생 포함. 저장은 항상 이쪽
         var tuitionData = {};
         var templateData = {}; // 정기 시간표 템플릿 (월에 무관하게 유지)
         
@@ -2515,7 +2597,7 @@
 
             // 학생 명단은 월과 무관한 단일 키(roster)로 유지. (과거 버전 호환 포함)
             loadRosterFromLocal();
-            sortStudentList();
+            applyStudentVisibility();
         }
 
         function loadGlobalDataForCurrentMonth() {
@@ -2572,12 +2654,12 @@
         function loadRosterFromLocal() {
             const rosterRaw = localStorage.getItem('regularClassStudents_roster');
             if (rosterRaw) {
-                try { studentList = JSON.parse(rosterRaw); return; } catch(e) {}
+                try { allStudents = JSON.parse(rosterRaw); return; } catch(e) {}
             }
 
             // roster 키가 없다면 과거의 월별 키들을 합쳐 마이그레이션
             const collected = new Map();
-            (studentList || []).forEach(s => {
+            (allStudents || []).forEach(s => {
                 const k = s.id != null ? `id:${s.id}` : `nm:${s.name}`;
                 if (!collected.has(k)) collected.set(k, s);
             });
@@ -2599,8 +2681,8 @@
             if (merged.length === 0) merged = JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
             let maxId = merged.reduce((m, s) => (typeof s.id === 'number' && s.id > m ? s.id : m), 0);
             merged = merged.map(s => s.id != null ? s : { ...s, id: ++maxId });
-            studentList = merged;
-            try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(studentList)); } catch(e) {}
+            allStudents = merged;
+            try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(allStudents)); } catch(e) {}
         }
 
         // 월 변경 시 타이틀 등 텍스트 자동 업데이트
@@ -2622,11 +2704,35 @@
             });
         }
 
+        // ─── 퇴원(숨김) ───
+        // 학생을 지워도 명단에서 빼지 않고 퇴원일(leaveDate)만 적는다 → 지도점검용 기록 보존.
+        // 각 달 화면에는 그달에 다닌 학생만: 입원일 ≤ 그달 말일, 퇴원일 ≥ 그달 1일.
+        function currentMonthKey() {
+            return window.APP_CONFIG.__autoPickedKey || Object.keys(window.MONTHS_CONFIG).find(k => window.MONTHS_CONFIG[k].dbName === window.APP_CONFIG.dbName);
+        }
+        function monthRangeOf(monthKey) {
+            const [y, m] = monthKey.split('-').map(Number);
+            return { first: `${monthKey}-01`, last: `${monthKey}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}` };
+        }
+        function isEnrolledInMonth(s, monthKey) {
+            const { first, last } = monthRangeOf(monthKey);
+            if (s.leaveDate && s.leaveDate < first) return false;
+            if (s.joinDate && s.joinDate > last) return false;
+            return true;
+        }
+        function applyStudentVisibility() {
+            const mk = currentMonthKey();
+            studentList = mk ? allStudents.filter(s => isEnrolledInMonth(s, mk)) : allStudents.slice();
+            sortStudentList();
+        }
+
         // 통합 UI 새로고침
         function refreshUI() {
             renderStudentList(currentFilter);
             if (document.getElementById('view-director').classList.contains('active')) renderDirectorView();
             if (document.getElementById('view-tuition').classList.contains('active')) renderTuitionList();
+            // 지도점검: 학생 정보 탭만 즉시 갱신(서류 탭은 여러 달을 다시 불러와야 해서 탭을 다시 열 때 갱신)
+            if (document.getElementById('view-audit').classList.contains('active') && auditTab === 'students') renderAuditView();
             if (currentStudentId && !document.getElementById('plannerModal').classList.contains('hidden')) {
                 renderCalendars(); 
             }
@@ -2662,6 +2768,7 @@
             
             if (view === 'tuition') renderTuitionList();
             if (view === 'director') renderDirectorView();
+            if (view === 'audit') renderAuditView();
         }
         
         // Director View Logic
@@ -2934,12 +3041,13 @@
                 const mathPct = Math.min(100, (mathHours / 20) * 100);
 
                 const familyBadge = s.familyId ? `<span class="ml-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full" title="형제 연결됨">👨‍👩‍👧 형제</span>` : '';
+                const leaveBadge = s.leaveDate ? `<span class="ml-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full" title="다음 달부터 숨겨집니다">퇴원 ${Number(s.leaveDate.slice(5,7))}/${Number(s.leaveDate.slice(8,10))}</span>` : '';
                 card.innerHTML = `
                     <div class="absolute top-3 right-3 flex items-center gap-1 z-10">
                         <button onclick="event.stopPropagation(); openFamilyModal(${s.id})" class="btn-family-link text-slate-300 hover:text-indigo-500 transition w-6 h-6 flex items-center justify-center rounded-full hover:bg-indigo-50" title="형제 연결">
                             <i class="fa-solid fa-link text-xs"></i>
                         </button>
-                        <button onclick="event.stopPropagation(); deleteStudent(${s.id})" class="btn-delete-student text-slate-300 hover:text-red-400 transition w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50">
+                        <button onclick="event.stopPropagation(); openDeleteStudentModal(${s.id})" class="btn-delete-student text-slate-300 hover:text-red-400 transition w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50" title="퇴원 처리">
                             <i class="fa-solid fa-xmark text-xs"></i>
                         </button>
                     </div>
@@ -2948,7 +3056,7 @@
                             ${s.name.charAt(0)}
                         </div>
                         <div>
-                            <h3 class="text-base font-black text-slate-800 leading-tight">${s.name}${familyBadge}</h3>
+                            <h3 class="text-base font-black text-slate-800 leading-tight">${s.name}${familyBadge}${leaveBadge}</h3>
                             <span class="text-[10px] font-bold ${groupColor} px-1.5 py-0.5 rounded-full">${groupName}</span>
                         </div>
                     </div>
@@ -3068,8 +3176,19 @@
             t.pay_method = method || '';
             t.is_paid = FULL_PAY_METHODS.includes(t.pay_method);
             if (t.pay_method !== 'partial') t.partial_amount = 0;
+            // 결제일: 납부 방법을 고르는 순간 오늘로 채우고(바로 고칠 수 있음), 미납으로 돌리면 지운다
+            if (!t.pay_method) delete t.pay_date;
+            else if (!t.pay_date) t.pay_date = todayStr();
             // 완납 처리되는 순간 청구서 확정 스냅샷 저장
             if (t.is_paid) _confirmBillSnapshot(id);
+            saveLocal();
+            renderTuitionList();
+        }
+
+        function setPayDate(id, value, event) {
+            if (event) event.stopPropagation();
+            const t = _ensureTuitionRecord(id);
+            if (value) t.pay_date = value; else delete t.pay_date;
             saveLocal();
             renderTuitionList();
         }
@@ -3428,6 +3547,11 @@
                         onchange="setPartialAmount(${s.id}, this.value, event)">
                     <div class="pay-partial-rest">잔액 ${formatNumber(rest)}원</div>`;
             }
+            if (method) {
+                html += `<input type="date" class="pay-date-input${t.pay_date ? '' : ' missing'}" value="${t.pay_date || ''}" title="결제일"
+                        onclick="event.stopPropagation()"
+                        onchange="setPayDate(${s.id}, this.value, event)">`;
+            }
             return html;
         }
 
@@ -3465,7 +3589,7 @@
         
         function downloadTuitionExcel() {
             let csvContent = "\uFEFF"; 
-            csvContent += "학생 이름,구분,시간표,영어(h),수학(h),특강(h),1:1(h),보강(h),총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태,부분납부액\n";
+            csvContent += "학생 이름,구분,시간표,영어(h),수학(h),특강(h),1:1(h),보강(h),총 시수(h),기본 수업료,추가 항목,추가 금액,할인 항목,할인 금액,총 청구액,납부상태,부분납부액,결제일\n";
 
             studentList.forEach(s => {
                 const h = getBillableHours(s.id);
@@ -3493,7 +3617,7 @@
                 const row = [
                     s.name, groupName, getBillOption(s.id), h.eng, h.math, h.spec, h.oneonone, h.supp,
                     parseFloat(totalHours.toFixed(1)), baseTuition,
-                    addName, add, discName, disc, grandTotal, isPaidText, partialAmt
+                    addName, add, discName, disc, grandTotal, isPaidText, partialAmt, t.pay_date || ''
                 ].join(',');
 
                 csvContent += row + "\n";
@@ -5400,6 +5524,7 @@
 
         // --- Add/Delete Student ---
         function openAddStudentModal() {
+            document.getElementById('newStudentJoinDate').value = todayStr();
             document.getElementById('addStudentModal').classList.remove('hidden');
             document.getElementById('addStudentModal').classList.add('flex');
         }
@@ -5410,33 +5535,60 @@
             document.getElementById('newStudentName').value = '';
         }
 
+        // 오늘 날짜 'YYYY-MM-DD' (로컬 시간 기준)
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // 새 학생 id: 지운 학생의 번호를 물려받지 않도록 이번 달 출결/수업료에 남은 번호보다도 크게
+        function _nextStudentId() {
+            const ids = allStudents.map(s => Number(s.id) || 0)
+                .concat(Object.keys(attendanceData).map(Number), Object.keys(tuitionData).map(Number))
+                .filter(n => !isNaN(n));
+            return ids.length ? Math.max(...ids) + 1 : 1;
+        }
+
+        // 등록번호: 입원 연도-일련번호 (예: 2026-007)
+        function nextRegNo(joinDate) {
+            const year = (joinDate || todayStr()).slice(0, 4);
+            const used = allStudents
+                .map(s => String(s.regNo || ''))
+                .filter(r => r.startsWith(year + '-'))
+                .map(r => parseInt(r.slice(5), 10) || 0);
+            const n = used.length ? Math.max(...used) + 1 : 1;
+            return `${year}-${String(n).padStart(3, '0')}`;
+        }
+
         function addNewStudent() {
             const name = document.getElementById('newStudentName').value.trim();
             const group = document.querySelector('input[name="newStudentGroup"]:checked').value;
+            const joinDate = document.getElementById('newStudentJoinDate').value || todayStr();
             if(!name) return alert('학생 이름을 입력해주세요.');
 
-            const newId = studentList.length > 0 ? Math.max(...studentList.map(s => s.id)) + 1 : 1;
-            studentList.push({ id: newId, name: name, group: group });
+            allStudents.push({ id: _nextStudentId(), name: name, group: group, joinDate: joinDate, regNo: nextRegNo(joinDate) });
 
-            sortStudentList();
+            applyStudentVisibility();
             saveRoster(); // 학생 명단은 모든 월에서 공용
 
             renderStudentList(currentFilter);
             closeAddStudentModal();
         }
 
-        function openDeleteStudentModal() {
+        // 퇴원 처리 창 — preselectId가 있으면 그 학생을 미리 선택
+        function openDeleteStudentModal(preselectId) {
             const modal = document.getElementById('deleteStudentModal');
             const list = document.getElementById('deleteStudentList');
             list.innerHTML = '';
-            
+            document.getElementById('leaveDateInput').value = todayStr();
+
             studentList.forEach(s => {
                 const div = document.createElement('div');
                 div.className = "relative";
                 div.innerHTML = `
-                    <input type="checkbox" class="del-student-checkbox peer absolute opacity-0 w-full h-full cursor-pointer" value="${s.id}">
+                    <input type="checkbox" class="del-student-checkbox peer absolute opacity-0 w-full h-full cursor-pointer" value="${s.id}"${s.id === preselectId ? ' checked' : ''}>
                     <div class="p-2 rounded border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 transition peer-checked:bg-red-100 peer-checked:border-red-500 peer-checked:text-red-700 text-sm font-bold flex items-center justify-between">
-                        <span>${s.name}</span><i class="fa-solid fa-trash-can opacity-0 peer-checked:opacity-100"></i>
+                        <span>${s.name}</span><i class="fa-solid fa-user-minus opacity-0 peer-checked:opacity-100"></i>
                     </div>
                 `;
                 list.appendChild(div);
@@ -5452,37 +5604,48 @@
 
         function deleteSelectedStudents() {
             const chks = document.querySelectorAll('.del-student-checkbox:checked');
-            if(chks.length===0) return alert('삭제할 학생을 선택해주세요.');
-            if(!confirm(`선택한 ${chks.length}명의 학생을 삭제하시겠습니까?`)) return;
+            if(chks.length===0) return alert('퇴원할 학생을 선택해주세요.');
+            const leaveDate = document.getElementById('leaveDateInput').value;
+            if (!leaveDate) return alert('퇴원일을 입력해주세요.');
+            const ids = Array.from(chks).map(c => parseInt(c.value));
+            const names = ids.map(id => (allStudents.find(s => s.id === id) || {}).name).join(', ');
+            if(!confirm(`${names}\n\n${leaveDate} 퇴원으로 처리할까요?\n(기록은 지도점검 › 학생 정보에 남습니다)`)) return;
 
-            const idsToDelete = Array.from(chks).map(c => parseInt(c.value));
-            studentList = studentList.filter(s => !idsToDelete.includes(s.id));
-
-            idsToDelete.forEach(id => {
-                delete attendanceData[id];
-                delete tuitionData[id];
+            ids.forEach(id => {
+                const s = allStudents.find(x => x.id === id);
+                if (s) s.leaveDate = leaveDate;
             });
 
-            _cleanupOrphanFamilies();
-            saveRoster();  // 명단은 roster(공용)
-            saveLocal();   // 현재 월의 출결/수업료 정리 반영
-
+            applyStudentVisibility();
+            saveRoster();
             renderStudentList(currentFilter);
             closeDeleteStudentModal();
         }
 
-        function deleteStudent(id) {
-            if(confirm('정말 삭제하시겠습니까?')) {
-                studentList = studentList.filter(s => s.id !== id);
-                delete attendanceData[id];
-                delete tuitionData[id];
+        // 퇴원 취소(재원으로 되돌림)
+        function restoreStudent(id) {
+            const s = allStudents.find(x => x.id === id);
+            if (!s) return;
+            delete s.leaveDate;
+            applyStudentVisibility();
+            saveRoster();
+            refreshUI();
+        }
 
-                _cleanupOrphanFamilies();
-                saveRoster();
-                saveLocal();
-
-                renderStudentList(currentFilter);
-            }
+        // 완전 삭제 — 잘못 추가한 학생 등. 지난 달 출결·수업료 기록과의 연결이 끊긴다
+        function purgeStudent(id) {
+            const s = allStudents.find(x => x.id === id);
+            if (!s) return;
+            if (!confirm(`${s.name} 학생을 명단에서 완전히 지울까요?\n\n지도점검 서류(수강생 대장·수납부)에서도 빠집니다.\n퇴원생이면 '완전 삭제' 대신 퇴원 처리만 해두세요.`)) return;
+            if (!confirm('되돌릴 수 없습니다. 정말 지울까요?')) return;
+            allStudents = allStudents.filter(x => x.id !== id);
+            delete attendanceData[id];
+            delete tuitionData[id];
+            _cleanupOrphanFamilies();
+            applyStudentVisibility();
+            saveRoster();
+            saveLocal();
+            refreshUI();
         }
 
         // globalOverride: 월별 설정 창에서 항목별 저장 시, 아직 저장 안 한 다른 항목은 빼고 저장본만 보낸다
@@ -5523,7 +5686,7 @@
 
         // roster(학생 명단) 저장 — 월과 무관
         function saveRoster() {
-            try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(studentList)); } catch(e) {}
+            try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(allStudents)); } catch(e) {}
             if (window.triggerRosterSave) {
                 window.triggerRosterSave();
             }
@@ -5531,7 +5694,7 @@
 
         function saveToFile() {
             const exportData = {
-                students: studentList,
+                students: allStudents,
                 attendance: attendanceData,
                 tuition: tuitionData,
                 global: { holidays: HOLIDAYS, closureDays: CLOSURE_DAYS, holidayLabels: HOLIDAY_LABELS, closureLabels: CLOSURE_LABELS, makeupDays: MAKEUP_DAYS, makeupLabels: MAKEUP_LABELS, importantDays: IMPORTANT_DAYS, customStartDate: window.customStartDate || '', customEndDate: window.customEndDate || '', globalNotice: globalNotice, noticeGroups: NOTICE_GROUPS }
@@ -5553,8 +5716,8 @@
                 try {
                     const loaded = JSON.parse(e.target.result);
                     if (loaded.students) {
-                        studentList = loaded.students;
-                        sortStudentList();
+                        allStudents = loaded.students;
+                        applyStudentVisibility();
                         saveRoster(); // 학생 명단은 roster(공용)로 반영
                     }
                     if (loaded.attendance) attendanceData = loaded.attendance;
@@ -7204,11 +7367,12 @@
 
         function _cleanupOrphanFamilies() {
             // 가족 멤버가 1명뿐인 familyId는 모두 해제
+            // 퇴원한 형제도 묶음으로 남겨둔다(지난달 형제 묶음 보기 유지) → 전체 명단 기준
             const counts = {};
-            studentList.forEach(s => {
+            allStudents.forEach(s => {
                 if (s.familyId) counts[s.familyId] = (counts[s.familyId] || 0) + 1;
             });
-            studentList.forEach(s => {
+            allStudents.forEach(s => {
                 if (s.familyId && counts[s.familyId] < 2) s.familyId = null;
             });
         }
@@ -7293,6 +7457,849 @@
         // ==================== /월별 설정 ====================
 
         init();
+    </script>
+    <!-- 학생 정보 (지도점검 · 수강생 대장용) -->
+    <div id="studentInfoModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-id-card mr-1 text-indigo-500"></i> 학생 정보</h3>
+                <button onclick="closeStudentInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
+                <label class="col-span-1"><span class="si-label">등록번호</span><input id="si-regNo" class="si-input" placeholder="2026-007"></label>
+                <label class="col-span-1"><span class="si-label">이름</span><input id="si-name" class="si-input font-bold"></label>
+                <div class="col-span-2"><span class="si-label">구분</span>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer"><input type="radio" name="si-group" value="Elementary" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-sky-50 peer-checked:border-sky-500 peer-checked:text-sky-700 font-bold text-sm transition">초등</div></label>
+                        <label class="flex-1 cursor-pointer"><input type="radio" name="si-group" value="Middle" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 font-bold text-sm transition">중등</div></label>
+                    </div>
+                </div>
+                <label class="col-span-1"><span class="si-label">생년월일</span><input id="si-birth" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">연락처</span><input id="si-phone" type="tel" class="si-input" placeholder="010-0000-0000"></label>
+                <label class="col-span-2"><span class="si-label">주소</span><input id="si-address" class="si-input" placeholder="예: 일성1차아파트"></label>
+                <label class="col-span-1"><span class="si-label">입원일</span><input id="si-join" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">퇴원일 <span class="font-normal text-slate-400">(비우면 재원)</span></span><input id="si-leave" type="date" class="si-input"></label>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                <button onclick="closeStudentInfoModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                <button onclick="saveStudentInfo()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수강생 대장 가져오기 (한글 표 복사 · 엑셀 · TSV/CSV) -->
+    <div id="registerImportModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-file-import mr-1 text-indigo-500"></i> 수강생 대장 가져오기</h3>
+                <button onclick="closeRegisterImport()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto custom-scrollbar text-sm">
+                <p class="text-xs text-slate-500 mb-2 leading-relaxed">한글·엑셀의 대장 표를 복사해 붙여넣거나 파일(.tsv/.csv/.txt)을 고르세요.<br>열 순서: <b>등록번호 · 성명 · 과목 · 주소 · 전화번호 · 입원일 · 퇴원일</b> (과목 열은 없어도 됩니다)</p>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="file" id="ri-file" accept=".tsv,.csv,.txt" class="text-xs" onchange="loadRegisterImportFile(this)">
+                </div>
+                <textarea id="ri-text" rows="6" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="2024-001	박지우	중등 영어, 중등 수학	미라11길 23		2024-03-04	"></textarea>
+                <button onclick="previewRegisterImport()" class="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition">미리보기</button>
+                <div id="ri-preview" class="mt-4"></div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                <button onclick="closeRegisterImport()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                <button onclick="applyRegisterImport()" id="ri-apply" disabled class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg text-sm font-bold shadow-md transition">가져오기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 간편장부 거래 입력 -->
+    <div id="ledgerEntryModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800" id="le-title">거래 입력</h3>
+                <button onclick="closeLedgerEntryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
+                <div class="col-span-2"><span class="si-label">구분</span>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer"><input type="radio" name="le-kind" value="expense" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-rose-50 peer-checked:border-rose-400 peer-checked:text-rose-700 font-bold text-sm transition">비용</div></label>
+                        <label class="flex-1 cursor-pointer"><input type="radio" name="le-kind" value="income" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 font-bold text-sm transition">수입</div></label>
+                        <label class="flex-1 cursor-pointer"><input type="radio" name="le-kind" value="asset" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-amber-50 peer-checked:border-amber-400 peer-checked:text-amber-700 font-bold text-sm transition">고정자산</div></label>
+                    </div>
+                </div>
+                <label class="col-span-1"><span class="si-label">날짜</span><input id="le-date" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">비고 (증빙)</span><input id="le-note" class="si-input" list="le-note-list" placeholder="영 / 카드 / 세계"></label>
+                <label class="col-span-2"><span class="si-label">거래내용</span><input id="le-desc" class="si-input" list="le-desc-list" placeholder="예: 임차료"></label>
+                <label class="col-span-2"><span class="si-label">거래처</span><input id="le-vendor" class="si-input" placeholder="예: 한전"></label>
+                <label class="col-span-1"><span class="si-label">금액</span><input id="le-amount" inputmode="numeric" class="si-input text-right font-bold" placeholder="0"></label>
+                <label class="col-span-1"><span class="si-label">부가세</span><input id="le-vat" inputmode="numeric" class="si-input text-right" placeholder="없으면 비움"></label>
+                <datalist id="le-note-list"><option value="영"><option value="카드"><option value="세계"><option value="계"><option value="이체"><option value="현금"></datalist>
+                <datalist id="le-desc-list"><option value="임차료"><option value="관리비"><option value="강사 급여"><option value="공과금"><option value="통신비"><option value="교재 구입"><option value="소모품 구입"><option value="광고선전비"><option value="차량유지비"><option value="세금과공과"><option value="교재비 수입"></datalist>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between gap-2 shrink-0">
+                <button onclick="deleteLedgerEntry()" id="le-delete" class="px-4 py-2 text-rose-500 hover:bg-rose-50 border border-rose-200 rounded-lg text-sm font-bold transition"><i class="fa-regular fa-trash-can mr-1"></i>삭제</button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="closeLedgerEntryModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
+                    <button onclick="saveLedgerEntry()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 교육청 지도점검 ====================
+        // 수강생 대장(학원법 시행규칙 별지 제25호서식) · 교육비 수납부 · 간편장부(국세청 서식).
+        // 모두 전체 명단(allStudents, 퇴원생 포함)과 각 달의 출결/수업료 기록에서 그때그때 만들어 낸다.
+        var auditTab = 'students';          // students | register | receipts | ledger
+        var auditStudentFilter = 'active';  // active | left | all
+        var auditStudentQuery = '';
+        var auditFrom = null, auditTo = null;   // 'YYYY-MM'
+        var ledgerEntries = null;               // 간편장부 직접 입력분 — 장부 탭을 열 때마다 새로 불러옴
+        var _ledgerFromCloud = false;
+        var _auditMonths = null;                // 마지막으로 불러온 월별 기록 (CSV 내보내기용)
+        var _auditRenderSeq = 0;
+
+        // 화면·인쇄 공용 서식 — 인쇄 창에도 같은 CSS를 넣는다
+        var AUDIT_DOC_CSS = `
+            .adoc { font-family: 'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #111827; }
+            .adoc-page { background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(15,23,42,.06); padding: 28px 32px; margin: 0 auto 20px; max-width: 880px; }
+            .adoc-law { font-size: 10.5px; color: #334155; }
+            .adoc-title { text-align: center; font-size: 22px; font-weight: 900; letter-spacing: .25em; margin: 14px 0 2px; }
+            .adoc-sub { text-align: center; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; }
+            .adoc-meta { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; gap: 2px; margin-bottom: 6px; }
+            .adoc-meta span { min-width: 180px; }
+            .adoc table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+            .adoc th, .adoc td { border: 1px solid #475569; padding: 5px 6px; vertical-align: middle; }
+            .adoc th { background: #f1f5f9; font-weight: 700; text-align: center; line-height: 1.3; }
+            .adoc td.c { text-align: center; white-space: nowrap; }
+            .adoc td.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+            .adoc tr.sum td { background: #f8fafc; font-weight: 800; }
+            .adoc tr.grand td { background: #e2e8f0; font-weight: 900; }
+            .adoc-foot { text-align: right; font-size: 10px; color: #64748b; margin-top: 4px; }
+            .adoc-empty { text-align: center; color: #94a3b8; padding: 18px 0; }
+            .adoc .miss { color: #dc2626; font-weight: 700; font-size: 10.5px; }
+            .adoc .tag { color: #6366f1; font-size: 10px; font-weight: 700; }
+            .adoc .edit-cell { cursor: pointer; }
+            .adoc .edit-cell:hover { background: #eef2ff; }
+            .adoc tr.manual td { background: #fffbeb; }
+            .adoc tr.manual:hover td { background: #fef3c7; cursor: pointer; }
+        `;
+        (function _injectAuditCss() {
+            const el = document.createElement('style');
+            el.textContent = AUDIT_DOC_CSS;
+            document.head.appendChild(el);
+        })();
+
+        function _ymLabel(mk) { return `${mk.slice(0, 4)}년 ${Number(mk.slice(5, 7))}월`; }
+        function _mdLabel(d) { return d ? `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}` : ''; }
+        function _won(n) { return n ? formatNumber(n) : ''; }
+        function _missHtml(text) { return `<span class="miss screen-only">${text || '미입력'}</span>`; }
+
+        function _auditMonthKeys() { return Object.keys(window.MONTHS_CONFIG).sort(); }
+        function _auditEnsurePeriod() {
+            const keys = _auditMonthKeys();
+            if (!auditFrom || !keys.includes(auditFrom)) auditFrom = keys[0];
+            if (!auditTo || !keys.includes(auditTo)) auditTo = currentMonthKey() || keys[keys.length - 1];
+            if (auditFrom > auditTo) { const t = auditFrom; auditFrom = auditTo; auditTo = t; }
+        }
+        // pad: 앞뒤 한 달씩 더 — 간편장부는 결제일이 수업 월과 다를 수 있어서(9월분을 8/28에 결제 등)
+        function _auditRangeKeys(pad) {
+            const keys = _auditMonthKeys();
+            let i = keys.indexOf(auditFrom), j = keys.indexOf(auditTo);
+            if (pad) { i = Math.max(0, i - 1); j = Math.min(keys.length - 1, j + 1); }
+            return keys.slice(i, j + 1);
+        }
+
+        // 여러 달의 출결/수업료 — 지금 달은 화면의 데이터, 나머지는 클라우드(오프라인이면 이 기기 저장본)
+        async function _auditLoadMonths(keys) {
+            const cur = currentMonthKey();
+            const out = {};
+            await Promise.all(keys.map(async mk => {
+                if (mk === cur) { out[mk] = { attendance: attendanceData, tuition: tuitionData }; return; }
+                const dbName = window.MONTHS_CONFIG[mk].dbName;
+                let data = window.fetchMonthDataOnce ? await window.fetchMonthDataOnce(dbName) : null;
+                if (!data) {
+                    data = {};
+                    try { data.attendance = JSON.parse(localStorage.getItem(`regularClassData_${dbName}`) || '{}'); } catch(e) {}
+                    try { data.tuition = JSON.parse(localStorage.getItem(`regularClassTuition_${dbName}`) || '{}'); } catch(e) {}
+                }
+                out[mk] = { attendance: data.attendance || {}, tuition: data.tuition || {} };
+            }));
+            return out;
+        }
+
+        // 수업료 계산 함수들은 지금 달 데이터(전역)를 보므로, 다른 달 계산 동안만 잠깐 바꿔 끼운다
+        function _withMonthData(md, fn) {
+            const keepA = attendanceData, keepT = tuitionData;
+            attendanceData = md.attendance; tuitionData = md.tuition;
+            try { return fn(); } finally { attendanceData = keepA; tuitionData = keepT; }
+        }
+
+        function _hadClassInMonth(id, md) {
+            const a = md.attendance[id];
+            if (a) {
+                for (const opt of ['A', 'B']) {
+                    const logs = a[opt] || {};
+                    for (const d in logs) {
+                        if (d.startsWith('__') || !logs[d] || typeof logs[d] !== 'object') continue;
+                        for (const k in logs[d]) if (logs[d][k] && logs[d][k].status === 'present') return true;
+                    }
+                }
+            }
+            const t = md.tuition[id];
+            return !!(t && (t.is_paid || Number(t.partial_amount) > 0));
+        }
+
+        function _byRegNo(a, b) {
+            const ra = a.regNo || '9999-999', rb = b.regNo || '9999-999';
+            return ra === rb ? (a.name || '').localeCompare(b.name || '', 'ko') : ra.localeCompare(rb);
+        }
+
+        // 그달의 수강생: 입원·퇴원일로 판단. 입원일이 비어 있으면 그달 수업·납부 기록이 있는 학생만
+        function _auditStudentsOfMonth(mk, md) {
+            return allStudents
+                .filter(s => isEnrolledInMonth(s, mk) && (s.joinDate || _hadClassInMonth(s.id, md)))
+                .sort(_byRegNo);
+        }
+
+        // 과목: 그달 정산 기준 시간표(A/B)에 실제로 들어간 수업에서 뽑는다 (보강·특강 포함).
+        // 대장 화면에서 칸을 눌러 그달만 직접 고칠 수 있다(s.subjectsByMonth).
+        var _ENG_KEYS = ['eng', 'supp_eng', 'spec_eng'];
+        var _MATH_KEYS = ['math', 'supp_math', 'spec_math'];
+        function _auditAutoSubjects(s, md) {
+            const t = md.tuition[s.id];
+            const opt = (t && t.bill_option === 'B') ? 'B' : 'A';
+            const logs = (md.attendance[s.id] && md.attendance[s.id][opt]) || {};
+            let eng = false, math = false;
+            for (const d in logs) {
+                if (d.startsWith('__') || !logs[d] || typeof logs[d] !== 'object') continue;
+                for (const k in logs[d]) {
+                    const e = logs[d][k];
+                    if (!e || e.status !== 'present') continue;
+                    if (_ENG_KEYS.includes(baseSubject(k))) eng = true;
+                    if (_MATH_KEYS.includes(baseSubject(k))) math = true;
+                }
+            }
+            const lv = s.group === 'Elementary' ? '초등' : '중등';
+            return [eng && `${lv} 영어`, math && `${lv} 수학`].filter(Boolean).join(', ');
+        }
+        function _auditSubjects(s, mk, md) {
+            const ov = s.subjectsByMonth && s.subjectsByMonth[mk];
+            return ov ? { text: ov, manual: true } : { text: _auditAutoSubjects(s, md), manual: false };
+        }
+
+        var AUDIT_PAY_LABELS = { card: '카드(현장)', payapp: '카드(결제선생)', transfer: '계좌이체', partial: '부분납부', etc: '방법 미기재' };
+        var LEDGER_NOTE_OF = { card: '카드', payapp: '카드', transfer: '이체' };
+
+        // 그달 한 학생의 청구액·납부액. 완납이면 납부 순간의 확정 청구서 금액을 우선
+        function _auditPayment(s, md) {
+            return _withMonthData(md, () => {
+                const calc = _calcStudentBill(s);
+                const t = md.tuition[s.id] || {};
+                const method = t.pay_method || (t.is_paid ? 'etc' : '');
+                const billed = (t.is_paid && t.confirmed && typeof t.confirmed.grandTotal === 'number') ? t.confirmed.grandTotal : calc.grandTotal;
+                const paid = method === 'partial' ? (Number(t.partial_amount) || 0) : (t.is_paid ? billed : 0);
+                return { hasRates: calc.hasRates, billed, paid, method, payDate: t.pay_date || '' };
+            });
+        }
+
+        // ─── 화면 ───
+        function setAuditTab(tab) {
+            auditTab = tab;
+            renderAuditView();
+        }
+
+        function openLeftStudents() {
+            auditTab = 'students';
+            auditStudentFilter = 'left';
+            switchView('audit');
+        }
+
+        async function renderAuditView() {
+            _auditEnsurePeriod();
+            document.querySelectorAll('.audit-tab').forEach(el => el.classList.toggle('active', el.id === `audit-tab-${auditTab}`));
+            _renderAuditToolbar();
+            const box = document.getElementById('audit-content');
+            const seq = ++_auditRenderSeq;
+            if (auditTab === 'students') { box.innerHTML = _auditStudentsHtml(); return; }
+
+            box.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-1"></i> 월별 기록을 불러오는 중...</div>';
+            const months = await _auditLoadMonths(_auditRangeKeys(auditTab === 'ledger'));
+            if (auditTab === 'ledger') await _ensureLedgerLoaded();
+            if (seq !== _auditRenderSeq) return;   // 그 사이 다른 탭/기간으로 바뀜
+            _auditMonths = months;
+            if (auditTab === 'register') box.innerHTML = _registerHtml(_registerData(months));
+            else if (auditTab === 'receipts') box.innerHTML = _receiptsHtml(_receiptsData(months));
+            else box.innerHTML = _ledgerHtml(_ledgerData(months));
+        }
+
+        function _renderAuditToolbar() {
+            const bar = document.getElementById('audit-toolbar');
+            const btn = (onclick, icon, label, cls) => `<button onclick="${onclick}" class="audit-tool-btn ${cls || ''}"><i class="fa-solid ${icon} mr-1"></i>${label}</button>`;
+            if (auditTab === 'students') {
+                const nActive = allStudents.filter(s => !s.leaveDate).length;
+                const nLeft = allStudents.length - nActive;
+                const pill = (f, label) => `<button onclick="auditStudentFilter='${f}'; renderAuditView()" class="audit-pill ${auditStudentFilter === f ? 'active' : ''}">${label}</button>`;
+                bar.innerHTML = `
+                    ${pill('active', `재원 ${nActive}`)}${pill('left', `퇴원 ${nLeft}`)}${pill('all', `전체 ${allStudents.length}`)}
+                    <input type="search" value="${_escapeHtml(auditStudentQuery)}" placeholder="이름 검색" oninput="auditStudentQuery=this.value; _rerenderAuditStudents()" class="ml-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-400 w-32">
+                    <div class="ml-auto flex flex-wrap gap-2">
+                        ${btn('fillMissingRegNos()', 'fa-hashtag', '빈 등록번호 채우기')}
+                        ${btn('openRegisterImport()', 'fa-file-import', '대장 가져오기')}
+                    </div>`;
+                return;
+            }
+            const opts = (sel) => _auditMonthKeys().map(k => `<option value="${k}"${k === sel ? ' selected' : ''}>${_ymLabel(k)}</option>`).join('');
+            bar.innerHTML = `
+                <span class="font-bold text-slate-500">기간</span>
+                <select onchange="auditFrom=this.value; renderAuditView()" class="audit-select">${opts(auditFrom)}</select>
+                <span class="text-slate-400">~</span>
+                <select onchange="auditTo=this.value; renderAuditView()" class="audit-select">${opts(auditTo)}</select>
+                <div class="ml-auto flex flex-wrap gap-2">
+                    ${auditTab === 'ledger' ? btn('openLedgerEntryModal()', 'fa-plus', '거래 입력', 'primary') : ''}
+                    ${btn('downloadAuditCsv()', 'fa-file-excel', '엑셀(CSV)')}
+                    ${btn('printAudit()', 'fa-print', '인쇄 / PDF')}
+                </div>`;
+        }
+
+        // ─── 학생 정보 탭 ───
+        function _rerenderAuditStudents() {
+            document.getElementById('audit-content').innerHTML = _auditStudentsHtml();
+        }
+
+        function _auditStudentsHtml() {
+            const q = auditStudentQuery.trim();
+            const list = allStudents
+                .filter(s => auditStudentFilter === 'all' || (auditStudentFilter === 'left' ? !!s.leaveDate : !s.leaveDate))
+                .filter(s => !q || (s.name || '').includes(q))
+                .sort(_byRegNo);
+
+            // 빠진 칸 집계 (재원생 기준)
+            const active = allStudents.filter(s => !s.leaveDate);
+            const missing = [['regNo', '등록번호'], ['joinDate', '입원일'], ['birth', '생년월일'], ['phone', '연락처'], ['address', '주소']]
+                .map(([k, label]) => [label, active.filter(s => !s[k]).length])
+                .filter(([, n]) => n > 0);
+            const notice = missing.length
+                ? `<div class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><i class="fa-solid fa-circle-exclamation mr-1"></i>재원생 중 비어 있는 칸 — ${missing.map(([l, n]) => `${l} ${n}명`).join(' · ')}</div>`
+                : '';
+
+            const cell = (v) => v ? _escapeHtml(v) : '<span class="text-slate-300">—</span>';
+            const rows = list.map(s => `
+                <tr class="hover:bg-indigo-50/50 cursor-pointer ${s.leaveDate ? 'text-slate-400' : ''}" onclick="openStudentInfoModal(${s.id})">
+                    <td class="px-3 py-2.5 font-mono text-xs">${cell(s.regNo)}</td>
+                    <td class="px-3 py-2.5 font-bold ${s.leaveDate ? '' : 'text-slate-800'}">${_escapeHtml(s.name)}</td>
+                    <td class="px-3 py-2.5 text-xs">${s.group === 'Elementary' ? '초등' : '중등'}</td>
+                    <td class="px-3 py-2.5 text-xs">${cell(s.birth)}</td>
+                    <td class="px-3 py-2.5 text-xs">${cell(s.phone)}</td>
+                    <td class="px-3 py-2.5 text-xs">${cell(s.address)}</td>
+                    <td class="px-3 py-2.5 text-xs">${cell(s.joinDate)}</td>
+                    <td class="px-3 py-2.5 text-xs">${s.leaveDate ? `<span class="text-rose-500 font-bold">${s.leaveDate}</span>` : ''}</td>
+                    <td class="px-3 py-2.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+                        ${s.leaveDate
+                            ? `<button onclick="restoreStudent(${s.id})" class="audit-row-btn">복원</button><button onclick="purgeStudent(${s.id})" class="audit-row-btn danger">완전 삭제</button>`
+                            : `<button onclick="openStudentInfoModal(${s.id})" class="audit-row-btn">수정</button>`}
+                    </td>
+                </tr>`).join('');
+
+            return `${notice}
+                <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-500 bg-slate-50 border-b border-slate-200">
+                            <tr><th class="px-3 py-2.5">등록번호</th><th class="px-3 py-2.5">이름</th><th class="px-3 py-2.5">구분</th><th class="px-3 py-2.5">생년월일</th><th class="px-3 py-2.5">연락처</th><th class="px-3 py-2.5">주소</th><th class="px-3 py-2.5">입원일</th><th class="px-3 py-2.5">퇴원일</th><th class="px-3 py-2.5"></th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="9" class="px-3 py-10 text-center text-slate-400">해당하는 학생이 없습니다.</td></tr>'}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        var _infoStudentId = null;
+        function openStudentInfoModal(id) {
+            const s = allStudents.find(x => x.id === id);
+            if (!s) return;
+            _infoStudentId = id;
+            const set = (k, v) => { document.getElementById(`si-${k}`).value = v || ''; };
+            set('regNo', s.regNo); set('name', s.name); set('birth', s.birth); set('phone', s.phone);
+            set('address', s.address); set('join', s.joinDate); set('leave', s.leaveDate);
+            document.querySelectorAll('input[name="si-group"]').forEach(r => { r.checked = (r.value === (s.group === 'Elementary' ? 'Elementary' : 'Middle')); });
+            const m = document.getElementById('studentInfoModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeStudentInfoModal() {
+            const m = document.getElementById('studentInfoModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+            _infoStudentId = null;
+        }
+        function saveStudentInfo() {
+            const s = allStudents.find(x => x.id === _infoStudentId);
+            if (!s) return closeStudentInfoModal();
+            const get = (k) => document.getElementById(`si-${k}`).value.trim();
+            const name = get('name');
+            if (!name) return alert('이름을 입력해주세요.');
+            const regNo = get('regNo'), joinDate = get('join'), leaveDate = get('leave');
+            if (joinDate && leaveDate && leaveDate < joinDate) return alert('퇴원일이 입원일보다 빠릅니다.');
+            if (regNo && allStudents.some(x => x.id !== s.id && x.regNo === regNo)
+                && !confirm(`등록번호 ${regNo}를 이미 다른 학생이 쓰고 있어요. 그대로 저장할까요?`)) return;
+
+            s.name = name;
+            s.group = document.querySelector('input[name="si-group"]:checked')?.value || s.group;
+            const put = (k, v) => { if (v) s[k] = v; else delete s[k]; };
+            put('regNo', regNo); put('birth', get('birth')); put('phone', get('phone'));
+            put('address', get('address')); put('joinDate', joinDate); put('leaveDate', leaveDate);
+
+            applyStudentVisibility();
+            saveRoster();
+            closeStudentInfoModal();
+            refreshUI();
+            const modalName = document.getElementById('modalName');
+            if (currentStudentId === s.id && modalName) modalName.textContent = s.name;
+        }
+
+        // 등록번호가 빈 학생에게 입원일 순으로 번호 부여
+        function fillMissingRegNos() {
+            const targets = allStudents.filter(s => !s.regNo).sort((a, b) => (a.joinDate || '9999').localeCompare(b.joinDate || '9999'));
+            if (!targets.length) return alert('등록번호가 빈 학생이 없습니다.');
+            const noJoin = targets.filter(s => !s.joinDate).length;
+            if (!confirm(`${targets.length}명에게 입원 연도 기준 등록번호를 매길까요?${noJoin ? `\n(입원일이 없는 ${noJoin}명은 올해 번호로 매겨집니다)` : ''}`)) return;
+            targets.forEach(s => { s.regNo = nextRegNo(s.joinDate); });
+            saveRoster();
+            renderAuditView();
+        }
+
+        // ─── 수강생 대장 가져오기 ───
+        var _registerImportRows = [];
+        function openRegisterImport() {
+            document.getElementById('ri-text').value = '';
+            document.getElementById('ri-file').value = '';
+            document.getElementById('ri-preview').innerHTML = '';
+            document.getElementById('ri-apply').disabled = true;
+            _registerImportRows = [];
+            const m = document.getElementById('registerImportModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeRegisterImport() {
+            const m = document.getElementById('registerImportModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+        function loadRegisterImportFile(input) {
+            const f = input.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('ri-text').value = e.target.result; previewRegisterImport(); };
+            reader.readAsText(f, 'utf-8');
+        }
+
+        function _normDate(v) {
+            const m = String(v || '').trim().match(/^(\d{4})[-.\/\s]+(\d{1,2})[-.\/\s]+(\d{1,2})/);
+            return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : '';
+        }
+        function _parseRegisterText(text) {
+            const rows = [];
+            text.replace(/^﻿/, '').split(/\r?\n/).forEach(line => {
+                const cols = (line.includes('\t') ? line.split('\t') : line.split(',')).map(c => c.trim().replace(/^"|"$/g, ''));
+                if (!/^\d{4}-\d{1,4}$/.test(cols[0] || '') || !cols[1]) return;   // 제목·머리글·빈 줄은 건너뜀
+                const [regNo, name, subj, address, phone, join, leave] = cols.length >= 7
+                    ? cols : [cols[0], cols[1], '', cols[2], cols[3], cols[4], cols[5]];
+                rows.push({ regNo, name, subj: subj || '', address: address || '', phone: phone || '', joinDate: _normDate(join), leaveDate: _normDate(leave) });
+            });
+            // 같은 등록번호가 여러 번(월별 페이지마다) 나오면 뒤쪽(최신) 것을 채택
+            const byReg = new Map();
+            rows.forEach(r => byReg.set(r.regNo, r));
+            return Array.from(byReg.values());
+        }
+
+        function previewRegisterImport() {
+            const rows = _parseRegisterText(document.getElementById('ri-text').value);
+            const box = document.getElementById('ri-preview');
+            if (!rows.length) {
+                box.innerHTML = '<p class="text-xs text-rose-500 font-bold">읽을 수 있는 줄이 없어요. 첫 칸이 등록번호(예: 2024-001)인지 확인해주세요.</p>';
+                document.getElementById('ri-apply').disabled = true;
+                return;
+            }
+            // 연결: ① 같은 등록번호 학생 ② 같은 이름이면서 등록번호가 빈 학생 (같은 이름이 여럿이면 최근 입원한 줄부터)
+            const taken = new Set();
+            rows.forEach(r => { r.target = ''; });
+            rows.forEach(r => {
+                const same = allStudents.find(s => s.regNo === r.regNo);
+                if (same) { r.target = String(same.id); taken.add(same.id); }
+            });
+            [...rows].sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || '')).forEach(r => {
+                if (r.target) return;
+                const cand = allStudents.find(s => s.name === r.name && !s.regNo && !taken.has(s.id));
+                if (cand) { r.target = String(cand.id); taken.add(cand.id); }
+                else r.target = 'new';
+            });
+            _registerImportRows = rows;
+
+            const optsFor = (r) => {
+                const same = allStudents.filter(s => s.name === r.name || String(s.id) === r.target);
+                return same.map(s => `<option value="${s.id}"${String(s.id) === r.target ? ' selected' : ''}>${_escapeHtml(s.name)}${s.regNo ? ` (${s.regNo})` : ''}${s.leaveDate ? ' · 퇴원' : ''} 에 덮어쓰기</option>`).join('')
+                    + `<option value="new"${r.target === 'new' ? ' selected' : ''}>새 학생으로 추가</option>`
+                    + `<option value="skip">건너뛰기</option>`;
+            };
+            box.innerHTML = `
+                <p class="text-xs text-slate-500 mb-2">${rows.length}줄을 읽었어요. 연결할 학생을 확인하세요. <span class="text-slate-400">(빈 칸은 기존 값을 지우지 않습니다)</span></p>
+                <div class="border border-slate-200 rounded-lg overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead class="bg-slate-50 text-slate-500"><tr><th class="px-2 py-1.5 text-left">등록번호</th><th class="px-2 py-1.5 text-left">성명</th><th class="px-2 py-1.5 text-left">주소</th><th class="px-2 py-1.5">입원</th><th class="px-2 py-1.5">퇴원</th><th class="px-2 py-1.5 text-left">연결</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">${rows.map((r, i) => `
+                        <tr>
+                            <td class="px-2 py-1.5 font-mono">${_escapeHtml(r.regNo)}</td>
+                            <td class="px-2 py-1.5 font-bold">${_escapeHtml(r.name)}</td>
+                            <td class="px-2 py-1.5">${_escapeHtml(r.address)}</td>
+                            <td class="px-2 py-1.5 text-center">${r.joinDate}</td>
+                            <td class="px-2 py-1.5 text-center text-rose-500">${r.leaveDate}</td>
+                            <td class="px-2 py-1.5"><select onchange="_registerImportRows[${i}].target=this.value" class="border border-slate-200 rounded px-1 py-0.5 text-xs">${optsFor(r)}</select></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table></div>`;
+            document.getElementById('ri-apply').disabled = false;
+        }
+
+        function applyRegisterImport() {
+            const rows = _registerImportRows.filter(r => r.target && r.target !== 'skip');
+            if (!rows.length) return;
+            const ids = rows.filter(r => r.target !== 'new').map(r => r.target);
+            if (new Set(ids).size !== ids.length) return alert('한 학생에 두 줄이 연결되어 있어요. 연결을 확인해주세요.');
+            let updated = 0, added = 0;
+            rows.forEach(r => {
+                let s;
+                if (r.target === 'new') {
+                    s = { id: _nextStudentId(), name: r.name, group: r.subj.includes('중등') ? 'Middle' : 'Elementary' };
+                    allStudents.push(s);
+                    added++;
+                } else {
+                    s = allStudents.find(x => String(x.id) === r.target);
+                    if (!s) return;
+                    updated++;
+                }
+                s.regNo = r.regNo;
+                if (r.address) s.address = r.address;
+                if (r.phone) s.phone = r.phone;
+                if (r.joinDate) s.joinDate = r.joinDate;
+                if (r.leaveDate) s.leaveDate = r.leaveDate;
+            });
+            applyStudentVisibility();
+            saveRoster();
+            closeRegisterImport();
+            refreshUI();
+            renderAuditView();
+            alert(`가져오기 완료: ${updated}명 갱신 · ${added}명 추가`);
+        }
+
+        // ─── 수강생 대장 ───
+        function _registerData(months) {
+            return _auditRangeKeys(false).map(mk => {
+                const md = months[mk];
+                const { last } = monthRangeOf(mk);
+                const rows = _auditStudentsOfMonth(mk, md).map(s => ({
+                    s, subj: _auditSubjects(s, mk, md),
+                    // 그 달 이후의 퇴원일은 그 달 대장에 쓰지 않는다
+                    leave: (s.leaveDate && s.leaveDate <= last) ? s.leaveDate : ''
+                }));
+                return { mk, rows };
+            });
+        }
+
+        function _registerHtml(pages) {
+            return `<div class="adoc">${pages.map(({ mk, rows }) => `
+                <div class="adoc-page">
+                    <div class="adoc-law">■ 학원의 설립ㆍ운영 및 과외교습에 관한 법률 시행규칙 [별지 제25호서식] &lt;개정 2019. 1. 10.&gt;</div>
+                    <div class="adoc-title">수강생 대장</div>
+                    <div class="adoc-sub">(${_ymLabel(mk)})</div>
+                    <div class="adoc-meta"><span>반명:</span><span>교습과목:</span></div>
+                    <table>
+                        <colgroup><col style="width:11%"><col style="width:9%"><col style="width:17%"><col><col style="width:13%"><col style="width:11%"><col style="width:11%"></colgroup>
+                        <thead><tr><th>등록번호</th><th>성명</th><th>과목</th><th>주소</th><th>전화번호</th><th>입원<br>연월일</th><th>퇴원<br>연월일</th></tr></thead>
+                        <tbody>${rows.length ? rows.map(({ s, subj, leave }) => `
+                            <tr>
+                                <td class="c">${s.regNo ? _escapeHtml(s.regNo) : _missHtml()}</td>
+                                <td class="c">${_escapeHtml(s.name)}</td>
+                                <td class="edit-cell" onclick="editAuditSubject(${s.id}, '${mk}')" title="눌러서 이 달 과목 고치기">${subj.text ? _escapeHtml(subj.text) : _missHtml('수업 없음')}${subj.manual ? ' <span class="tag screen-only">직접</span>' : ''}</td>
+                                <td>${_escapeHtml(s.address || '')}</td>
+                                <td class="c">${_escapeHtml(s.phone || '')}</td>
+                                <td class="c">${s.joinDate || _missHtml()}</td>
+                                <td class="c">${leave}</td>
+                            </tr>`).join('') : '<tr><td colspan="7" class="adoc-empty">이 달 수강생이 없습니다.</td></tr>'}
+                        </tbody>
+                    </table>
+                    <div class="adoc-foot">210mm×297mm[백상지 80g/㎡]</div>
+                </div>`).join('')}</div>`;
+        }
+
+        function editAuditSubject(id, mk) {
+            const s = allStudents.find(x => x.id === id);
+            if (!s) return;
+            const cur = (s.subjectsByMonth && s.subjectsByMonth[mk]) || '';
+            const auto = _auditMonths && _auditMonths[mk] ? _auditAutoSubjects(s, _auditMonths[mk]) : '';
+            const v = prompt(`${s.name} · ${_ymLabel(mk)} 과목\n(비우면 시간표에서 자동: ${auto || '없음'})`, cur || auto);
+            if (v === null) return;
+            s.subjectsByMonth = s.subjectsByMonth || {};
+            if (v.trim() && v.trim() !== auto) s.subjectsByMonth[mk] = v.trim();
+            else delete s.subjectsByMonth[mk];
+            saveRoster();
+            document.getElementById('audit-content').innerHTML = _registerHtml(_registerData(_auditMonths));
+        }
+
+        // ─── 교육비 수납부 ───
+        function _receiptsData(months) {
+            return _auditRangeKeys(false).map(mk => {
+                const md = months[mk];
+                const rows = _auditStudentsOfMonth(mk, md)
+                    .map(s => ({ s, subj: _auditSubjects(s, mk, md).text, ...(_auditPayment(s, md)) }))
+                    .filter(r => r.hasRates || r.paid > 0)
+                    .sort((a, b) => (a.payDate || '9999').localeCompare(b.payDate || '9999') || (a.s.name || '').localeCompare(b.s.name || '', 'ko'));
+                return { mk, rows };
+            });
+        }
+
+        function _receiptNote(r) {
+            if (r.method === 'partial') return `잔액 ${formatNumber(r.billed - r.paid)}원`;
+            if (!r.method) return '미납';
+            return '';
+        }
+
+        function _receiptsHtml(pages) {
+            return `<div class="adoc">${pages.map(({ mk, rows }) => {
+                const billedSum = rows.reduce((a, r) => a + r.billed, 0);
+                const paidSum = rows.reduce((a, r) => a + r.paid, 0);
+                return `
+                <div class="adoc-page">
+                    <div class="adoc-title">교육비 수납부</div>
+                    <div class="adoc-sub">(${_ymLabel(mk)}분)</div>
+                    <table>
+                        <colgroup><col style="width:6%"><col style="width:11%"><col style="width:10%"><col><col style="width:12%"><col style="width:12%"><col style="width:13%"><col style="width:12%"></colgroup>
+                        <thead><tr><th>번호</th><th>결제일</th><th>성명</th><th>과목</th><th>교육비</th><th>납부액</th><th>결제방법</th><th>비고</th></tr></thead>
+                        <tbody>${rows.length ? rows.map((r, i) => `
+                            <tr>
+                                <td class="c">${i + 1}</td>
+                                <td class="c">${r.payDate || (r.method ? _missHtml('결제일 미기재') : '')}</td>
+                                <td class="c">${_escapeHtml(r.s.name)}</td>
+                                <td>${_escapeHtml(r.subj)}</td>
+                                <td class="r">${formatNumber(r.billed)}</td>
+                                <td class="r">${_won(r.paid)}</td>
+                                <td class="c">${AUDIT_PAY_LABELS[r.method] || ''}</td>
+                                <td class="c">${_receiptNote(r)}</td>
+                            </tr>`).join('') : '<tr><td colspan="8" class="adoc-empty">이 달 수업료 기록이 없습니다.</td></tr>'}
+                            <tr class="sum"><td colspan="4" class="c">합계 (${rows.length}명)</td><td class="r">${formatNumber(billedSum)}</td><td class="r">${formatNumber(paidSum)}</td><td colspan="2" class="c">${billedSum - paidSum ? `미수 ${formatNumber(billedSum - paidSum)}` : ''}</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="adoc-foot">결제 영수증(카드전표·이체확인증) 원본은 결제일 순으로 따로 보관</div>
+                </div>`;
+            }).join('')}</div>`;
+        }
+
+        // ─── 간편장부 ───
+        async function _ensureLedgerLoaded() {
+            let entries = window.fetchLedgerOnce ? await window.fetchLedgerOnce() : null;
+            _ledgerFromCloud = entries !== null;
+            if (entries === null) {
+                try { entries = JSON.parse(localStorage.getItem('regularClassLedger') || '[]'); } catch(e) { entries = []; }
+            }
+            ledgerEntries = entries;
+        }
+
+        async function _saveLedger() {
+            // 오프라인으로 열었다가 연결된 경우, 클라우드의 다른 거래를 덮어쓰지 않도록 합쳐서 저장
+            if (!_ledgerFromCloud && window.isCloudOnline && window.fetchLedgerOnce) {
+                const cloud = await window.fetchLedgerOnce();
+                if (cloud) {
+                    const mine = new Set(ledgerEntries.map(e => e.id));
+                    ledgerEntries = ledgerEntries.concat(cloud.filter(e => !mine.has(e.id)));
+                    _ledgerFromCloud = true;
+                }
+            }
+            try { localStorage.setItem('regularClassLedger', JSON.stringify(ledgerEntries)); } catch(e) {}
+            if (window.triggerLedgerSave) await window.triggerLedgerSave(ledgerEntries);
+        }
+
+        function _ledgerData(months) {
+            const from = auditFrom, to = auditTo;
+            const rows = [];
+            // 수업료 수입 — 결제일 기준. 결제일이 없으면 수업 월 끝에 '미기재'로
+            Object.keys(months).forEach(mk => {
+                const md = months[mk];
+                allStudents.forEach(s => {
+                    if (!md.tuition[s.id]) return;
+                    const p = _auditPayment(s, md);
+                    if (p.paid <= 0) return;
+                    const ym = p.payDate ? p.payDate.slice(0, 7) : mk;
+                    if (ym < from || ym > to) return;
+                    rows.push({
+                        ym, date: p.payDate, desc: `수강료 수입 (${Number(mk.slice(5))}월분${p.method === 'partial' ? '·부분' : ''})`,
+                        vendor: s.name, income: p.paid, incomeVat: 0, expense: 0, expenseVat: 0, asset: 0, assetVat: 0,
+                        note: LEDGER_NOTE_OF[p.method] || '', auto: true
+                    });
+                });
+            });
+            // 직접 입력한 거래
+            (ledgerEntries || []).forEach(e => {
+                const ym = (e.date || '').slice(0, 7);
+                if (!ym || ym < from || ym > to) return;
+                const amt = Number(e.amount) || 0, vat = Number(e.vat) || 0;
+                rows.push({
+                    ym, date: e.date, desc: e.desc || '', vendor: e.vendor || '', note: e.note || '', id: e.id,
+                    income: e.kind === 'income' ? amt : 0, incomeVat: e.kind === 'income' ? vat : 0,
+                    expense: e.kind === 'expense' ? amt : 0, expenseVat: e.kind === 'expense' ? vat : 0,
+                    asset: e.kind === 'asset' ? amt : 0, assetVat: e.kind === 'asset' ? vat : 0
+                });
+            });
+            rows.sort((a, b) => a.ym.localeCompare(b.ym) || (a.date || '9999').localeCompare(b.date || '9999') || (a.auto === b.auto ? 0 : a.auto ? -1 : 1) || a.vendor.localeCompare(b.vendor, 'ko'));
+            // 월별로 묶기 — 거래가 없는 달도 합계 줄은 남긴다
+            return _auditRangeKeys(false).map(ym => ({ ym, rows: rows.filter(r => r.ym === ym) }));
+        }
+
+        var _LEDGER_SUM_KEYS = ['income', 'incomeVat', 'expense', 'expenseVat', 'asset', 'assetVat'];
+        function _sumRows(rows) {
+            const t = {};
+            _LEDGER_SUM_KEYS.forEach(k => { t[k] = rows.reduce((a, r) => a + (r[k] || 0), 0); });
+            return t;
+        }
+
+        function _ledgerHtml(groups) {
+            const all = groups.flatMap(g => g.rows);
+            const grand = _sumRows(all);
+            const undated = all.filter(r => r.auto && !r.date).length;
+            const nums = (t) => _LEDGER_SUM_KEYS.map(k => `<td class="r">${_won(t[k])}</td>`).join('');
+            const body = groups.map(({ ym, rows }) => rows.map(r => `
+                <tr class="${r.auto ? '' : 'manual'}"${r.auto ? '' : ` onclick="openLedgerEntryModal('${r.id}')" title="눌러서 고치기"`}>
+                    <td class="c">${r.date ? _mdLabel(r.date) : _missHtml('미기재')}</td>
+                    <td>${_escapeHtml(r.desc)}</td>
+                    <td>${_escapeHtml(r.vendor)}</td>
+                    ${nums(r)}
+                    <td class="c">${_escapeHtml(r.note)}</td>
+                </tr>`).join('') + `
+                <tr class="sum"><td class="c">${Number(ym.slice(5))}월 합계</td><td></td><td></td>${nums(_sumRows(rows))}<td></td></tr>`).join('');
+
+            return `
+                ${undated ? `<div class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><i class="fa-solid fa-circle-exclamation mr-1"></i>결제일이 비어 있는 수강료 ${undated}건 — 수업료 화면의 납부 칸 아래 날짜를 채우면 정확한 날짜로 들어갑니다. (지금은 수업 월 합계에 포함)</div>` : ''}
+                <div class="adoc"><div class="adoc-page" style="max-width:1080px">
+                    <div class="adoc-title">간 편 장 부</div>
+                    <div class="adoc-sub">(${_ymLabel(auditFrom)} ~ ${_ymLabel(auditTo)})</div>
+                    <table>
+                        <colgroup><col style="width:7%"><col style="width:17%"><col style="width:12%"><col span="6" style="width:9%"><col style="width:6%"></colgroup>
+                        <thead>
+                            <tr><th rowspan="2">① 날짜</th><th rowspan="2">② 거래내용</th><th rowspan="2">③ 거래처</th><th colspan="2">④ 수입(매출)</th><th colspan="2">⑤ 비용<br>(원가관련 매입포함)</th><th colspan="2">⑥ 고정자산<br>증감(매매)</th><th rowspan="2">⑦ 비고</th></tr>
+                            <tr><th>금액</th><th>부가세</th><th>금액</th><th>부가세</th><th>금액</th><th>부가세</th></tr>
+                        </thead>
+                        <tbody>${body}
+                            <tr class="grand"><td class="c">기간 합계</td><td></td><td></td>${nums(grand)}<td></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="adoc-foot screen-only">노란 줄 = 직접 입력한 거래(눌러서 수정) · 흰 줄 = 수업료 화면의 납부 기록에서 자동 · 비고: 영=영수증, 카드, 세계=세금계산서, 계=계산서</div>
+                </div></div>`;
+        }
+
+        var _editLedgerId = null;
+        function openLedgerEntryModal(id) {
+            const e = id ? (ledgerEntries || []).find(x => x.id === id) : null;
+            _editLedgerId = e ? e.id : null;
+            document.getElementById('le-title').textContent = e ? '거래 수정' : '거래 입력';
+            document.getElementById('le-delete').classList.toggle('hidden', !e);
+            const kind = e ? e.kind : 'expense';
+            document.querySelectorAll('input[name="le-kind"]').forEach(r => { r.checked = r.value === kind; });
+            document.getElementById('le-date').value = e ? e.date : todayStr();
+            document.getElementById('le-desc').value = e ? e.desc : '';
+            document.getElementById('le-vendor').value = e ? e.vendor : '';
+            document.getElementById('le-amount').value = e && e.amount ? formatNumber(e.amount) : '';
+            document.getElementById('le-vat').value = e && e.vat ? formatNumber(e.vat) : '';
+            document.getElementById('le-note').value = e ? e.note : '';
+            const m = document.getElementById('ledgerEntryModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeLedgerEntryModal() {
+            const m = document.getElementById('ledgerEntryModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+        async function saveLedgerEntry() {
+            const entry = {
+                id: _editLedgerId || `le_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                kind: document.querySelector('input[name="le-kind"]:checked')?.value || 'expense',
+                date: document.getElementById('le-date').value,
+                desc: document.getElementById('le-desc').value.trim(),
+                vendor: document.getElementById('le-vendor').value.trim(),
+                amount: parseNumber(document.getElementById('le-amount').value),
+                vat: parseNumber(document.getElementById('le-vat').value),
+                note: document.getElementById('le-note').value.trim()
+            };
+            if (!entry.date) return alert('날짜를 입력해주세요.');
+            if (!entry.desc) return alert('거래내용을 입력해주세요.');
+            if (!entry.amount) return alert('금액을 입력해주세요.');
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            const i = ledgerEntries.findIndex(x => x.id === entry.id);
+            if (i >= 0) ledgerEntries[i] = entry; else ledgerEntries.push(entry);
+            closeLedgerEntryModal();
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+        }
+        async function deleteLedgerEntry() {
+            if (!_editLedgerId || !confirm('이 거래를 지울까요?')) return;
+            ledgerEntries = ledgerEntries.filter(x => x.id !== _editLedgerId);
+            closeLedgerEntryModal();
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+        }
+
+        // ─── 인쇄 · 내보내기 ───
+        function printAudit() {
+            const area = document.querySelector('#audit-content .adoc');
+            if (!area) return;
+            const titles = { register: '수강생 대장', receipts: '교육비 수납부', ledger: '간편장부' };
+            const title = `${titles[auditTab]}_${auditFrom}~${auditTo}`;
+            const w = window.open('', '_blank');
+            if (!w) return alert('팝업이 차단되었어요. 이 사이트의 팝업을 허용한 뒤 다시 눌러주세요.');
+            w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${title}</title>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+                <style>${AUDIT_DOC_CSS}
+                    @page { size: A4 ${auditTab === 'ledger' ? 'landscape' : 'portrait'}; margin: 15mm; }
+                    body { margin: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .screen-only { display: none !important; }
+                    .adoc-page { border: 0; box-shadow: none; padding: 0; margin: 0; max-width: none !important; break-after: page; }
+                    .adoc-page:last-child { break-after: auto; }
+                    .adoc tr.manual td { background: none; }
+                    .adoc thead { display: table-header-group; }
+                    .adoc tr { break-inside: avoid; }
+                </style></head><body>${area.outerHTML}</body></html>`);
+            w.document.close();
+            // 웹폰트가 들어온 다음 인쇄
+            const go = () => { w.focus(); w.print(); };
+            if (w.document.fonts && w.document.fonts.ready) w.document.fonts.ready.then(() => setTimeout(go, 150));
+            else setTimeout(go, 500);
+        }
+
+        function _downloadCsv(filename, rows) {
+            const q = (v) => {
+                const t = String(v == null ? '' : v);
+                return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+            };
+            const csv = '﻿' + rows.map(r => r.map(q).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            a.download = filename;
+            a.click();
+        }
+
+        function downloadAuditCsv() {
+            if (!_auditMonths) return;
+            const span = `${auditFrom}~${auditTo}`;
+            if (auditTab === 'register') {
+                const rows = [['월', '등록번호', '성명', '과목', '주소', '전화번호', '입원 연월일', '퇴원 연월일']];
+                _registerData(_auditMonths).forEach(({ mk, rows: rs }) => rs.forEach(({ s, subj, leave }) =>
+                    rows.push([_ymLabel(mk), s.regNo || '', s.name, subj.text, s.address || '', s.phone || '', s.joinDate || '', leave])));
+                _downloadCsv(`수강생대장_${span}.csv`, rows);
+            } else if (auditTab === 'receipts') {
+                const rows = [['월', '결제일', '성명', '구분', '과목', '교육비', '납부액', '결제방법', '비고']];
+                _receiptsData(_auditMonths).forEach(({ mk, rows: rs }) => rs.forEach(r =>
+                    rows.push([_ymLabel(mk), r.payDate, r.s.name, r.s.group === 'Elementary' ? '초등' : '중등', r.subj, r.billed, r.paid, AUDIT_PAY_LABELS[r.method] || '', _receiptNote(r)])));
+                _downloadCsv(`교육비수납부_${span}.csv`, rows);
+            } else if (auditTab === 'ledger') {
+                const rows = [['날짜', '거래내용', '거래처', '수입 금액', '수입 부가세', '비용 금액', '비용 부가세', '고정자산 금액', '고정자산 부가세', '비고']];
+                _ledgerData(_auditMonths).forEach(({ ym, rows: rs }) => {
+                    rs.forEach(r => rows.push([r.date || `${ym} (결제일 미기재)`, r.desc, r.vendor, r.income || '', r.incomeVat || '', r.expense || '', r.expenseVat || '', r.asset || '', r.assetVat || '', r.note]));
+                    const t = _sumRows(rs);
+                    rows.push([`${Number(ym.slice(5))}월 합계`, '', '', t.income || '', t.incomeVat || '', t.expense || '', t.expenseVat || '', t.asset || '', t.assetVat || '', '']);
+                });
+                _downloadCsv(`간편장부_${span}.csv`, rows);
+            }
+        }
+        // ==================== /교육청 지도점검 ====================
     </script>
 </body>
 </html>
