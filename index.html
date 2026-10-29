@@ -5597,15 +5597,34 @@
             return ids.length ? Math.max(...ids) + 1 : 1;
         }
 
-        // 등록번호: 입원 연도-일련번호 (예: 2026-007)
-        function nextRegNo(joinDate) {
-            const year = (joinDate || todayStr()).slice(0, 4);
-            const used = allStudents
-                .map(s => String(s.regNo || ''))
-                .filter(r => r.startsWith(year + '-'))
-                .map(r => parseInt(r.slice(5), 10) || 0);
-            const n = used.length ? Math.max(...used) + 1 : 1;
-            return `${year}-${String(n).padStart(3, '0')}`;
+        // 등록번호: 입원 연도-일련번호 (예: 2026-007). 입원일 순으로 해마다 001부터 자동으로 매긴다.
+        // 입원일이 없으면 번호도 없음. 같은 날 입원은 기존 번호 → 추가된 순서.
+        function _computeRegNos(list) {
+            const out = new Map();
+            const byYear = {};
+            list.filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s.joinDate || '')).forEach(s => {
+                (byYear[s.joinDate.slice(0, 4)] = byYear[s.joinDate.slice(0, 4)] || []).push(s);
+            });
+            for (const year in byYear) {
+                byYear[year]
+                    .sort((a, b) => a.joinDate.localeCompare(b.joinDate)
+                        || (a.regNo ? 0 : 1) - (b.regNo ? 0 : 1)
+                        || String(a.regNo || '').localeCompare(String(b.regNo || ''))
+                        || a.id - b.id)
+                    .forEach((s, i) => out.set(s.id, `${year}-${String(i + 1).padStart(3, '0')}`));
+            }
+            return out;
+        }
+        function renumberRegNos() {
+            const nos = _computeRegNos(allStudents);
+            let changed = false;
+            allStudents.forEach(s => {
+                const r = nos.get(s.id);
+                if ((s.regNo || '') === (r || '')) return;
+                if (r) s.regNo = r; else delete s.regNo;
+                changed = true;
+            });
+            return changed;
         }
 
         function addNewStudent() {
@@ -5614,7 +5633,7 @@
             const joinDate = document.getElementById('newStudentJoinDate').value || todayStr();
             if(!name) return alert('학생 이름을 입력해주세요.');
 
-            allStudents.push({ id: _nextStudentId(), name: name, group: group, joinDate: joinDate, regNo: nextRegNo(joinDate) });
+            allStudents.push({ id: _nextStudentId(), name: name, group: group, joinDate: joinDate });
 
             applyStudentVisibility();
             saveRoster(); // 학생 명단은 모든 월에서 공용
@@ -5734,6 +5753,7 @@
 
         // roster(학생 명단) 저장 — 월과 무관
         function saveRoster() {
+            renumberRegNos();
             try { localStorage.setItem('regularClassStudents_roster', JSON.stringify(allStudents)); } catch(e) {}
             if (window.triggerRosterSave) {
                 window.triggerRosterSave();
@@ -7514,7 +7534,7 @@
                 <button onclick="closeStudentInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
-                <label class="col-span-1"><span class="si-label">등록번호</span><input id="si-regNo" class="si-input" placeholder="2026-007"></label>
+                <label class="col-span-1"><span class="si-label">등록번호 <span class="font-normal text-slate-400">(입원일로 자동)</span></span><input id="si-regNo" class="si-input bg-slate-50 text-slate-500 font-mono" readonly tabindex="-1" placeholder="입원일을 넣으면 매겨져요"></label>
                 <label class="col-span-1"><span class="si-label">이름</span><input id="si-name" class="si-input font-bold"></label>
                 <div class="col-span-2"><span class="si-label">구분</span>
                     <div class="flex gap-2">
@@ -7525,7 +7545,7 @@
                 <label class="col-span-1"><span class="si-label">생년월일</span><input id="si-birth" type="date" class="si-input"></label>
                 <label class="col-span-1"><span class="si-label">연락처</span><input id="si-phone" type="tel" class="si-input" placeholder="010-0000-0000"></label>
                 <label class="col-span-2"><span class="si-label">주소</span><input id="si-address" class="si-input" placeholder="예: 일성1차아파트"></label>
-                <label class="col-span-1"><span class="si-label">입원일</span><input id="si-join" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">입원일</span><input id="si-join" type="date" class="si-input" oninput="_previewInfoRegNo()"></label>
                 <label class="col-span-1"><span class="si-label">퇴원일 <span class="font-normal text-slate-400">(비우면 재원)</span></span><input id="si-leave" type="date" class="si-input"></label>
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
@@ -7543,7 +7563,7 @@
                 <button onclick="closeRegisterImport()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-5 overflow-y-auto custom-scrollbar text-sm">
-                <p class="text-xs text-slate-500 mb-2 leading-relaxed">한글·엑셀의 대장 표를 복사해 붙여넣거나 파일(.tsv/.csv/.txt)을 고르세요.<br>열 순서: <b>등록번호 · 성명 · 과목 · 주소 · 전화번호 · 입원일 · 퇴원일</b> (과목 열은 없어도 됩니다)</p>
+                <p class="text-xs text-slate-500 mb-2 leading-relaxed">한글·엑셀의 대장 표를 복사해 붙여넣거나 파일(.tsv/.csv/.txt)을 고르세요.<br>열 순서: <b>등록번호 · 성명 · 과목 · 주소 · 전화번호 · 입원일 · 퇴원일</b> (과목 열은 없어도 됩니다)<br>등록번호는 가져온 뒤 입원일 순으로 다시 매겨집니다.</p>
                 <div class="flex items-center gap-2 mb-2">
                     <input type="file" id="ri-file" accept=".tsv,.csv,.txt" class="text-xs" onchange="loadRegisterImportFile(this)">
                 </div>
@@ -7807,7 +7827,11 @@
             _renderAuditToolbar();
             const box = document.getElementById('audit-content');
             const seq = ++_auditRenderSeq;
-            if (auditTab === 'students') { box.innerHTML = _auditStudentsHtml(); return; }
+            if (renumberRegNos()) saveRoster();   // 예전 데이터도 열 때 입원일 순으로 정리
+            if (auditTab === 'students') {
+                box.innerHTML = _auditStudentsHtml();
+                return;
+            }
 
             box.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-1"></i> 월별 기록을 불러오는 중...</div>';
             if (auditTab === 'receipts') {
@@ -7837,7 +7861,6 @@
                     ${pill('active', `재원 ${nActive}`)}${pill('left', `퇴원 ${nLeft}`)}${pill('all', `전체 ${allStudents.length}`)}
                     <input type="search" value="${_escapeHtml(auditStudentQuery)}" placeholder="이름 검색" oninput="auditStudentQuery=this.value; _rerenderAuditStudents()" class="ml-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-400 w-32">
                     <div class="ml-auto flex flex-wrap gap-2">
-                        ${btn('fillMissingRegNos()', 'fa-hashtag', '빈 등록번호 채우기')}
                         ${btn('openRegisterImport()', 'fa-file-import', '대장 가져오기')}
                     </div>`;
                 return;
@@ -7876,7 +7899,7 @@
 
             // 빠진 칸 집계 (재원생 기준)
             const active = allStudents.filter(s => !s.leaveDate);
-            const missing = [['regNo', '등록번호'], ['joinDate', '입원일'], ['birth', '생년월일'], ['phone', '연락처'], ['address', '주소']]
+            const missing = [['joinDate', '입원일(=등록번호)'], ['birth', '생년월일'], ['phone', '연락처'], ['address', '주소']]
                 .map(([k, label]) => [label, active.filter(s => !s[k]).length])
                 .filter(([, n]) => n > 0);
             const notice = missing.length
@@ -7924,6 +7947,12 @@
             const m = document.getElementById('studentInfoModal');
             m.classList.remove('hidden'); m.classList.add('flex');
         }
+        // 입원일을 바꾸면 저장 전에 번호를 미리 보여준다 (다른 학생 번호가 밀릴 수 있음)
+        function _previewInfoRegNo() {
+            const join = document.getElementById('si-join').value;
+            const list = allStudents.map(x => x.id === _infoStudentId ? { ...x, joinDate: join } : x);
+            document.getElementById('si-regNo').value = _computeRegNos(list).get(_infoStudentId) || '';
+        }
         function closeStudentInfoModal() {
             const m = document.getElementById('studentInfoModal');
             m.classList.add('hidden'); m.classList.remove('flex');
@@ -7935,15 +7964,13 @@
             const get = (k) => document.getElementById(`si-${k}`).value.trim();
             const name = get('name');
             if (!name) return alert('이름을 입력해주세요.');
-            const regNo = get('regNo'), joinDate = get('join'), leaveDate = get('leave');
+            const joinDate = get('join'), leaveDate = get('leave');
             if (joinDate && leaveDate && leaveDate < joinDate) return alert('퇴원일이 입원일보다 빠릅니다.');
-            if (regNo && allStudents.some(x => x.id !== s.id && x.regNo === regNo)
-                && !confirm(`등록번호 ${regNo}를 이미 다른 학생이 쓰고 있어요. 그대로 저장할까요?`)) return;
 
             s.name = name;
             s.group = document.querySelector('input[name="si-group"]:checked')?.value || s.group;
             const put = (k, v) => { if (v) s[k] = v; else delete s[k]; };
-            put('regNo', regNo); put('birth', get('birth')); put('phone', get('phone'));
+            put('birth', get('birth')); put('phone', get('phone'));
             put('address', get('address')); put('joinDate', joinDate); put('leaveDate', leaveDate);
 
             applyStudentVisibility();
@@ -7952,17 +7979,6 @@
             refreshUI();
             const modalName = document.getElementById('modalName');
             if (currentStudentId === s.id && modalName) modalName.textContent = s.name;
-        }
-
-        // 등록번호가 빈 학생에게 입원일 순으로 번호 부여
-        function fillMissingRegNos() {
-            const targets = allStudents.filter(s => !s.regNo).sort((a, b) => (a.joinDate || '9999').localeCompare(b.joinDate || '9999'));
-            if (!targets.length) return alert('등록번호가 빈 학생이 없습니다.');
-            const noJoin = targets.filter(s => !s.joinDate).length;
-            if (!confirm(`${targets.length}명에게 입원 연도 기준 등록번호를 매길까요?${noJoin ? `\n(입원일이 없는 ${noJoin}명은 올해 번호로 매겨집니다)` : ''}`)) return;
-            targets.forEach(s => { s.regNo = nextRegNo(s.joinDate); });
-            saveRoster();
-            renderAuditView();
         }
 
         // ─── 수강생 대장 가져오기 ───
@@ -8015,18 +8031,20 @@
                 document.getElementById('ri-apply').disabled = true;
                 return;
             }
-            // 연결: ① 같은 등록번호 학생 ② 같은 이름이면서 등록번호가 빈 학생 (같은 이름이 여럿이면 최근 입원한 줄부터)
+            // 연결: 같은 이름 학생 중 ① 입원일이 같은 학생 ② 등록번호가 같은 학생 ③ 아직 안 묶인 학생
+            // (등록번호는 앱이 입원일 순으로 다시 매기므로 이름 없이 번호만으로는 묶지 않는다)
             const taken = new Set();
             rows.forEach(r => { r.target = ''; });
-            rows.forEach(r => {
-                const same = allStudents.find(s => s.regNo === r.regNo);
-                if (same) { r.target = String(same.id); taken.add(same.id); }
-            });
-            [...rows].sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || '')).forEach(r => {
+            const pick = (r, pred) => {
                 if (r.target) return;
-                const cand = allStudents.find(s => s.name === r.name && !s.regNo && !taken.has(s.id));
+                const cand = allStudents.find(s => s.name === r.name && !taken.has(s.id) && pred(s));
                 if (cand) { r.target = String(cand.id); taken.add(cand.id); }
-                else r.target = 'new';
+            };
+            rows.forEach(r => pick(r, s => r.joinDate && s.joinDate === r.joinDate));
+            rows.forEach(r => pick(r, s => s.regNo && s.regNo === r.regNo));
+            [...rows].sort((a, b) => (b.joinDate || '').localeCompare(a.joinDate || '')).forEach(r => {
+                pick(r, () => true);
+                if (!r.target) r.target = 'new';
             });
             _registerImportRows = rows;
 
@@ -8072,7 +8090,6 @@
                     if (!s) return;
                     updated++;
                 }
-                s.regNo = r.regNo;
                 if (r.address) s.address = r.address;
                 if (r.phone) s.phone = r.phone;
                 if (r.joinDate) s.joinDate = r.joinDate;
