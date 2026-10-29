@@ -939,6 +939,7 @@
                     <button onclick="switchView('schedule')" id="nav-schedule" class="nav-tab rounded-lg active">📅 시간표</button>
                     <button onclick="switchView('director')" id="nav-director" class="nav-tab rounded-lg">👁️ 전체보기</button>
                     <button onclick="switchView('tuition')" id="nav-tuition" class="nav-tab rounded-lg">💰 수업료</button>
+                    <button onclick="switchView('students')" id="nav-students" class="nav-tab rounded-lg">👤 학생 정보</button>
                     <button onclick="switchView('audit')" id="nav-audit" class="nav-tab rounded-lg">🏛️ 지도점검</button>
                 </div>
 
@@ -1050,16 +1051,26 @@
                 </div>
             </div>
 
+            <div id="view-students" class="view-section">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-800">👤 학생 정보</h2>
+                        <p class="text-xs text-slate-500">재원생·퇴원생 전체 명단입니다. 등록번호·생년월일·연락처·주소·입원/퇴원일이 지도점검 서류에 그대로 들어갑니다.</p>
+                    </div>
+                    <div id="students-toolbar" class="px-6 py-3 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-2 text-xs"></div>
+                    <div id="students-content" class="p-4 md:p-6 bg-slate-100/60"></div>
+                </div>
+            </div>
+
             <div id="view-audit" class="view-section">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-6 border-b border-slate-100 flex flex-col lg:flex-row justify-between lg:items-center gap-4">
                         <div>
                             <h2 class="text-lg font-bold text-slate-800">🏛️ 교육청 지도점검 서류</h2>
-                            <p class="text-xs text-slate-500">명단(퇴원생 포함)과 매달의 시간표·수업료 기록으로 자동 작성됩니다.</p>
+                            <p class="text-xs text-slate-500">👤 학생 정보(퇴원생 포함)와 매달의 시간표·수업료 기록으로 자동 작성됩니다.</p>
                         </div>
                         <div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-full self-start">
-                            <button onclick="setAuditTab('students')" id="audit-tab-students" class="audit-tab active">👤 학생 정보</button>
-                            <button onclick="setAuditTab('register')" id="audit-tab-register" class="audit-tab">📋 수강생 대장</button>
+                            <button onclick="setAuditTab('register')" id="audit-tab-register" class="audit-tab active">📋 수강생 대장</button>
                             <button onclick="setAuditTab('receipts')" id="audit-tab-receipts" class="audit-tab">🧾 교육비 영수증</button>
                             <button onclick="setAuditTab('ledger')" id="audit-tab-ledger" class="audit-tab">📒 간편장부</button>
                         </div>
@@ -1635,7 +1646,7 @@
                 <div class="mb-6">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">입원일 (등록일)</label>
                     <input type="date" id="newStudentJoinDate" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <p class="text-[11px] text-slate-400 mt-1">등록번호는 자동으로 매겨져요. 생년월일·연락처·주소는 🏛️ 지도점검 › 학생 정보에서 입력하세요.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">등록번호는 자동으로 매겨져요. 생년월일·연락처·주소는 👤 학생 정보 탭에서 입력하세요.</p>
                 </div>
                 <button onclick="addNewStudent()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold shadow-md transition">추가하기</button>
             </div>
@@ -1681,7 +1692,7 @@
             </div>
             <div class="p-4 overflow-y-auto bg-white custom-scrollbar flex-grow">
                 <p class="text-sm text-slate-600 mb-1 text-center font-bold">퇴원할 학생을 선택하세요.</p>
-                <p class="text-[11px] text-slate-500 mb-3 text-center leading-relaxed">기록은 지워지지 않고 🏛️ 지도점검 › 학생 정보에 보관돼요.<br>퇴원일이 속한 달까지는 시간표·수업료에 보이고, 다음 달부터 숨겨집니다.</p>
+                <p class="text-[11px] text-slate-500 mb-3 text-center leading-relaxed">기록은 지워지지 않고 👤 학생 정보 탭에 보관돼요.<br>퇴원일이 속한 달까지는 시간표·수업료에 보이고, 다음 달부터 숨겨집니다.</p>
                 <div class="flex items-center justify-center gap-2 mb-4">
                     <label for="leaveDateInput" class="text-xs font-bold text-slate-500">퇴원일</label>
                     <input type="date" id="leaveDateInput" class="border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-400">
@@ -2804,8 +2815,8 @@
             renderStudentList(currentFilter);
             if (document.getElementById('view-director').classList.contains('active')) renderDirectorView();
             if (document.getElementById('view-tuition').classList.contains('active')) renderTuitionList();
-            // 지도점검: 학생 정보 탭만 즉시 갱신(서류 탭은 여러 달을 다시 불러와야 해서 탭을 다시 열 때 갱신)
-            if (document.getElementById('view-audit').classList.contains('active') && auditTab === 'students') renderAuditView();
+            // 학생 정보 탭은 즉시 갱신(지도점검 서류는 여러 달을 다시 불러와야 해서 탭을 다시 열 때 갱신)
+            if (document.getElementById('view-students').classList.contains('active')) renderStudentsView();
             if (currentStudentId && !document.getElementById('plannerModal').classList.contains('hidden')) {
                 renderCalendars(); 
             }
@@ -2841,6 +2852,7 @@
             
             if (view === 'tuition') renderTuitionList();
             if (view === 'director') renderDirectorView();
+            if (view === 'students') renderStudentsView();
             if (view === 'audit') renderAuditView();
         }
         
@@ -5701,7 +5713,7 @@
             if (!leaveDate) return alert('퇴원일을 입력해주세요.');
             const ids = Array.from(chks).map(c => parseInt(c.value));
             const names = ids.map(id => (allStudents.find(s => s.id === id) || {}).name).join(', ');
-            if(!confirm(`${names}\n\n${leaveDate} 퇴원으로 처리할까요?\n(기록은 지도점검 › 학생 정보에 남습니다)`)) return;
+            if(!confirm(`${names}\n\n${leaveDate} 퇴원으로 처리할까요?\n(기록은 학생 정보 탭에 남습니다)`)) return;
 
             ids.forEach(id => {
                 const s = allStudents.find(x => x.id === id);
@@ -7555,7 +7567,7 @@
     <div id="studentInfoModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-id-card mr-1 text-indigo-500"></i> 학생 정보</h3>
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-id-card mr-1 text-indigo-500"></i> <span id="si-title">학생 정보</span></h3>
                 <button onclick="closeStudentInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
@@ -7570,8 +7582,9 @@
                 <label class="col-span-1"><span class="si-label">생년월일</span><input id="si-birth" type="date" class="si-input"></label>
                 <label class="col-span-1"><span class="si-label">연락처</span><input id="si-phone" type="tel" class="si-input" placeholder="010-0000-0000"></label>
                 <label class="col-span-2"><span class="si-label">주소</span><input id="si-address" class="si-input" placeholder="예: 일성1차아파트"></label>
+                <label class="col-span-2"><span class="si-label">수강 과목 <span class="font-normal text-slate-400">(시간표 기록이 없는 달의 수강생 대장에 사용)</span></span><input id="si-subjects" class="si-input" placeholder="예: 초등 영어, 초등 수학"></label>
                 <label class="col-span-1"><span class="si-label">입원일</span><input id="si-join" type="date" class="si-input" oninput="_previewInfoRegNo()"></label>
-                <label class="col-span-1"><span class="si-label">퇴원일 <span class="font-normal text-slate-400">(비우면 재원)</span></span><input id="si-leave" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">퇴원일 <span class="font-normal text-slate-400">(비우면 재원 · 그만둔 학생은 꼭)</span></span><input id="si-leave" type="date" class="si-input"></label>
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button onclick="closeStudentInfoModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
@@ -7676,7 +7689,7 @@
         // ==================== 교육청 지도점검 ====================
         // 수강생 대장(학원법 시행규칙 별지 제25호서식) · 교육비 수납부 · 간편장부(국세청 서식).
         // 모두 전체 명단(allStudents, 퇴원생 포함)과 각 달의 출결/수업료 기록에서 그때그때 만들어 낸다.
-        var auditTab = 'students';          // students | register | receipts | ledger
+        var auditTab = 'register';          // register | receipts | ledger
         var auditStudentFilter = 'active';  // active | left | all
         var auditStudentQuery = '';
         var auditFrom = null, auditTo = null;   // 'YYYY-MM'
@@ -7724,11 +7737,22 @@
         function _auditMonthKeys() {
             const keys = new Set(Object.keys(window.MONTHS_CONFIG));
             if (auditTab === 'receipts') (receiptMetas || []).forEach(r => _receiptMonths(r).forEach(m => keys.add(m)));
+            // 수강생 대장은 앱을 쓰기 전 달도 — 가장 먼저 입원한 학생의 달부터
+            if (auditTab === 'register') {
+                const first = allStudents.map(s => (s.joinDate || '').slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)).sort()[0];
+                const last = Array.from(keys).sort().pop();
+                if (first && last) {
+                    let [y, m] = first.split('-').map(Number);
+                    for (let k = first; k < last; ) { keys.add(k); m++; if (m > 12) { m = 1; y++; } k = `${y}-${String(m).padStart(2, '0')}`; }
+                }
+            }
             return Array.from(keys).sort();
         }
         function _auditEnsurePeriod() {
             const keys = _auditMonthKeys();
-            if (!auditFrom || !keys.includes(auditFrom)) auditFrom = keys[0];
+            // 처음엔 앱을 쓰기 시작한 달부터 (더 이전 달은 기간에서 직접 고른다)
+            const appFirst = Object.keys(window.MONTHS_CONFIG).sort()[0];
+            if (!auditFrom || !keys.includes(auditFrom)) auditFrom = keys.includes(appFirst) ? appFirst : keys[0];
             if (!auditTo || !keys.includes(auditTo)) auditTo = currentMonthKey() || keys[keys.length - 1];
             if (auditFrom > auditTo) { const t = auditFrom; auditFrom = auditTo; auditTo = t; }
         }
@@ -7816,7 +7840,7 @@
         }
         function _auditSubjects(s, mk, md) {
             const ov = s.subjectsByMonth && s.subjectsByMonth[mk];
-            return ov ? { text: ov, manual: true } : { text: _auditAutoSubjects(s, md), manual: false };
+            return ov ? { text: ov, manual: true } : { text: _auditAutoSubjects(s, md) || s.subjects || '', manual: false };
         }
 
         var LEDGER_NOTE_OF = { card: '카드', payapp: '카드', transfer: '이체' };
@@ -7841,9 +7865,8 @@
         }
 
         function openLeftStudents() {
-            auditTab = 'students';
             auditStudentFilter = 'left';
-            switchView('audit');
+            switchView('students');
         }
 
         async function renderAuditView() {
@@ -7853,10 +7876,6 @@
             const box = document.getElementById('audit-content');
             const seq = ++_auditRenderSeq;
             if (renumberRegNos()) saveRoster();   // 예전 데이터도 열 때 입원일 순으로 정리
-            if (auditTab === 'students') {
-                box.innerHTML = _auditStudentsHtml();
-                return;
-            }
 
             box.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm"><i class="fa-solid fa-spinner fa-spin mr-1"></i> 월별 기록을 불러오는 중...</div>';
             if (auditTab === 'receipts') {
@@ -7878,18 +7897,6 @@
         function _renderAuditToolbar() {
             const bar = document.getElementById('audit-toolbar');
             const btn = (onclick, icon, label, cls) => `<button onclick="${onclick}" class="audit-tool-btn ${cls || ''}"><i class="fa-solid ${icon} mr-1"></i>${label}</button>`;
-            if (auditTab === 'students') {
-                const nActive = allStudents.filter(s => !s.leaveDate).length;
-                const nLeft = allStudents.length - nActive;
-                const pill = (f, label) => `<button onclick="auditStudentFilter='${f}'; renderAuditView()" class="audit-pill ${auditStudentFilter === f ? 'active' : ''}">${label}</button>`;
-                bar.innerHTML = `
-                    ${pill('active', `재원 ${nActive}`)}${pill('left', `퇴원 ${nLeft}`)}${pill('all', `전체 ${allStudents.length}`)}
-                    <input type="search" value="${_escapeHtml(auditStudentQuery)}" placeholder="이름 검색" oninput="auditStudentQuery=this.value; _rerenderAuditStudents()" class="ml-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-400 w-32">
-                    <div class="ml-auto flex flex-wrap gap-2">
-                        ${btn('openRegisterImport()', 'fa-file-import', '대장 가져오기')}
-                    </div>`;
-                return;
-            }
             const opts = (sel) => _auditMonthKeys().map(k => `<option value="${k}"${k === sel ? ' selected' : ''}>${_ymLabel(k)}</option>`).join('');
             bar.innerHTML = `
                 <span class="font-bold text-slate-500">기간</span>
@@ -7910,9 +7917,24 @@
                 </div>`;
         }
 
-        // ─── 학생 정보 탭 ───
+        // ─── 학생 정보 탭 (상단 탭) ───
+        function renderStudentsView() {
+            if (renumberRegNos()) saveRoster();   // 예전 데이터도 열 때 입원일 순으로 정리
+            const nActive = allStudents.filter(s => !s.leaveDate).length;
+            const nLeft = allStudents.length - nActive;
+            const pill = (f, label) => `<button onclick="auditStudentFilter='${f}'; renderStudentsView()" class="audit-pill ${auditStudentFilter === f ? 'active' : ''}">${label}</button>`;
+            const btn = (onclick, icon, label, cls) => `<button onclick="${onclick}" class="audit-tool-btn ${cls || ''}"><i class="fa-solid ${icon} mr-1"></i>${label}</button>`;
+            document.getElementById('students-toolbar').innerHTML = `
+                ${pill('active', `재원 ${nActive}`)}${pill('left', `퇴원 ${nLeft}`)}${pill('all', `전체 ${allStudents.length}`)}
+                <input type="search" value="${_escapeHtml(auditStudentQuery)}" placeholder="이름 검색" oninput="auditStudentQuery=this.value; _rerenderAuditStudents()" class="ml-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-400 w-32">
+                <div class="ml-auto flex flex-wrap gap-2">
+                    ${btn('openStudentInfoModal(null)', 'fa-user-plus', '학생 추가 (그만둔 학생 포함)', 'primary')}
+                    ${btn('openRegisterImport()', 'fa-file-import', '대장 가져오기')}
+                </div>`;
+            _rerenderAuditStudents();
+        }
         function _rerenderAuditStudents() {
-            document.getElementById('audit-content').innerHTML = _auditStudentsHtml();
+            document.getElementById('students-content').innerHTML = _auditStudentsHtml();
         }
 
         function _auditStudentsHtml() {
@@ -7961,13 +7983,16 @@
         }
 
         var _infoStudentId = null;
+        // id 없이 열면 새 학생 추가 (예전에 다녔다 그만둔 학생도 입원·퇴원일을 넣어 등록)
         function openStudentInfoModal(id) {
-            const s = allStudents.find(x => x.id === id);
+            const isNew = id == null;
+            const s = isNew ? { group: 'Elementary' } : allStudents.find(x => x.id === id);
             if (!s) return;
-            _infoStudentId = id;
+            _infoStudentId = isNew ? 'new' : id;
+            document.getElementById('si-title').textContent = isNew ? '학생 추가' : '학생 정보';
             const set = (k, v) => { document.getElementById(`si-${k}`).value = v || ''; };
             set('regNo', s.regNo); set('name', s.name); set('birth', s.birth); set('phone', s.phone);
-            set('address', s.address); set('join', s.joinDate); set('leave', s.leaveDate);
+            set('address', s.address); set('join', s.joinDate); set('leave', s.leaveDate); set('subjects', s.subjects);
             document.querySelectorAll('input[name="si-group"]').forEach(r => { r.checked = (r.value === (s.group === 'Elementary' ? 'Elementary' : 'Middle')); });
             const m = document.getElementById('studentInfoModal');
             m.classList.remove('hidden'); m.classList.add('flex');
@@ -7975,8 +8000,10 @@
         // 입원일을 바꾸면 저장 전에 번호를 미리 보여준다 (다른 학생 번호가 밀릴 수 있음)
         function _previewInfoRegNo() {
             const join = document.getElementById('si-join').value;
-            const list = allStudents.map(x => x.id === _infoStudentId ? { ...x, joinDate: join } : x);
-            document.getElementById('si-regNo').value = _computeRegNos(list).get(_infoStudentId) || '';
+            const list = _infoStudentId === 'new'
+                ? allStudents.concat([{ id: Infinity, joinDate: join }])
+                : allStudents.map(x => x.id === _infoStudentId ? { ...x, joinDate: join } : x);
+            document.getElementById('si-regNo').value = _computeRegNos(list).get(_infoStudentId === 'new' ? Infinity : _infoStudentId) || '';
         }
         function closeStudentInfoModal() {
             const m = document.getElementById('studentInfoModal');
@@ -7984,19 +8011,24 @@
             _infoStudentId = null;
         }
         function saveStudentInfo() {
-            const s = allStudents.find(x => x.id === _infoStudentId);
+            const isNew = _infoStudentId === 'new';
+            const s = isNew ? { id: _nextStudentId() } : allStudents.find(x => x.id === _infoStudentId);
             if (!s) return closeStudentInfoModal();
             const get = (k) => document.getElementById(`si-${k}`).value.trim();
             const name = get('name');
             if (!name) return alert('이름을 입력해주세요.');
             const joinDate = get('join'), leaveDate = get('leave');
+            if (isNew && !joinDate) return alert('입원일을 입력해주세요. (등록번호가 입원일로 매겨져요)');
             if (joinDate && leaveDate && leaveDate < joinDate) return alert('퇴원일이 입원일보다 빠릅니다.');
+            if (isNew && allStudents.some(x => x.name === name && x.joinDate === joinDate)
+                && !confirm(`${name} (${joinDate} 입원) 학생이 이미 있어요. 그래도 추가할까요?`)) return;
+            if (isNew) allStudents.push(s);
 
             s.name = name;
             s.group = document.querySelector('input[name="si-group"]:checked')?.value || s.group;
             const put = (k, v) => { if (v) s[k] = v; else delete s[k]; };
             put('birth', get('birth')); put('phone', get('phone'));
-            put('address', get('address')); put('joinDate', joinDate); put('leaveDate', leaveDate);
+            put('address', get('address')); put('joinDate', joinDate); put('leaveDate', leaveDate); put('subjects', get('subjects'));
 
             applyStudentVisibility();
             saveRoster();
@@ -8125,7 +8157,6 @@
             saveRoster();
             closeRegisterImport();
             refreshUI();
-            renderAuditView();
             alert(`가져오기 완료: ${updated}명 갱신 · ${added}명 추가`);
         }
 
