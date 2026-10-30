@@ -1056,7 +1056,7 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-6 border-b border-slate-100">
                         <h2 class="text-lg font-bold text-slate-800">👤 학생 정보</h2>
-                        <p class="text-xs text-slate-500">재원생·퇴원생 전체 명단입니다. 등록번호·생년월일·연락처·주소·입원/퇴원일이 지도점검 서류에 그대로 들어갑니다.</p>
+                        <p class="text-xs text-slate-500">재원생·퇴원생 전체 명단입니다. 등록번호·학년·연락처·주소·입원/퇴원일이 지도점검 서류에 그대로 들어갑니다.</p>
                     </div>
                     <div id="students-toolbar" class="px-6 py-3 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center gap-2 text-xs"></div>
                     <div id="students-content" class="p-4 md:p-6 bg-slate-100/60"></div>
@@ -1647,7 +1647,7 @@
                 <div class="mb-6">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">입원일 (등록일)</label>
                     <input type="date" id="newStudentJoinDate" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <p class="text-[11px] text-slate-400 mt-1">등록번호는 자동으로 매겨져요. 생년월일·주소·학생 연락처는 👤 학생 정보 탭에서 입력하세요.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">등록번호는 자동으로 매겨져요. 학년·주소·학생 연락처는 👤 학생 정보 탭에서 입력하세요.</p>
                 </div>
                 <div class="mb-6">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">학부모 연락처</label>
@@ -5673,7 +5673,7 @@
             return ids.length ? Math.max(...ids) + 1 : 1;
         }
 
-        // 등록번호: 입원 연도-일련번호 (예: 2026-007). 입원일 순으로 해마다 001부터 자동으로 매긴다.
+        // 등록번호: 입원 연도 두 자리-일련번호 (예: 26-007). 입원일 순으로 해마다 001부터 자동으로 매긴다.
         // 입원일이 없으면 번호도 없음. 같은 날 입원은 기존 번호 → 추가된 순서.
         function _computeRegNos(list) {
             const out = new Map();
@@ -5687,7 +5687,7 @@
                         || (a.regNo ? 0 : 1) - (b.regNo ? 0 : 1)
                         || String(a.regNo || '').localeCompare(String(b.regNo || ''))
                         || a.id - b.id)
-                    .forEach((s, i) => out.set(s.id, `${year}-${String(i + 1).padStart(3, '0')}`));
+                    .forEach((s, i) => out.set(s.id, `${year.slice(2)}-${String(i + 1).padStart(3, '0')}`));
             }
             return out;
         }
@@ -7628,7 +7628,14 @@
                         <label class="flex-1 cursor-pointer"><input type="radio" name="si-group" value="Middle" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 font-bold text-sm transition">중등</div></label>
                     </div>
                 </div>
-                <label class="col-span-2"><span class="si-label">생년월일</span><input id="si-birth" type="date" class="si-input"></label>
+                <label class="col-span-1"><span class="si-label">학년 <span class="font-normal text-slate-400">(<span id="si-grade-year"></span>년 · 1월 1일 자동 진급)</span></span>
+                    <select id="si-grade" class="si-input bg-white" onchange="_onInfoGradeChange()">
+                        <option value="">모름</option>
+                        <option value="1">초1</option><option value="2">초2</option><option value="3">초3</option><option value="4">초4</option><option value="5">초5</option><option value="6">초6</option>
+                        <option value="7">중1</option><option value="8">중2</option><option value="9">중3</option>
+                        <option value="10">고1</option><option value="11">고2</option><option value="12">고3</option>
+                    </select></label>
+                <label class="col-span-1"><span class="si-label">생년월일 <span class="font-normal text-slate-400">(모르면 비움)</span></span><input id="si-birth" type="date" class="si-input" oninput="_onInfoGradeChange()"></label>
                 <label class="col-span-1"><span class="si-label">학부모 연락처</span><input id="si-phone" type="tel" inputmode="numeric" class="si-input" placeholder="010-0000-0000" oninput="_typePhone(this)" onblur="this.value=_fmtPhone(this.value)"></label>
                 <label class="col-span-1"><span class="si-label">학생 연락처 <span class="font-normal text-slate-400">(선택)</span></span><input id="si-studentPhone" type="tel" inputmode="numeric" class="si-input" placeholder="없으면 비워두세요" oninput="_typePhone(this)" onblur="this.value=_fmtPhone(this.value)"></label>
                 <label class="col-span-2"><span class="si-label">주소</span><input id="si-address" class="si-input" placeholder="예: 일성1차아파트"></label>
@@ -7655,7 +7662,7 @@
                 <div class="flex items-center gap-2 mb-2">
                     <input type="file" id="ri-file" accept=".tsv,.csv,.txt" class="text-xs" onchange="loadRegisterImportFile(this)">
                 </div>
-                <textarea id="ri-text" rows="6" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="2024-001	박지우	중등 영어, 중등 수학	미라11길 23		2024-03-04	"></textarea>
+                <textarea id="ri-text" rows="6" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-500" placeholder="24-001	박지우	중등 영어, 중등 수학	미라11길 23		2024-03-04	"></textarea>
                 <button onclick="previewRegisterImport()" class="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition">미리보기</button>
                 <div id="ri-preview" class="mt-4"></div>
             </div>
@@ -7856,7 +7863,7 @@
         }
 
         function _byRegNo(a, b) {
-            const ra = a.regNo || '9999-999', rb = b.regNo || '9999-999';
+            const ra = a.regNo || '99-999', rb = b.regNo || '99-999';
             return ra === rb ? (a.name || '').localeCompare(b.name || '', 'ko') : ra.localeCompare(rb);
         }
 
@@ -7996,8 +8003,9 @@
 
             // 빠진 칸 집계 (재원생 기준)
             const active = allStudents.filter(s => !s.leaveDate);
-            const missing = [['joinDate', '입원일(=등록번호)'], ['birth', '생년월일'], ['phone', '학부모 연락처'], ['address', '주소']]
-                .map(([k, label]) => [label, active.filter(s => !s[k]).length])
+            const nowMk = todayStr().slice(0, 7);
+            const missing = [['joinDate', '입원일(=등록번호)'], ['grade', '학년'], ['phone', '학부모 연락처'], ['address', '주소']]
+                .map(([k, label]) => [label, active.filter(s => k === 'grade' ? !_gradeOf(s, nowMk) : !s[k]).length])
                 .filter(([, n]) => n > 0);
             const notice = missing.length
                 ? `<div class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><i class="fa-solid fa-circle-exclamation mr-1"></i>재원생 중 비어 있는 칸 — ${missing.map(([l, n]) => `${l} ${n}명`).join(' · ')}</div>`
@@ -8009,6 +8017,7 @@
                     <td class="px-3 py-2.5 font-mono text-xs">${cell(s.regNo)}</td>
                     <td class="px-3 py-2.5 font-bold ${s.leaveDate ? '' : 'text-slate-800'}">${_nameHtml(s)}</td>
                     <td class="px-3 py-2.5 text-xs">${s.group === 'Elementary' ? '초등' : '중등'}</td>
+                    <td class="px-3 py-2.5 text-xs whitespace-nowrap">${s.leaveDate ? '' : cell(_gradeOf(s, todayStr().slice(0, 7)))}</td>
                     <td class="px-3 py-2.5 text-xs">${cell(s.birth)}</td>
                     <td class="px-3 py-2.5 text-xs whitespace-nowrap">${cell(_fmtPhone(s.phone))}</td>
                     <td class="px-3 py-2.5 text-xs whitespace-nowrap">${cell(_fmtPhone(s.studentPhone))}</td>
@@ -8026,9 +8035,9 @@
                 <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-slate-500 bg-slate-50 border-b border-slate-200">
-                            <tr><th class="px-3 py-2.5">등록번호</th><th class="px-3 py-2.5">이름</th><th class="px-3 py-2.5">구분</th><th class="px-3 py-2.5">생년월일</th><th class="px-3 py-2.5">학부모 연락처</th><th class="px-3 py-2.5">학생 연락처</th><th class="px-3 py-2.5">주소</th><th class="px-3 py-2.5">입원일</th><th class="px-3 py-2.5">퇴원일</th><th class="px-3 py-2.5"></th></tr>
+                            <tr><th class="px-3 py-2.5">등록번호</th><th class="px-3 py-2.5">이름</th><th class="px-3 py-2.5">구분</th><th class="px-3 py-2.5">학년</th><th class="px-3 py-2.5">생년월일</th><th class="px-3 py-2.5">학부모 연락처</th><th class="px-3 py-2.5">학생 연락처</th><th class="px-3 py-2.5">주소</th><th class="px-3 py-2.5">입원일</th><th class="px-3 py-2.5">퇴원일</th><th class="px-3 py-2.5"></th></tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="10" class="px-3 py-10 text-center text-slate-400">해당하는 학생이 없습니다.</td></tr>'}</tbody>
+                        <tbody class="divide-y divide-slate-100">${rows || '<tr><td colspan="11" class="px-3 py-10 text-center text-slate-400">해당하는 학생이 없습니다.</td></tr>'}</tbody>
                     </table>
                 </div>`;
         }
@@ -8045,6 +8054,14 @@
             set('regNo', s.regNo); set('name', s.name); set('birth', s.birth); set('phone', _fmtPhone(s.phone)); set('studentPhone', _fmtPhone(s.studentPhone));
             set('address', s.address); set('join', s.joinDate); set('leave', s.leaveDate); set('subjects', s.subjects);
             document.querySelectorAll('input[name="si-group"]').forEach(r => { r.checked = (r.value === (s.group === 'Elementary' ? 'Elementary' : 'Middle')); });
+            // 학년은 올해 기준으로 보여 주고, 저장하면 올해 학년으로 다시 적어 둔다
+            const thisMk = todayStr().slice(0, 7);
+            const g = (s.grade && s.gradeYear) ? _gradeNum(s, thisMk) : null;
+            const gSel = document.getElementById('si-grade');
+            gSel.value = (g >= 1 && g <= 12) ? String(g) : '';
+            gSel.dataset.orig = gSel.value;
+            document.getElementById('si-grade-year').textContent = thisMk.slice(0, 4);
+            _onInfoGradeChange(true);
             const m = document.getElementById('studentInfoModal');
             m.classList.remove('hidden'); m.classList.add('flex');
         }
@@ -8055,6 +8072,18 @@
                 ? allStudents.concat([{ id: Infinity, joinDate: join }])
                 : allStudents.map(x => x.id === _infoStudentId ? { ...x, joinDate: join } : x);
             document.getElementById('si-regNo').value = _computeRegNos(list).get(_infoStudentId === 'new' ? Infinity : _infoStudentId) || '';
+        }
+        // 학년을 고르면 초등/중등 구분도 맞춰 주고, 학년이 비어 있으면 생년월일로 계산한 학년을 안내
+        function _onInfoGradeChange(opening) {
+            const gSel = document.getElementById('si-grade');
+            const g = Number(gSel.value);
+            if (g && opening !== true) {
+                const grp = g <= 6 ? 'Elementary' : 'Middle';
+                document.querySelectorAll('input[name="si-group"]').forEach(r => { r.checked = r.value === grp; });
+            }
+            const birth = document.getElementById('si-birth').value;
+            const auto = birth ? _gradeLabel(_gradeNum({ birth }, todayStr().slice(0, 7))) : '';
+            gSel.options[0].textContent = auto ? `모름 (생년월일로 ${auto})` : '모름';
         }
         function closeStudentInfoModal() {
             const m = document.getElementById('studentInfoModal');
@@ -8085,6 +8114,11 @@
             s.group = document.querySelector('input[name="si-group"]:checked')?.value || s.group;
             const put = (k, v) => { if (v) s[k] = v; else delete s[k]; };
             put('birth', get('birth')); put('phone', phone); put('studentPhone', studentPhone);
+            const gVal = document.getElementById('si-grade').value;
+            if (gVal !== document.getElementById('si-grade').dataset.orig || isNew) {
+                if (gVal) { s.grade = Number(gVal); s.gradeYear = Number(todayStr().slice(0, 4)); }
+                else { delete s.grade; delete s.gradeYear; }
+            }
             put('address', get('address')); put('joinDate', joinDate); put('leaveDate', leaveDate); put('subjects', get('subjects'));
 
             applyStudentVisibility();
@@ -8127,10 +8161,11 @@
             const rows = [];
             text.replace(/^﻿/, '').split(/\r?\n/).forEach(line => {
                 const cols = (line.includes('\t') ? line.split('\t') : line.split(',')).map(c => c.trim().replace(/^"|"$/g, ''));
-                if (!/^\d{4}-\d{1,4}$/.test(cols[0] || '') || !cols[1]) return;   // 제목·머리글·빈 줄은 건너뜀
+                if (!/^(\d{2}|\d{4})-\d{1,4}$/.test(cols[0] || '') || !cols[1]) return;   // 제목·머리글·빈 줄은 건너뜀
                 const [regNo, name, subj, address, phone, join, leave] = cols.length >= 7
                     ? cols : [cols[0], cols[1], '', cols[2], cols[3], cols[4], cols[5]];
-                rows.push({ regNo, name, subj: subj || '', address: address || '', phone: _fmtPhone(phone), joinDate: _normDate(join), leaveDate: _normDate(leave) });
+                const [ry, rn] = regNo.split('-');
+                rows.push({ regNo: `${ry.slice(-2)}-${rn.padStart(3, '0')}`, name, subj: subj || '', address: address || '', phone: _fmtPhone(phone), joinDate: _normDate(join), leaveDate: _normDate(leave) });
             });
             // 같은 등록번호가 여러 번(월별 페이지마다) 나오면 뒤쪽(최신) 것을 채택
             const byReg = new Map();
@@ -8142,7 +8177,7 @@
             const rows = _parseRegisterText(document.getElementById('ri-text').value);
             const box = document.getElementById('ri-preview');
             if (!rows.length) {
-                box.innerHTML = '<p class="text-xs text-rose-500 font-bold">읽을 수 있는 줄이 없어요. 첫 칸이 등록번호(예: 2024-001)인지 확인해주세요.</p>';
+                box.innerHTML = '<p class="text-xs text-rose-500 font-bold">읽을 수 있는 줄이 없어요. 첫 칸이 등록번호(예: 24-001)인지 확인해주세요.</p>';
                 document.getElementById('ri-apply').disabled = true;
                 return;
             }
@@ -8330,15 +8365,22 @@
         var _mergeFrom = null;      // { mk, key } — '형제와 묶기'를 누른 줄
         var _rowUploadTarget = null;
 
-        function _gradeOf(s, mk) {
-            if (!s || !/^\d{4}/.test(s.birth || '')) return '';
+        // 학년 숫자(1~12): 직접 넣은 학년(gradeYear년에 grade학년, 해마다 1월 1일에 +1)이 우선, 없으면 생년월일
+        function _gradeNum(s, mk) {
+            if (!s) return null;
             const y = Number(mk.slice(0, 4)), m = Number(mk.slice(5, 7));
-            const g = (m >= 3 ? y : y - 1) - Number(s.birth.slice(0, 4)) - 6;   // 학년은 3월에 바뀐다
+            if (s.grade && s.gradeYear) return Number(s.grade) + (y - Number(s.gradeYear));
+            if (!/^\d{4}/.test(s.birth || '')) return null;
+            return (m >= 3 ? y : y - 1) - Number(s.birth.slice(0, 4)) - 6;   // 생년월일 기준 학년은 3월에 바뀐다
+        }
+        function _gradeLabel(g) {
+            if (g == null) return '';
             if (g >= 1 && g <= 6) return `초${g}`;
             if (g >= 7 && g <= 9) return `중${g - 6}`;
             if (g >= 10 && g <= 12) return `고${g - 9}`;
             return g < 1 ? '미취학' : '성인';
         }
+        function _gradeOf(s, mk) { return _gradeLabel(_gradeNum(s, mk)); }
 
         function _paymentRowsOfMonth(mk) {
             const md = _auditMonths && _auditMonths[mk];
@@ -8429,7 +8471,7 @@
                 return `<tr class="${i === 0 ? 'pay-start' : ''} ${n > 1 ? 'pay-bundle' : ''}">
                     <td class="font-mono text-xs text-slate-500 whitespace-nowrap">${s.regNo ? _escapeHtml(s.regNo) : '<span class="text-slate-300">—</span>'}</td>
                     <td class="whitespace-nowrap"><span class="font-bold text-slate-800">${_nameHtml(s)}</span>${tools}${mergeSel}</td>
-                    <td class="text-xs whitespace-nowrap">${grade || (s.group ? `<button onclick="openStudentInfoModal(${s.id})" class="text-rose-400 hover:text-rose-600 font-bold" title="생년월일을 넣으면 학년이 자동으로 나와요">생년월일?</button>` : '')}</td>
+                    <td class="text-xs whitespace-nowrap">${grade || (s.group ? `<button onclick="openStudentInfoModal(${s.id})" class="text-rose-400 hover:text-rose-600 font-bold" title="학생 정보에 학년(또는 생년월일)을 넣으면 나와요">학년?</button>` : '')}</td>
                     <td class="text-xs text-slate-600">${_escapeHtml(subj)}</td>
                     ${side}
                 </tr>`;
