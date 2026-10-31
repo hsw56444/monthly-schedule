@@ -7716,7 +7716,8 @@
                 <button onclick="closeLedgerEntryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
-                <div class="col-span-2"><span class="si-label">구분</span>
+                <div id="le-auto-hint" class="col-span-2 hidden text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2"></div>
+                <div id="le-kind-row" class="col-span-2"><span class="si-label">구분</span>
                     <div class="flex gap-2">
                         <label class="flex-1 cursor-pointer"><input type="radio" name="le-kind" value="expense" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-rose-50 peer-checked:border-rose-400 peer-checked:text-rose-700 font-bold text-sm transition">비용</div></label>
                         <label class="flex-1 cursor-pointer"><input type="radio" name="le-kind" value="income" class="peer hidden"><div class="text-center py-2 rounded-lg border border-slate-200 text-slate-500 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 font-bold text-sm transition">수입</div></label>
@@ -7734,6 +7735,7 @@
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between gap-2 shrink-0">
                 <button onclick="deleteLedgerEntry()" id="le-delete" class="px-4 py-2 text-rose-500 hover:bg-rose-50 border border-rose-200 rounded-lg text-sm font-bold transition"><i class="fa-regular fa-trash-can mr-1"></i>삭제</button>
+                <button onclick="resetLedgerAuto()" id="le-reset" class="hidden px-4 py-2 text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg text-sm font-bold transition"><i class="fa-solid fa-rotate-left mr-1"></i>자동값으로</button>
                 <div class="flex gap-2 ml-auto">
                     <button onclick="closeLedgerEntryModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
                     <button onclick="saveLedgerEntry()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">저장</button>
@@ -7779,6 +7781,7 @@
             .adoc .edit-cell:hover { background: #eef2ff; }
             .adoc tr.manual td { background: #fffbeb; }
             .adoc tr.manual:hover td { background: #fef3c7; cursor: pointer; }
+            .adoc tr.auto:hover td { background: #eef2ff; cursor: pointer; }
         `;
         (function _injectAuditCss() {
             const el = document.createElement('style');
@@ -9103,10 +9106,9 @@
                     const withDate = pays.find(p => p.payDate);
                     const date = r.payDate || (withDate ? withDate.payDate : '');
                     const ym = date ? date.slice(0, 7) : mk;
-                    if (ym < from || ym > to) return;
                     const method = r.method || (pays.find(p => p.method) || {}).method;
                     rows.push({
-                        ym, date, desc: `수강료 수입 (${Number(mk.slice(5))}월분)`,
+                        key: `rc:${r.id}:${mk}`, mk, ym, date, desc: `수강료 수입 (${Number(mk.slice(5))}월분)`,
                         vendor: studs.map(s => s.name).join(', '), income: amt, incomeVat: 0, expense: 0, expenseVat: 0, asset: 0, assetVat: 0,
                         note: LEDGER_NOTE_OF[method] || '', auto: true
                     });
@@ -9118,11 +9120,10 @@
                     const p = _auditPayment(s, md);
                     if (p.paid <= 0) return;
                     const ym = p.payDate ? p.payDate.slice(0, 7) : mk;
-                    if (ym < from || ym > to) return;
                     const fk = s.familyId ? `${s.familyId}|${p.payDate}` : null;
                     if (fk && fam[fk]) { fam[fk].vendor += `, ${s.name}`; fam[fk].income += p.paid; return; }
                     const row = {
-                        ym, date: p.payDate, desc: `수강료 수입 (${Number(mk.slice(5))}월분${p.method === 'partial' ? '·부분' : ''})`,
+                        key: `st:${mk}:${s.id}`, mk, ym, date: p.payDate, desc: `수강료 수입 (${Number(mk.slice(5))}월분${p.method === 'partial' ? '·부분' : ''})`,
                         vendor: s.name, income: p.paid, incomeVat: 0, expense: 0, expenseVat: 0, asset: 0, assetVat: 0,
                         note: LEDGER_NOTE_OF[p.method] || '', auto: true
                     };
@@ -9130,8 +9131,23 @@
                     rows.push(row);
                 });
             });
+            // 자동 줄을 장부에서 직접 고친 값 — 고친 칸만 덮어쓴다
+            const ovr = {};
+            (ledgerEntries || []).forEach(e => { if (e.auto) ovr[e.auto] = e; });
+            rows.forEach(r => {
+                const o = ovr[r.key];
+                if (!o) return;
+                r.orig = { date: r.date, desc: r.desc, vendor: r.vendor, income: r.income, incomeVat: r.incomeVat, note: r.note };
+                ['date', 'desc', 'vendor', 'note'].forEach(k => { if (o[k] !== undefined) r[k] = o[k]; });
+                if (o.amount !== undefined) r.income = Number(o.amount) || 0;
+                if (o.vat !== undefined) r.incomeVat = Number(o.vat) || 0;
+                if (o.date !== undefined) r.ym = o.date ? o.date.slice(0, 7) : r.mk;
+                r.edited = true;
+            });
+            for (let i = rows.length - 1; i >= 0; i--) if (rows[i].ym < from || rows[i].ym > to) rows.splice(i, 1);
             // 직접 입력한 거래
             (ledgerEntries || []).forEach(e => {
+                if (e.auto) return;
                 const ym = (e.date || '').slice(0, 7);
                 if (!ym || ym < from || ym > to) return;
                 const amt = Number(e.amount) || 0, vat = Number(e.vat) || 0;
@@ -9158,10 +9174,12 @@
             const all = groups.flatMap(g => g.rows);
             const grand = _sumRows(all);
             const undated = all.filter(r => r.auto && !r.date).length;
+            _ledgerAutoRows = {};
+            all.forEach(r => { if (r.auto) _ledgerAutoRows[r.key] = r; });
             const nums = (t) => _LEDGER_SUM_KEYS.map(k => `<td class="r">${_won(t[k])}</td>`).join('');
             const body = groups.map(({ ym, rows }) => rows.map(r => `
-                <tr class="${r.auto ? '' : 'manual'}"${r.auto ? '' : ` onclick="openLedgerEntryModal('${r.id}')" title="눌러서 고치기"`}>
-                    <td class="c">${r.date ? _mdLabel(r.date) : _missHtml('미기재')}</td>
+                <tr class="${r.auto ? `auto${r.edited && !r.income ? ' screen-only' : ''}` : 'manual'}" onclick="${r.auto ? `openLedgerAutoModal('${r.key}')` : `openLedgerEntryModal('${r.id}')`}" title="눌러서 고치기">
+                    <td class="c">${r.date ? _mdLabel(r.date) : _missHtml('미기재')}${r.edited ? ' <span class="tag screen-only">직접</span>' : ''}</td>
                     <td>${_escapeHtml(r.desc)}</td>
                     <td>${_escapeHtml(r.vendor)}</td>
                     ${nums(r)}
@@ -9184,14 +9202,23 @@
                             <tr class="grand"><td class="c">기간 합계</td><td></td><td></td>${nums(grand)}<td></td></tr>
                         </tbody>
                     </table>
-                    <div class="adoc-foot screen-only">노란 줄 = 직접 입력한 거래(눌러서 수정) · 흰 줄 = 교육비 영수증 탭의 금액(없으면 수업료 화면의 납부 기록)에서 자동 · 비고: 영=영수증, 카드, 세계=세금계산서, 계=계산서</div>
+                    <div class="adoc-foot screen-only">노란 줄 = 직접 입력한 거래 · 흰 줄 = 교육비 영수증 탭의 금액(없으면 수업료 화면의 납부 기록)에서 자동 · 어느 줄이든 눌러서 수정('직접' 표시 = 고친 자동 줄, 금액을 비우면 인쇄에서 빠짐) · 비고: 영=영수증, 카드, 세계=세금계산서, 계=계산서</div>
                 </div></div>`;
         }
 
         var _editLedgerId = null;
+        var _editLedgerAuto = null;     // 자동 줄을 고칠 때 그 줄의 key
+        var _ledgerAutoRows = {};       // 화면에 그린 자동 줄 (key → 줄)
+        function _setLedgerModalMode(auto) {
+            document.getElementById('le-kind-row').classList.toggle('hidden', auto);
+            document.getElementById('le-auto-hint').classList.toggle('hidden', !auto);
+            document.getElementById('le-reset').classList.add('hidden');
+        }
         function openLedgerEntryModal(id) {
             const e = id ? (ledgerEntries || []).find(x => x.id === id) : null;
             _editLedgerId = e ? e.id : null;
+            _editLedgerAuto = null;
+            _setLedgerModalMode(false);
             document.getElementById('le-title').textContent = e ? '거래 수정' : '거래 입력';
             document.getElementById('le-delete').classList.toggle('hidden', !e);
             const kind = e ? e.kind : 'expense';
@@ -9205,11 +9232,65 @@
             const m = document.getElementById('ledgerEntryModal');
             m.classList.remove('hidden'); m.classList.add('flex');
         }
+        // 수업료에서 자동으로 들어온 수강료 줄 고치기 — 원래 기록은 그대로 두고 장부에만 덮어쓴다
+        function openLedgerAutoModal(key) {
+            const r = _ledgerAutoRows[key];
+            if (!r) return;
+            _editLedgerId = null;
+            _editLedgerAuto = key;
+            _setLedgerModalMode(true);
+            const o = r.orig || r;
+            document.getElementById('le-auto-hint').innerHTML = `<i class="fa-solid fa-circle-info mr-1"></i>수업료에서 자동으로 들어온 줄입니다. 여기서 고친 값은 간편장부에만 반영돼요.`
+                + (r.edited ? `<br>자동값: ${o.date ? _mdLabel(o.date) : '날짜 없음'} · ${_escapeHtml(o.vendor)} · ${formatNumber(o.income)}원${o.note ? ' · ' + _escapeHtml(o.note) : ''}` : '')
+                + `<br>금액을 비우면 이 줄은 합계·인쇄에서 빠집니다.`;
+            document.getElementById('le-title').textContent = '수강료 줄 수정';
+            document.getElementById('le-delete').classList.add('hidden');
+            document.getElementById('le-reset').classList.toggle('hidden', !r.edited);
+            document.getElementById('le-date').value = r.date || '';
+            document.getElementById('le-desc').value = r.desc;
+            document.getElementById('le-vendor').value = r.vendor;
+            document.getElementById('le-amount').value = r.income ? formatNumber(r.income) : '';
+            document.getElementById('le-vat').value = r.incomeVat ? formatNumber(r.incomeVat) : '';
+            document.getElementById('le-note').value = r.note || '';
+            const m = document.getElementById('ledgerEntryModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        async function _saveLedgerAuto() {
+            const r = _ledgerAutoRows[_editLedgerAuto];
+            if (!r) return closeLedgerEntryModal();
+            const o = r.orig || r;
+            const v = {
+                date: document.getElementById('le-date').value,
+                desc: document.getElementById('le-desc').value.trim(),
+                vendor: document.getElementById('le-vendor').value.trim(),
+                amount: parseNumber(document.getElementById('le-amount').value),
+                vat: parseNumber(document.getElementById('le-vat').value),
+                note: document.getElementById('le-note').value.trim()
+            };
+            // 자동값과 다른 칸만 남겨서, 나머지 칸은 수업료 기록이 바뀌면 따라가게
+            const auto = { date: o.date || '', desc: o.desc, vendor: o.vendor, amount: o.income || 0, vat: o.incomeVat || 0, note: o.note || '' };
+            const entry = { id: `lo_${_editLedgerAuto}`, auto: _editLedgerAuto };
+            Object.keys(v).forEach(k => { if (v[k] !== auto[k]) entry[k] = v[k]; });
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            ledgerEntries = ledgerEntries.filter(x => x.auto !== _editLedgerAuto);
+            if (Object.keys(entry).length > 2) ledgerEntries.push(entry);
+            closeLedgerEntryModal();
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+        }
+        async function resetLedgerAuto() {
+            if (!_editLedgerAuto || !confirm('고친 값을 지우고 자동값으로 되돌릴까요?')) return;
+            ledgerEntries = (ledgerEntries || []).filter(x => x.auto !== _editLedgerAuto);
+            closeLedgerEntryModal();
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+        }
         function closeLedgerEntryModal() {
             const m = document.getElementById('ledgerEntryModal');
             m.classList.add('hidden'); m.classList.remove('flex');
         }
         async function saveLedgerEntry() {
+            if (_editLedgerAuto) return _saveLedgerAuto();
             const entry = {
                 id: _editLedgerId || `le_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                 kind: document.querySelector('input[name="le-kind"]:checked')?.value || 'expense',
@@ -9255,7 +9336,7 @@
                     .screen-only { display: none !important; }
                     .adoc-page { border: 0; box-shadow: none; padding: 0; margin: 0; max-width: none !important; break-after: page; }
                     .adoc-page:last-child { break-after: auto; }
-                    .adoc tr.manual td { background: none; }
+                    .adoc tr.manual td, .adoc tr.auto td { background: none; }
                     .adoc thead { display: table-header-group; }
                     .adoc tr { break-inside: avoid; }
                 </style></head><body>${area.outerHTML}</body></html>`);
@@ -9301,7 +9382,7 @@
             } else if (auditTab === 'ledger') {
                 const rows = [['날짜', '거래내용', '거래처', '수입 금액', '수입 부가세', '비용 금액', '비용 부가세', '고정자산 금액', '고정자산 부가세', '비고']];
                 _ledgerData(_auditMonths).forEach(({ ym, rows: rs }) => {
-                    rs.forEach(r => rows.push([r.date || `${ym} (결제일 미기재)`, r.desc, r.vendor, r.income || '', r.incomeVat || '', r.expense || '', r.expenseVat || '', r.asset || '', r.assetVat || '', r.note]));
+                    rs.filter(r => !(r.edited && !r.income)).forEach(r => rows.push([r.date || `${ym} (결제일 미기재)`, r.desc, r.vendor, r.income || '', r.incomeVat || '', r.expense || '', r.expenseVat || '', r.asset || '', r.assetVat || '', r.note]));
                     const t = _sumRows(rs);
                     rows.push([`${Number(ym.slice(5))}월 합계`, '', '', t.income || '', t.incomeVat || '', t.expense || '', t.expenseVat || '', t.asset || '', t.assetVat || '', '']);
                 });
