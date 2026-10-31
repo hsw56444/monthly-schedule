@@ -7750,8 +7750,8 @@
                 <label class="col-span-1"><span class="si-label">비고 (증빙)</span><input id="le-note" class="si-input" list="le-note-list" placeholder="영 / 카드 / 세계"></label>
                 <label class="col-span-2"><span class="si-label">거래내용</span><input id="le-desc" class="si-input" list="le-desc-list" placeholder="예: 전기요금(208호)"></label>
                 <label class="col-span-2"><span class="si-label">거래처</span><input id="le-vendor" class="si-input" list="le-vendor-list" placeholder="예: 한전"></label>
-                <label class="col-span-1"><span class="si-label">금액</span><input id="le-amount" inputmode="numeric" class="si-input text-right font-bold" placeholder="0"></label>
-                <label class="col-span-1"><span class="si-label">부가세</span><input id="le-vat" inputmode="numeric" class="si-input text-right" placeholder="없으면 비움"></label>
+                <label class="col-span-1"><span class="si-label">금액</span><input id="le-amount" inputmode="numeric" oninput="_commaInput(this)" class="si-input text-right font-bold" placeholder="0"></label>
+                <label class="col-span-1"><span class="si-label">부가세</span><input id="le-vat" inputmode="numeric" oninput="_commaInput(this)" class="si-input text-right" placeholder="없으면 비움"></label>
                 <datalist id="le-note-list"><option value="영"><option value="카드"><option value="세계"><option value="계"><option value="이체"><option value="현금"></datalist>
                 <datalist id="le-desc-list"></datalist>
                 <datalist id="le-vendor-list"></datalist>
@@ -9238,6 +9238,16 @@
             document.getElementById('le-auto-hint').classList.toggle('hidden', !auto);
             document.getElementById('le-reset').classList.add('hidden');
         }
+        // 금액 칸: 치는 동안 세 자리마다 쉼표 — 커서는 앞쪽 숫자 개수 기준으로 제자리에
+        function _commaInput(el) {
+            const digitsBefore = el.value.slice(0, el.selectionStart).replace(/\D/g, '').length;
+            const digits = el.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            el.value = digits ? Number(digits).toLocaleString('ko-KR') : '';
+            let pos = 0;
+            for (let n = 0; pos < el.value.length && n < digitsBefore; pos++) if (/\d/.test(el.value[pos])) n++;
+            el.setSelectionRange(pos, pos);
+        }
+
         // ─── 자주 쓰는 거래 ───
         var ledgerPresets = null;
         async function _ensureLedgerPresets() {
