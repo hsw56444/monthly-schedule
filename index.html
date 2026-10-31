@@ -2260,6 +2260,23 @@
             }
         };
 
+        // 간편장부 '자주 쓰는 거래' (거래내용·거래처 묶음)
+        const ledgerPresetRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'academy_schedule', '_ledger_presets');
+        window.ledgerPresetCloud = {
+            async get() {
+                if (!window.isCloudOnline) return null;
+                try {
+                    const snap = await getDoc(ledgerPresetRef());
+                    return snap.exists() && Array.isArray(snap.data().presets) ? snap.data().presets : [];
+                } catch(e) { console.error('자주 쓰는 거래 조회 실패', e); return null; }
+            },
+            async save(presets) {
+                if (!window.isCloudOnline) return;
+                try { await setDoc(ledgerPresetRef(), { presets, updatedAt: new Date().toISOString() }); }
+                catch(e) { console.error('자주 쓰는 거래 저장 실패', e); }
+            }
+        };
+
         window.triggerLedgerSave = async (entries) => {
             if (!window.isCloudOnline) return;
             try {
@@ -7716,6 +7733,11 @@
                 <button onclick="closeLedgerEntryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-5 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-3 text-sm">
+                <div id="le-preset-row" class="col-span-2">
+                    <div class="flex items-center justify-between mb-1"><span class="si-label" style="margin:0">자주 쓰는 거래</span>
+                        <button type="button" onclick="addLedgerPreset()" class="text-xs font-bold text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-star mr-1"></i>지금 내용 등록</button></div>
+                    <div id="le-presets" class="flex flex-wrap gap-1.5"></div>
+                </div>
                 <div id="le-auto-hint" class="col-span-2 hidden text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2"></div>
                 <div id="le-kind-row" class="col-span-2"><span class="si-label">구분</span>
                     <div class="flex gap-2">
@@ -7726,12 +7748,13 @@
                 </div>
                 <label class="col-span-1"><span class="si-label">날짜</span><input id="le-date" type="date" class="si-input"></label>
                 <label class="col-span-1"><span class="si-label">비고 (증빙)</span><input id="le-note" class="si-input" list="le-note-list" placeholder="영 / 카드 / 세계"></label>
-                <label class="col-span-2"><span class="si-label">거래내용</span><input id="le-desc" class="si-input" list="le-desc-list" placeholder="예: 임차료"></label>
-                <label class="col-span-2"><span class="si-label">거래처</span><input id="le-vendor" class="si-input" placeholder="예: 한전"></label>
+                <label class="col-span-2"><span class="si-label">거래내용</span><input id="le-desc" class="si-input" list="le-desc-list" placeholder="예: 전기요금(208호)"></label>
+                <label class="col-span-2"><span class="si-label">거래처</span><input id="le-vendor" class="si-input" list="le-vendor-list" placeholder="예: 한전"></label>
                 <label class="col-span-1"><span class="si-label">금액</span><input id="le-amount" inputmode="numeric" class="si-input text-right font-bold" placeholder="0"></label>
                 <label class="col-span-1"><span class="si-label">부가세</span><input id="le-vat" inputmode="numeric" class="si-input text-right" placeholder="없으면 비움"></label>
                 <datalist id="le-note-list"><option value="영"><option value="카드"><option value="세계"><option value="계"><option value="이체"><option value="현금"></datalist>
-                <datalist id="le-desc-list"><option value="임차료"><option value="관리비"><option value="강사 급여"><option value="공과금"><option value="통신비"><option value="교재 구입"><option value="소모품 구입"><option value="광고선전비"><option value="차량유지비"><option value="세금과공과"><option value="교재비 수입"></datalist>
+                <datalist id="le-desc-list"></datalist>
+                <datalist id="le-vendor-list"></datalist>
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between gap-2 shrink-0">
                 <button onclick="deleteLedgerEntry()" id="le-delete" class="px-4 py-2 text-rose-500 hover:bg-rose-50 border border-rose-200 rounded-lg text-sm font-bold transition"><i class="fa-regular fa-trash-can mr-1"></i>삭제</button>
@@ -7946,7 +7969,7 @@
                 _renderAuditToolbar();
             }
             const months = await _auditLoadMonths(_auditRangeKeys(auditTab === 'ledger'));
-            if (auditTab === 'ledger') await Promise.all([_ensureLedgerLoaded(), _ensureReceiptsLoaded()]);
+            if (auditTab === 'ledger') await Promise.all([_ensureLedgerLoaded(), _ensureReceiptsLoaded(), _ensureLedgerPresets()]);
             if (seq !== _auditRenderSeq) return;   // 그 사이 다른 탭/기간으로 바뀜
             _auditMonths = months;
             if (auditTab === 'register') box.innerHTML = _registerHtml(_registerData(months));
@@ -9211,11 +9234,70 @@
         var _ledgerAutoRows = {};       // 화면에 그린 자동 줄 (key → 줄)
         function _setLedgerModalMode(auto) {
             document.getElementById('le-kind-row').classList.toggle('hidden', auto);
+            document.getElementById('le-preset-row').classList.toggle('hidden', auto);
             document.getElementById('le-auto-hint').classList.toggle('hidden', !auto);
             document.getElementById('le-reset').classList.add('hidden');
         }
+        // ─── 자주 쓰는 거래 ───
+        var ledgerPresets = null;
+        async function _ensureLedgerPresets() {
+            if (ledgerPresets) return;
+            let ps = window.ledgerPresetCloud ? await window.ledgerPresetCloud.get() : null;
+            if (ps === null) { try { ps = JSON.parse(localStorage.getItem('regularClassLedgerPresets') || '[]'); } catch(e) { ps = []; } }
+            ledgerPresets = ps;
+        }
+        async function _saveLedgerPresets() {
+            try { localStorage.setItem('regularClassLedgerPresets', JSON.stringify(ledgerPresets)); } catch(e) {}
+            if (window.ledgerPresetCloud) await window.ledgerPresetCloud.save(ledgerPresets);
+        }
+        var _LEDGER_KIND_DOT = { expense: 'bg-rose-400', income: 'bg-emerald-500', asset: 'bg-amber-400' };
+        function _renderLedgerPresets() {
+            const ps = ledgerPresets || [];
+            document.getElementById('le-presets').innerHTML = ps.length ? ps.map(p => `
+                <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 cursor-pointer text-xs font-bold text-slate-700" onclick="applyLedgerPreset('${p.id}')" title="눌러서 채우기">
+                    <span class="w-1.5 h-1.5 rounded-full ${_LEDGER_KIND_DOT[p.kind] || 'bg-slate-400'}"></span>${_escapeHtml(p.desc)}${p.vendor ? `<span class="font-normal text-slate-400">· ${_escapeHtml(p.vendor)}</span>` : ''}
+                    <button type="button" onclick="event.stopPropagation(); removeLedgerPreset('${p.id}')" class="w-4 h-4 rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 leading-none" title="목록에서 빼기">×</button>
+                </span>`).join('') : '<span class="text-xs text-slate-400">아래 거래내용·거래처를 적고 [지금 내용 등록]을 누르면 여기 생겨요.</span>';
+            const uniq = (k) => [...new Set(ps.map(p => p[k]).filter(Boolean))].map(v => `<option value="${_escapeHtml(v)}">`).join('');
+            document.getElementById('le-desc-list').innerHTML = uniq('desc');
+            document.getElementById('le-vendor-list').innerHTML = uniq('vendor');
+        }
+        function applyLedgerPreset(id) {
+            const p = (ledgerPresets || []).find(x => x.id === id);
+            if (!p) return;
+            document.querySelectorAll('input[name="le-kind"]').forEach(r => { r.checked = r.value === p.kind; });
+            document.getElementById('le-desc').value = p.desc;
+            document.getElementById('le-vendor').value = p.vendor || '';
+            if (p.note) document.getElementById('le-note').value = p.note;
+            document.getElementById('le-amount').focus();
+        }
+        async function addLedgerPreset() {
+            const p = {
+                id: `lp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+                kind: document.querySelector('input[name="le-kind"]:checked')?.value || 'expense',
+                desc: document.getElementById('le-desc').value.trim(),
+                vendor: document.getElementById('le-vendor').value.trim(),
+                note: document.getElementById('le-note').value.trim()
+            };
+            if (!p.desc) return alert('거래내용을 먼저 적어주세요.');
+            await _ensureLedgerPresets();
+            const same = ledgerPresets.find(x => x.desc === p.desc && (x.vendor || '') === p.vendor);
+            if (same) Object.assign(same, { kind: p.kind, note: p.note }); else ledgerPresets.push(p);
+            _renderLedgerPresets();
+            await _saveLedgerPresets();
+        }
+        async function removeLedgerPreset(id) {
+            const p = (ledgerPresets || []).find(x => x.id === id);
+            if (!p || !confirm(`'${p.desc}${p.vendor ? ' · ' + p.vendor : ''}'을(를) 자주 쓰는 거래에서 뺄까요?`)) return;
+            ledgerPresets = ledgerPresets.filter(x => x.id !== id);
+            _renderLedgerPresets();
+            await _saveLedgerPresets();
+        }
+
         function openLedgerEntryModal(id) {
             const e = id ? (ledgerEntries || []).find(x => x.id === id) : null;
+            _renderLedgerPresets();
+            if (!ledgerPresets) _ensureLedgerPresets().then(_renderLedgerPresets);
             _editLedgerId = e ? e.id : null;
             _editLedgerAuto = null;
             _setLedgerModalMode(false);
