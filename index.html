@@ -7659,6 +7659,7 @@
                 <label class="col-span-2"><span class="si-label">수강 과목 <span class="font-normal text-slate-400">(시간표 기록이 없는 달의 수강생 대장에 사용)</span></span><input id="si-subjects" class="si-input" placeholder="예: 초등 영어, 초등 수학"></label>
                 <label class="col-span-1"><span class="si-label">입원일</span><input id="si-join" type="date" class="si-input" oninput="_previewInfoRegNo()"></label>
                 <label class="col-span-1"><span class="si-label">퇴원일 <span class="font-normal text-slate-400">(비우면 재원 · 그만둔 학생은 꼭)</span></span><input id="si-leave" type="date" class="si-input"></label>
+                <div id="si-cards-row" class="col-span-2 hidden"><span class="si-label">결제한 카드 <span class="font-normal text-slate-400">(교육비 영수증에서 자동 · 최근 순)</span></span><div id="si-cards" class="flex flex-wrap gap-1.5 text-xs"></div></div>
             </div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
                 <button onclick="closeStudentInfoModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
@@ -7705,8 +7706,10 @@
                         <label><span class="si-label">금액 <span class="font-normal text-slate-400">(비우면 수업료 기록)</span></span><input id="rm-amount" inputmode="numeric" class="si-input text-right font-bold" placeholder="0"></label>
                         <label><span class="si-label">결제수단</span>
                             <select id="rm-method" class="si-input"><option value="">-</option><option value="card">카드</option><option value="payapp">결제선생</option><option value="transfer">계좌이체</option><option value="cash">현금</option><option value="etc">기타</option></select></label>
-                        <label><span class="si-label">비고</span><input id="rm-note" class="si-input" placeholder="승인번호 등"></label>
+                        <label><span class="si-label">카드 끝 4자리 <span class="font-normal text-slate-400">(PDF면 자동)</span></span><input id="rm-card4" inputmode="numeric" maxlength="4" class="si-input font-mono tracking-widest" placeholder="0000" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4); _renderCardMatch()"></label>
+                        <label class="col-span-2"><span class="si-label">비고</span><input id="rm-note" class="si-input" placeholder="승인번호 등"></label>
                     </div>
+                    <div id="rm-card-match" class="hidden mb-4 text-xs rounded-lg px-3 py-2 border"></div>
                     <div class="flex items-center justify-between mb-2">
                         <span class="si-label mb-0">이 영수증으로 낸 수업료 <span class="font-normal text-slate-400">(학생 · 월 · 과목)</span></span>
                         <button onclick="addReceiptAlloc()" class="audit-row-btn"><i class="fa-solid fa-plus mr-1"></i>학생 추가 (형제)</button>
@@ -8088,8 +8091,25 @@
             gSel.dataset.orig = gSel.value;
             document.getElementById('si-grade-year').textContent = thisMk.slice(0, 4);
             _onInfoGradeChange(true);
+            _renderInfoCards(isNew ? null : id);
             const m = document.getElementById('studentInfoModal');
             m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        // 이 학생 결제에 쓰인 카드 끝 4자리 — 따로 입력하지 않고 영수증 기록에서 모은다
+        async function _renderInfoCards(id) {
+            const row = document.getElementById('si-cards-row');
+            row.classList.add('hidden');
+            if (id == null || !window.isCloudOnline) return;
+            await _ensureReceiptsLoaded();
+            if (_infoStudentId !== id) return;
+            const seen = new Map();
+            (receiptMetas || []).filter(r => r.card4 && (r.allocs || []).some(a => a.sid === id))
+                .sort((a, b) => (b.payDate || '').localeCompare(a.payDate || ''))
+                .forEach(r => { if (!seen.has(r.card4)) seen.set(r.card4, r.payDate); });
+            if (!seen.size) return;
+            document.getElementById('si-cards').innerHTML = Array.from(seen).map(([c, d]) =>
+                `<span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700"><span class="font-mono font-bold">•${c}</span>${d ? ` <span class="text-slate-400">${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일</span>` : ''}</span>`).join('');
+            row.classList.remove('hidden');
         }
         // 입원일을 바꾸면 저장 전에 번호를 미리 보여준다 (다른 학생 번호가 밀릴 수 있음)
         function _previewInfoRegNo() {
@@ -8377,7 +8397,7 @@
                     <div class="rc-thumb" onclick="openReceiptModal('${r.id}')">${r.thumb ? `<img src="${r.thumb}" alt="">` : '<i class="fa-regular fa-file-lines"></i>'}${r.pages > 1 ? `<span class="rc-pages">${r.pages}쪽</span>` : ''}</div>
                     <div class="rc-body" onclick="openReceiptModal('${r.id}')">
                         <div class="rc-name">${_escapeHtml(_receiptNames(r, mk)) || '<span class="text-rose-500">학생 미지정</span>'}</div>
-                        <div class="rc-sub">${r.payDate ? _mdLabel(r.payDate) : '<span class="text-rose-500">결제일?</span>'}${amt ? ` · ${formatNumber(amt)}원` : ''}${r.method ? ` · ${RECEIPT_METHODS[r.method] || ''}` : ''}</div>
+                        <div class="rc-sub">${r.payDate ? _mdLabel(r.payDate) : '<span class="text-rose-500">결제일?</span>'}${amt ? ` · ${formatNumber(amt)}원` : ''}${r.method ? ` · ${RECEIPT_METHODS[r.method] || ''}` : ''}${r.card4 ? ` · •${r.card4}` : ''}</div>
                         ${subj.length ? `<div class="rc-sub">${_escapeHtml(Array.from(new Set(subj)).join(' / '))}</div>` : ''}
                     </div>
                 </div>`;
@@ -8466,6 +8486,7 @@
                         <div class="thumb" onclick="openReceiptModal('${r.id}')" title="크게 보기·결제일·수단">${r.thumb ? `<img src="${r.thumb}" alt="">` : '<i class="fa-regular fa-file-lines text-slate-300"></i>'}${r.pages > 1 ? `<span class="rc-pages">${r.pages}</span>` : ''}</div>
                         <label title="인쇄에 포함"><input type="checkbox" ${_receiptUnchecked.has(printKey) ? '' : 'checked'} onchange="toggleReceiptPrint('${printKey}', this.checked)"></label>
                         <button onclick="pickPaymentImage(${q})" class="pay-link" title="이미지 더 붙이기"><i class="fa-solid fa-plus"></i></button>
+                        ${r.card4 ? `<span class="font-mono text-[10px] text-slate-400" title="카드 끝 4자리">•${r.card4}</span>` : ''}
                    </div>`
                 : `<button onclick="pickPaymentImage(${q})" class="audit-row-btn" style="margin-left:0"><i class="fa-solid fa-image mr-1"></i>이미지 등록</button>`;
 
@@ -8676,6 +8697,7 @@
                         if (!r.fileName) r.fileName = f.name;
                         if (!r.payDate) r.payDate = d.payDate;
                         if (!r.method) r.method = d.method;
+                        if (!r.card4) r.card4 = d.card4;
                     } catch (e) {
                         console.error('영수증 올리기 실패', f.name, e);
                         failed.push(`${f.name} (${e.message || e})`);
@@ -8861,6 +8883,26 @@
             el.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${msg}`;
         }
 
+        // 가려진 카드번호('5310-12**-****-3456', '531012******3456')에서 끝 4자리. 끝자리까지 가려져 있으면 ''
+        function _cardLast4(flat) {
+            const runs = flat.match(/[\d*Xx×][\d*Xx×-]{11,22}[\d*Xx×]/g) || [];
+            for (const run of runs) {
+                if ((run.match(/[*Xx×]/g) || []).length < 3) continue;
+                const m = run.match(/(\d{4})$/);
+                if (m) return m[1];
+            }
+            return '';
+        }
+        // 같은 카드로 낸 지난 결제 중 가장 최근 것의 학생들
+        function _cardOwners(card4, exceptId) {
+            if (!/^\d{4}$/.test(card4 || '')) return null;
+            const r = (receiptMetas || []).filter(x => x.id !== exceptId && x.card4 === card4 && (x.allocs || []).some(a => a.sid))
+                .sort((a, b) => (b.payDate || '').localeCompare(a.payDate || ''))[0];
+            if (!r) return null;
+            const last = _receiptMonths(r).pop();
+            return { sids: Array.from(new Set(r.allocs.filter(a => a.sid && (!last || a.month === last)).map(a => a.sid))), payDate: r.payDate };
+        }
+
         // 파일 하나 → 영수증 쪽 이미지(JPEG)·썸네일·결제일·결제수단
         async function _receiptFileData(f, hash) {
             const { canvases, text } = await _fileToPages(f);
@@ -8873,7 +8915,8 @@
                 images: pages.map(c => _canvasToJpeg(c, 1800, 900000)),
                 thumb: _canvasToJpeg(pages[0], 320, 60000),
                 payDate: dm ? `${dm[1]}-${dm[2]}-${dm[3]}` : '',
-                method: /결제선생|페이앱|payapp/i.test(flat) ? 'payapp' : (/카드/.test(flat) ? 'card' : '')
+                method: /결제선생|페이앱|payapp/i.test(flat) ? 'payapp' : (/카드/.test(flat) ? 'card' : ''),
+                card4: _cardLast4(flat)
             };
         }
 
@@ -8884,7 +8927,7 @@
             if (!window.isCloudOnline) return alert('영수증은 클라우드에 보관돼요. 온라인 연결 후 다시 올려주세요.');
             await _ensureReceiptsLoaded();
             const known = new Set(receiptMetas.map(r => r.hash));
-            let added = 0, dup = 0;
+            let added = 0, dup = 0, byCard = 0;
             const failed = [];
             for (let i = 0; i < files.length; i++) {
                 const f = files[i];
@@ -8895,14 +8938,18 @@
                     if (known.has(hash)) { dup++; continue; }
                     const d = await _receiptFileData(f, hash);
                     const month = _guessReceiptMonth(path, d.payDate);
-                    const sids = _guessReceiptStudents(f.name, month);
+                    let sids = _guessReceiptStudents(f.name, month);
+                    if (!sids.length && d.card4) {
+                        const own = _cardOwners(d.card4);
+                        if (own) { sids = own.sids; byCard++; }
+                    }
                     // 금액·메모만 적어 둔(이미지 없는) 같은 학생들의 결제 줄이 있으면 거기에 붙인다
                     const slot = sids.length && (receiptMetas || []).find(r => !(r.pages > 0) &&
                         sids.every(sid => r.allocs.some(a => a.month === month && a.sid === sid)));
                     const meta = slot || _newPaymentMeta(sids.map(sid => ({ sid, month })));
                     Object.assign(meta, {
                         hash, fileName: f.name, pages: d.images.length, thumb: d.thumb,
-                        payDate: meta.payDate || d.payDate, method: meta.method || d.method
+                        payDate: meta.payDate || d.payDate, method: meta.method || d.method, card4: meta.card4 || d.card4
                     });
                     await window.receiptCloud.saveImages(meta.id, d.images);
                     await _savePaymentMeta(meta);
@@ -8915,7 +8962,7 @@
             }
             _receiptBusy(null);
             renderAuditView();
-            alert(`영수증 ${added}장을 올렸어요.${dup ? `\n이미 올린 파일 ${dup}장은 건너뛰었어요.` : ''}${failed.length ? `\n\n실패 ${failed.length}장:\n${failed.join('\n')}` : ''}\n\n학생·월이 맞는지 확인하고, 다르면 영수증을 눌러 고쳐주세요.`);
+            alert(`영수증 ${added}장을 올렸어요.${byCard ? `\n파일 이름에 학생이 없던 ${byCard}장은 카드 끝 4자리로 지난번 같은 카드의 학생과 짝지었어요.` : ''}${dup ? `\n이미 올린 파일 ${dup}장은 건너뛰었어요.` : ''}${failed.length ? `\n\n실패 ${failed.length}장:\n${failed.join('\n')}` : ''}\n\n학생·월이 맞는지 확인하고, 다르면 영수증을 눌러 고쳐주세요.`);
         }
 
         // ─── 영수증 짝짓기(수정) 창 ───
@@ -8932,10 +8979,10 @@
                 const md = _auditMonths && _auditMonths[a.month];
                 const auto = (s && md) ? _auditSubjects(s, a.month, md).text : '';
                 return `<div class="rm-alloc">
-                    <select onchange="_editReceipt.allocs[${i}].sid = Number(this.value) || null; _renderReceiptAllocs()" class="si-input">${_studentOptions(a.sid)}</select>
+                    <select onchange="_editReceipt.allocs[${i}].sid = Number(this.value) || null; _renderReceiptAllocs(); _renderCardMatch()" class="si-input">${_studentOptions(a.sid)}</select>
                     <input type="month" value="${a.month || ''}" onchange="_editReceipt.allocs[${i}].month = this.value; _loadAllocMonth(this.value)" class="si-input">
                     <input value="${_escapeHtml(a.subj || '')}" placeholder="${_escapeHtml(auto || '과목')}" oninput="_editReceipt.allocs[${i}].subj = this.value.trim()" class="si-input" title="비우면 그 달 시간표에서 자동">
-                    <button onclick="_editReceipt.allocs.splice(${i}, 1); _renderReceiptAllocs()" class="text-slate-300 hover:text-rose-500 px-1" title="빼기"><i class="fa-solid fa-xmark"></i></button>
+                    <button onclick="_editReceipt.allocs.splice(${i}, 1); _renderReceiptAllocs(); _renderCardMatch()" class="text-slate-300 hover:text-rose-500 px-1" title="빼기"><i class="fa-solid fa-xmark"></i></button>
                 </div>`;
             }).join('') || '<p class="text-xs text-slate-400">아직 짝지은 학생이 없어요.</p>';
         }
@@ -8946,6 +8993,31 @@
                 _auditMonths = Object.assign(_auditMonths || {}, got);
             }
             _renderReceiptAllocs();
+        }
+        // 카드 끝 4자리가 지난 결제와 같으면 그때 학생을 알려 주고, 눌러서 채울 수 있게
+        function _renderCardMatch() {
+            const box = document.getElementById('rm-card-match');
+            const card4 = document.getElementById('rm-card4').value;
+            const own = _editReceipt && _cardOwners(card4, _editReceipt.id);
+            if (!own) { box.classList.add('hidden'); return; }
+            const names = own.sids.map(id => (allStudents.find(x => x.id === id) || {}).name || '(삭제된 학생)').join(', ');
+            const cur = _editReceipt.allocs.filter(a => a.sid).map(a => a.sid);
+            const same = cur.length && own.sids.every(id => cur.includes(id)) && cur.every(id => own.sids.includes(id));
+            const when = own.payDate ? `${Number(own.payDate.slice(5, 7))}월 ${Number(own.payDate.slice(8, 10))}일` : '지난번';
+            box.className = `mb-4 text-xs rounded-lg px-3 py-2 border ${same ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`;
+            box.innerHTML = same
+                ? `<i class="fa-solid fa-check mr-1"></i>${when}에도 이 카드(•${card4})로 <b>${_escapeHtml(names)}</b> 수업료를 냈어요.`
+                : `<i class="fa-solid fa-credit-card mr-1"></i>${when}에 이 카드(•${card4})로 <b>${_escapeHtml(names)}</b> 수업료를 냈어요.
+                   <button onclick="applyCardOwners()" class="ml-1 px-2 py-0.5 rounded bg-indigo-600 text-white font-bold hover:bg-indigo-700">${cur.length ? '이 학생으로 바꾸기' : '이 학생으로 채우기'}</button>`;
+        }
+        function applyCardOwners() {
+            const own = _editReceipt && _cardOwners(document.getElementById('rm-card4').value, _editReceipt.id);
+            if (!own) return;
+            const pd = document.getElementById('rm-date').value;
+            const month = (_editReceipt.allocs.find(a => a.month) || {}).month || _guessReceiptMonth('', pd);
+            _editReceipt.allocs = own.sids.map(sid => ({ sid, month }));
+            _loadAllocMonth(month);
+            _renderCardMatch();
         }
         function addReceiptAlloc() {
             const last = _editReceipt.allocs[_editReceipt.allocs.length - 1];
@@ -8963,7 +9035,9 @@
             document.getElementById('rm-amount').value = r.amount ? formatNumber(r.amount) : '';
             document.getElementById('rm-method').value = r.method || '';
             document.getElementById('rm-note').value = r.note || '';
+            document.getElementById('rm-card4').value = r.card4 || '';
             _renderReceiptAllocs();
+            _renderCardMatch();
             const prev = document.getElementById('rm-preview');
             prev.innerHTML = `<img src="${r.thumb}" class="opacity-60">`;
             const m = document.getElementById('receiptModal');
@@ -8988,6 +9062,7 @@
             r.amount = parseNumber(document.getElementById('rm-amount').value);
             r.method = document.getElementById('rm-method').value;
             r.note = document.getElementById('rm-note').value.trim();
+            r.card4 = document.getElementById('rm-card4').value;
             r.updatedAt = new Date().toISOString();
             try {
                 await window.receiptCloud.saveMeta(r);
@@ -9460,7 +9535,7 @@
                     rows.push([_ymLabel(mk), s.regNo || '', s.name, subj.text, s.address || '', _fmtPhone(s.phone), s.joinDate || '', leave])));
                 _downloadCsv(`수강생대장_${span}.csv`, rows);
             } else if (auditTab === 'receipts') {
-                const rows = [['월', '등록번호', '학생이름', '학년', '과목명', '금액', '메모', '결제일', '결제수단', '영수증']];
+                const rows = [['월', '등록번호', '학생이름', '학년', '과목명', '금액', '메모', '결제일', '결제수단', '카드 끝 4자리', '영수증']];
                 _auditRangeKeys(false).forEach(mk => _paymentRowsOfMonth(mk).forEach(row => {
                     const studs = row.sids.map(id => allStudents.find(x => x.id === id) || { id, name: '(삭제된 학생)' });
                     const md = _auditMonths[mk];
@@ -9468,7 +9543,7 @@
                     const r = row.r || {};
                     rows.push([_ymLabel(mk), studs.map(s => s.regNo || '').join(', '), studs.map(s => s.name).join(', '),
                         studs.map(s => _gradeOf(s, mk)).join(', '), studs.map(subj).join(' / '), _rowAmounts(row, mk).shown || '',
-                        r.note || '', r.payDate || '', RECEIPT_METHODS[r.method] || '', r.pages > 0 ? '있음' : '']);
+                        r.note || '', r.payDate || '', RECEIPT_METHODS[r.method] || '', r.card4 || '', r.pages > 0 ? '있음' : '']);
                 }));
                 _downloadCsv(`교육비영수증_${span}.csv`, rows);
             } else if (auditTab === 'ledger') {
