@@ -390,6 +390,17 @@
         .rc-body { padding: 7px 9px 9px; cursor: pointer; }
         .rc-name { font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.3; }
         .rc-sub { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.3; }
+        .rcc-page { background: #fff; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 6px; }
+        .rcc-page-no { font-size: 11px; font-weight: 700; color: #94a3b8; margin: 0 2px 4px; }
+        .rcc-sheet { position: relative; user-select: none; touch-action: none; cursor: crosshair; }
+        .rcc-sheet canvas { display: block; width: 100%; height: auto; }
+        .rcc-box { position: absolute; border: 2px solid #4f46e5; background: rgba(79,70,229,.08); border-radius: 3px; }
+        .rcc-box.done { border-color: #94a3b8; border-style: dashed; background: rgba(148,163,184,.25); }
+        .rcc-box.drawing { border-style: dashed; }
+        .rcc-tag { position: absolute; top: -1px; left: -1px; max-width: calc(100% - 26px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #4f46e5; color: #fff; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 3px 0 4px 0; }
+        .rcc-box.done .rcc-tag { background: #64748b; }
+        .rcc-x { position: absolute; z-index: 2; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 9999px; background: #fff; border: 1px solid #cbd5e1; color: #e11d48; font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+        .rcc-x:hover { background: #fff1f2; }
         #rm-preview img { max-width: 100%; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
         .pay-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .pay-table th { font-size: 11px; font-weight: 700; color: #64748b; background: #f8fafc; text-align: left; padding: 7px 8px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
@@ -7728,6 +7739,27 @@
         </div>
     </div>
 
+    <!-- 여러 장 모인 PDF 잘라서 올리기 -->
+    <div id="receiptCropModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[97] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-start gap-3 bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-scissors mr-1 text-indigo-500"></i> 영수증 나누기 <span id="rcc-file" class="text-xs font-normal text-slate-400 ml-1"></span></h3>
+                    <p class="text-xs text-slate-500 mt-1">네모 하나 = 영수증 한 장. 틀린 칸은 <b>×</b>로 지우고, 빠진 영수증은 그 위를 <b>끌어서 네모를 그리세요</b>.</p>
+                </div>
+                <button onclick="closeReceiptCrop(null)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="rcc-pages" class="flex-grow overflow-y-auto custom-scrollbar bg-slate-100 p-4 grid gap-4 md:grid-cols-2"></div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex flex-wrap justify-between gap-2 shrink-0">
+                <button onclick="closeReceiptCrop('whole')" class="px-4 py-2 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded-lg text-sm font-bold transition">자르지 않고 쪽 그대로</button>
+                <div class="flex gap-2">
+                    <button onclick="closeReceiptCrop(null)" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">이 파일 건너뛰기</button>
+                    <button id="rcc-ok" onclick="finishReceiptCrop()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg text-sm font-bold shadow-md transition"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 간편장부 거래 입력 -->
     <div id="ledgerEntryModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
@@ -7992,7 +8024,8 @@
                 <div class="ml-auto flex flex-wrap gap-2">
                     ${auditTab === 'ledger' ? btn('openLedgerEntryModal()', 'fa-plus', '거래 입력', 'primary') : ''}
                     ${auditTab === 'receipts' ? `
-                        ${btn("document.getElementById('rc-files').click()", 'fa-file-arrow-up', '영수증 올리기', 'primary')}
+                        ${btn('pickReceiptFiles()', 'fa-file-arrow-up', '영수증 올리기', 'primary')}
+                        ${btn('pickReceiptFiles(true)', 'fa-scissors', '잘라서 올리기')}
                         ${btn("document.getElementById('rc-folder').click()", 'fa-folder-open', '폴더째 올리기')}
                         <select onchange="setReceiptPrintLayout(this.value)" class="audit-select" title="인쇄 배치">
                             <option value="6"${receiptPrintLayout === 6 ? ' selected' : ''}>한 장에 6개</option>
@@ -8359,6 +8392,7 @@
         var receiptPrintLayout = 6;         // 한 장에 6개(3×2) | 1개
         var _receiptUnchecked = new Set();  // 인쇄에서 뺄 '영수증id|월'
         var RECEIPT_MAX_PAGES = 4;
+        var RECEIPT_CROP_MAX_PAGES = 30;    // 여러 장 모인 PDF(매출전표)는 잘라서 올리므로 더 많은 쪽까지 읽는다
         var RECEIPT_METHODS = { card: '카드', payapp: '결제선생', transfer: '계좌이체', cash: '현금', etc: '기타' };
 
         async function _ensureReceiptsLoaded(force) {
@@ -8689,15 +8723,21 @@
                     const f = files[i];
                     _receiptBusy(`영수증 처리 중 ${i + 1}/${files.length} · ${_escapeHtml(f.name)}`);
                     try {
-                        const d = await _receiptFileData(f);
-                        await window.receiptCloud.saveImages(r.id, d.images, r.pages || 0);
-                        r.pages = (r.pages || 0) + d.images.length;
-                        if (!r.thumb) r.thumb = d.thumb;
-                        if (!r.hash) r.hash = d.hash;
-                        if (!r.fileName) r.fileName = f.name;
-                        if (!r.payDate) r.payDate = d.payDate;
-                        if (!r.method) r.method = d.method;
-                        if (!r.card4) r.card4 = d.card4;
+                        const src = await _fileToPages(f);
+                        const crops = await _maybeCropReceipts(f, src, '', new Set(), false, row.sids);
+                        if (!crops) continue;
+                        _receiptBusy(`영수증 처리 중 ${i + 1}/${files.length} · ${_escapeHtml(f.name)}`);
+                        const ds = crops === 'whole' ? [await _receiptFileData(f, null, src)] : crops.map(_receiptCropData);
+                        for (const d of ds) {
+                            await window.receiptCloud.saveImages(r.id, d.images, r.pages || 0);
+                            r.pages = (r.pages || 0) + d.images.length;
+                            if (!r.thumb) r.thumb = d.thumb;
+                            if (!r.hash) r.hash = d.hash;
+                            if (!r.fileName) r.fileName = f.name;
+                            if (!r.payDate) r.payDate = d.payDate;
+                            if (!r.method) r.method = d.method;
+                            if (!r.card4) r.card4 = d.card4;
+                        }
                     } catch (e) {
                         console.error('영수증 올리기 실패', f.name, e);
                         failed.push(`${f.name} (${e.message || e})`);
@@ -8741,21 +8781,25 @@
             return c;
         }
 
+        // items[쪽] = 글자 조각과 그 위치(캔버스 px) — 한 쪽에 여러 장 모인 PDF를 잘랐을 때 칸마다 글자를 나누려고
         async function _fileToPages(file) {
             if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
                 const pdfjs = await _loadPdfJs();
                 const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-                const canvases = [];
+                const n = Math.min(pdf.numPages, RECEIPT_CROP_MAX_PAGES);
+                const canvases = [], items = [];
                 let text = '';
-                for (let i = 1; i <= Math.min(pdf.numPages, RECEIPT_MAX_PAGES); i++) {
+                for (let i = 1; i <= n; i++) {
                     const page = await pdf.getPage(i);
-                    const vp = page.getViewport({ scale: 3 });
+                    const vp = page.getViewport({ scale: n > RECEIPT_MAX_PAGES ? 2 : 3 });
                     const c = _blankCanvas(Math.round(vp.width), Math.round(vp.height));
                     await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
                     canvases.push(c);
-                    if (i === 1) text = (await page.getTextContent()).items.map(t => t.str).join(' ');
+                    const tc = (await page.getTextContent()).items;
+                    items.push(tc.map(t => { const [x, y] = vp.convertToViewportPoint(t.transform[4], t.transform[5]); return { str: t.str, x, y }; }));
+                    if (i === 1) text = tc.map(t => t.str).join(' ');
                 }
-                return { canvases, text };
+                return { canvases, text, items };
             }
             const url = URL.createObjectURL(file);
             try {
@@ -8768,7 +8812,7 @@
                 const k = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));
                 const c = _blankCanvas(Math.round(img.naturalWidth * k), Math.round(img.naturalHeight * k));
                 c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                return { canvases: [c], text: '' };
+                return { canvases: [c], text: '', items: [[]] };
             } finally {
                 URL.revokeObjectURL(url);
             }
@@ -8811,6 +8855,58 @@
             out.getContext('2d').drawImage(c, sx, sy, sw, sh, 0, 0, sw, sh);
             return out;
         }
+
+        // 한 쪽에 모인 영수증 칸 찾기 → [{ x, y, w, h }] (쪽 크기에 대한 비율, 위→아래·왼→오른쪽 순)
+        // 테두리 있는 전표는 테두리째 한 덩어리, 테두리가 없으면 가까운 글자끼리 묶는다. 작은 것(조회기간·로고)은 뺀다
+        function _detectReceiptBoxes(c) {
+            const W = c.width, H = c.height, S = 2;
+            const w = Math.ceil(W / S), h = Math.ceil(H / S);
+            const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+            const ink = new Uint8Array(w * h);
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+                const i = (y * W + x) * 4;   // 연회색 테두리(225 안팎)도 잉크로
+                if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) ink[((y / S) | 0) * w + ((x / S) | 0)] = 1;
+            }
+            const blobs = (on, gw, gh, reach) => {
+                const seen = new Uint8Array(gw * gh), out = [], stack = [];
+                for (let p = 0; p < gw * gh; p++) {
+                    if (!on[p] || seen[p]) continue;
+                    const b = { x0: gw, y0: gh, x1: 0, y1: 0 };
+                    seen[p] = 1; stack.push(p);
+                    while (stack.length) {
+                        const q = stack.pop(), qx = q % gw, qy = (q / gw) | 0;
+                        if (qx < b.x0) b.x0 = qx; if (qx > b.x1) b.x1 = qx;
+                        if (qy < b.y0) b.y0 = qy; if (qy > b.y1) b.y1 = qy;
+                        for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
+                            const nx = qx + dx, ny = qy + dy, r = ny * gw + nx;
+                            if (nx >= 0 && ny >= 0 && nx < gw && ny < gh && on[r] && !seen[r]) { seen[r] = 1; stack.push(r); }
+                        }
+                    }
+                    out.push(b);
+                }
+                return out;
+            };
+            const bigEnough = (b) => b.x1 - b.x0 >= w * 0.2 && b.y1 - b.y0 >= h * 0.1;
+            const overlap = (a, b) => a.x0 <= b.x1 && b.x0 <= a.x1 && a.y0 <= b.y1 && b.y0 <= a.y1;
+            let boxes = blobs(ink, w, h, 1).filter(bigEnough);
+            boxes = boxes.filter(a => !boxes.some(b => a !== b && a.x0 >= b.x0 && a.y0 >= b.y0 && a.x1 <= b.x1 && a.y1 <= b.y1));
+            // 테두리 없는 영수증: 위에서 못 찾은 곳의 잉크를 굵은 칸(쪽 너비의 1%)으로 모아 두 칸 안쪽이면 한 덩어리로
+            const G = Math.max(3, Math.round(w / 100)), gw = Math.ceil(w / G), gh = Math.ceil(h / G);
+            const cell = new Uint8Array(gw * gh);
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+                if (ink[y * w + x] && !boxes.some(b => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1)) cell[((y / G) | 0) * gw + ((x / G) | 0)] = 1;
+            }
+            blobs(cell, gw, gh, 2).forEach(b => {
+                const f = { x0: b.x0 * G, y0: b.y0 * G, x1: Math.min(w - 1, b.x1 * G + G - 1), y1: Math.min(h - 1, b.y1 * G + G - 1) };
+                if (bigEnough(f) && !boxes.some(x => overlap(x, f))) boxes.push(f);
+            });
+            const pad = 0.006;
+            return boxes.map(b => {
+                const x = Math.max(0, b.x0 / w - pad), y = Math.max(0, b.y0 / h - pad);
+                return { x, y, w: Math.min(1, (b.x1 + 1) / w + pad) - x, h: Math.min(1, (b.y1 + 1) / h + pad) - y };
+            }).sort(_byReadingOrder);
+        }
+        function _byReadingOrder(a, b) { return Math.abs(a.y - b.y) < 0.05 ? a.x - b.x : a.y - b.y; }
 
         // JPEG data URL — Firestore 문서 1MB 제한 안으로 들어갈 때까지 화질·크기를 줄인다
         function _canvasToJpeg(c, maxDim, maxChars) {
@@ -8911,36 +9007,204 @@
             return { sids: Array.from(new Set(r.allocs.filter(a => a.sid && (!last || a.month === last)).map(a => a.sid))), payDate: r.payDate };
         }
 
-        // 파일 하나 → 영수증 쪽 이미지(JPEG)·썸네일·결제일·결제수단
-        async function _receiptFileData(f, hash) {
-            const { canvases, text } = await _fileToPages(f);
-            const pages = canvases.map(_trimCanvas);
+        // PDF 글자에서 결제일·결제수단·카드 끝 4자리
+        function _receiptTextInfo(text) {
             // PDF 글자는 한 글자씩 띄어 나오기도 한다('2026 - 08 - 28   18 : 17') → 띄어쓰기를 지우고 찾는다
             const flat = text.replace(/\s+/g, '');
             const dm = flat.match(/(20\d{2})[-.\/](\d{2})[-.\/](\d{2})(\d{1,2}):\d{2}/);
             return {
-                hash: hash || await _fileHash(f),
-                images: pages.map(c => _canvasToJpeg(c, 1800, 900000)),
-                thumb: _canvasToJpeg(pages[0], 320, 60000),
                 payDate: dm ? `${dm[1]}-${dm[2]}-${dm[3]}` : '',
                 method: /결제선생|페이앱|payapp/i.test(flat) ? 'payapp' : (/카드/.test(flat) ? 'card' : ''),
                 card4: _cardLast4(flat)
             };
         }
 
+        // 파일 하나 → 영수증 쪽 이미지(JPEG)·썸네일·결제일·결제수단
+        async function _receiptFileData(f, hash, src) {
+            const { canvases, text } = src || await _fileToPages(f);
+            const pages = canvases.slice(0, RECEIPT_MAX_PAGES).map(_trimCanvas);
+            return {
+                hash: hash || await _fileHash(f),
+                images: pages.map(c => _canvasToJpeg(c, 1800, 900000)),
+                thumb: _canvasToJpeg(pages[0], 320, 60000),
+                ..._receiptTextInfo(text)
+            };
+        }
+
+        // ─── 여러 장 모인 PDF(매출전표 등) 잘라서 올리기 ───
+        // 자른 칸 하나 = 영수증 한 장. 칸 안의 글자로 결제일·달·학생('11월 수업료(채지우)')·승인번호를 읽는다
+        function _cropInfo(c, items, b, pi, fileHash, path) {
+            const x0 = b.x * c.width, y0 = b.y * c.height, x1 = x0 + b.w * c.width, y1 = y0 + b.h * c.height;
+            const text = items.filter(t => t.x >= x0 && t.x <= x1 && t.y >= y0 && t.y <= y1).map(t => t.str).join(' ');
+            const info = _receiptTextInfo(text);
+            const appr = (text.replace(/\s+/g, '').match(/승인번호:?(\d{6,12})/) || [])[1];
+            const names = Array.from(text.matchAll(/\(\s*([가-힣][가-힣\s,·]*?)\s*\)/g), m => m[1]).join(',');
+            const mon = (text.match(/\d{1,2}\s*월\s*(?:수업료|교육비|학원비|원비|수강료)/) || [])[0];
+            const month = _guessReceiptMonth(mon || path, info.payDate);
+            return {
+                info, names, month,
+                sids: names ? _guessReceiptStudents(names, month) : [],
+                // 같은 결제가 다른 날 뽑은 전표에 또 들어 있어도 한 번만 올라가게 승인번호로
+                hash: appr ? `appr:${appr}_${info.payDate}` : `${fileHash}#${pi}:${[b.x, b.y, b.w, b.h].map(v => Math.round(v * 1000)).join(',')}`
+            };
+        }
+        function _receiptCropData(cr) {
+            const { canvas: c, box: b } = cr;
+            const sx = Math.round(b.x * c.width), sy = Math.round(b.y * c.height);
+            const sw = Math.max(1, Math.round(b.w * c.width)), sh = Math.max(1, Math.round(b.h * c.height));
+            const out = _blankCanvas(sw, sh);
+            out.getContext('2d').drawImage(c, sx, sy, sw, sh, 0, 0, sw, sh);
+            return { hash: cr.hash, images: [_canvasToJpeg(out, 1800, 900000)], thumb: _canvasToJpeg(out, 320, 60000), ...cr.info };
+        }
+
+        // 한 쪽에 영수증이 2장 이상 보이면(또는 [잘라서 올리기]) 나누기 창을 연다
+        // → 자른 칸 목록(done = 이미 올린 영수증) | 'whole'(쪽 그대로) | null(이 파일 건너뛰기)
+        // forSids: 결제 줄의 [이미지 등록]이면 그 학생 이름이 적힌 칸만 남겨 둔다(없으면 전부)
+        async function _maybeCropReceipts(f, src, fileHash, known, force, forSids) {
+            const boxes = src.canvases.map(_detectReceiptBoxes);
+            if (!force && !boxes.some(b => b.length >= 2)) return 'whole';
+            const crop = { pages: src.canvases.map((canvas, i) => ({ canvas, items: src.items[i] || [], boxes: boxes[i] })), fileHash, path: f.webkitRelativePath || f.name, known };
+            if (forSids && forSids.length) {
+                const mine = _rccCrops(crop).filter(cr => cr.sids.some(sid => forSids.includes(sid)));
+                if (mine.length) crop.pages.forEach((p, pi) => { p.boxes = mine.filter(cr => cr.pi === pi).map(cr => cr.box); });
+            }
+            // 다시 올린 전표라 자동으로 찾은 영수증이 모두 이미 있으면 창 없이 넘어간다
+            if (!force && _rccCrops(crop).every(cr => cr.done)) return _rccCrops(crop);
+            _receiptBusy(null);
+            return _openReceiptCrop(f.name, crop);
+        }
+        function _rccCrops(crop) {
+            const out = [];
+            crop.pages.forEach((p, pi) => p.boxes.forEach((box, bi) => {
+                const cr = _cropInfo(p.canvas, p.items, box, pi, crop.fileHash, crop.path);
+                out.push({ ...cr, canvas: p.canvas, box, pi, bi, no: out.length + 1, done: crop.known.has(cr.hash) });
+            }));
+            return out;
+        }
+
+        var _rcCrop = null;   // 나누기 창: { pages: [{ canvas, items, boxes, layer }], fileHash, path, known, resolve }
+        function _openReceiptCrop(fileName, crop) {
+            return new Promise(resolve => {
+                _rcCrop = { ...crop, resolve };
+                document.getElementById('rcc-file').textContent = fileName;
+                const wrap = document.getElementById('rcc-pages');
+                wrap.innerHTML = '';
+                _rcCrop.pages.forEach((p, i) => {
+                    const page = document.createElement('div');
+                    page.className = 'rcc-page';
+                    page.innerHTML = `<div class="rcc-page-no">${i + 1}쪽</div><div class="rcc-sheet"><div style="position:absolute;inset:0"></div></div>`;
+                    const sheet = page.lastChild;
+                    sheet.prepend(p.canvas);
+                    p.layer = sheet.lastChild;
+                    sheet.addEventListener('pointerdown', e => _rccPointerDown(e, i));
+                    wrap.appendChild(page);
+                });
+                _rccRender();
+                const m = document.getElementById('receiptCropModal');
+                m.classList.remove('hidden'); m.classList.add('flex');
+            });
+        }
+        function _rccRender() {
+            const crops = _rccCrops(_rcCrop);
+            _rcCrop.pages.forEach(p => { p.layer.innerHTML = ''; });
+            crops.forEach(cr => {
+                const b = cr.box;
+                const who = cr.sids.map(sid => _nameText(allStudents.find(s => s.id === sid))).join(', ') || cr.names;
+                _rcCrop.pages[cr.pi].layer.insertAdjacentHTML('beforeend', `<div class="rcc-box${cr.done ? ' done' : ''}" style="left:${b.x * 100}%;top:${b.y * 100}%;width:${b.w * 100}%;height:${b.h * 100}%">
+                    <span class="rcc-tag">${cr.no}${who ? ` · ${_escapeHtml(who)}` : ''}${cr.done ? ' · 이미 올림' : ''}</span>
+                    <span class="rcc-x" data-p="${cr.pi}" data-b="${cr.bi}" title="이 칸 지우기">×</span></div>`);
+            });
+            const todo = crops.filter(cr => !cr.done).length;
+            const ok = document.getElementById('rcc-ok');
+            ok.textContent = todo ? `${todo}장 올리기` : '올릴 새 영수증 없음';
+            ok.disabled = !todo;
+        }
+        // × = 칸 지우기, 빈 곳을 끌면 새 칸
+        function _rccPointerDown(e, pi) {
+            const x = e.target.closest('.rcc-x');
+            if (x) { _rcCrop.pages[x.dataset.p].boxes.splice(Number(x.dataset.b), 1); _rccRender(); return; }
+            if (e.button !== 0) return;
+            e.preventDefault();
+            const sheet = e.currentTarget, r = sheet.getBoundingClientRect();
+            const fx = (ev) => Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+            const fy = (ev) => Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+            const sx = fx(e), sy = fy(e);
+            const el = document.createElement('div');
+            el.className = 'rcc-box drawing';
+            sheet.appendChild(el);
+            let b = null;
+            const move = (ev) => {
+                b = { x: Math.min(sx, fx(ev)), y: Math.min(sy, fy(ev)), w: Math.abs(fx(ev) - sx), h: Math.abs(fy(ev) - sy) };
+                Object.assign(el.style, { left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` });
+            };
+            const up = () => {
+                sheet.removeEventListener('pointermove', move);
+                sheet.removeEventListener('pointerup', up);
+                sheet.removeEventListener('pointercancel', up);
+                el.remove();
+                if (!_rcCrop || !b || b.w < 0.04 || b.h < 0.03) return;
+                const p = _rcCrop.pages[pi];
+                p.boxes.push(b);
+                p.boxes.sort(_byReadingOrder);
+                _rccRender();
+            };
+            sheet.setPointerCapture(e.pointerId);
+            sheet.addEventListener('pointermove', move);
+            sheet.addEventListener('pointerup', up);
+            sheet.addEventListener('pointercancel', up);
+        }
+        function finishReceiptCrop() { if (_rcCrop) closeReceiptCrop(_rccCrops(_rcCrop)); }
+        function closeReceiptCrop(result) {
+            if (!_rcCrop) return;
+            const { resolve } = _rcCrop;
+            _rcCrop = null;
+            const m = document.getElementById('receiptCropModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+            document.getElementById('rcc-pages').innerHTML = '';
+            resolve(result);
+        }
+
+        var _receiptCropAll = false;   // [잘라서 올리기] — 영수증이 한 장뿐이어도 나누기 창을 연다
+        function pickReceiptFiles(crop) {
+            _receiptCropAll = !!crop;
+            document.getElementById('rc-files').click();
+        }
         async function uploadReceiptFiles(input) {
             const files = Array.from(input.files || []).filter(f => /\.(pdf|jpe?g|png|webp|gif|bmp)$/i.test(f.name) || /^image\/|pdf/.test(f.type));
             input.value = '';
+            const force = _receiptCropAll && input.id === 'rc-files';
+            _receiptCropAll = false;
             if (!files.length) return;
             if (!window.isCloudOnline) return alert('영수증은 클라우드에 보관돼요. 온라인 연결 후 다시 올려주세요.');
             await _ensureReceiptsLoaded();
             const known = new Set(receiptMetas.map(r => r.hash));
-            let added = 0, dup = 0, byCard = 0, filled = 0;
+            let added = 0, dup = 0, dupCrop = 0, byCard = 0, filled = 0, skipped = 0;
             const failed = [];
+            // 영수증 한 장 저장 — 이름으로 학생을 못 찾으면 같은 카드로 낸 지난 결제의 학생으로
+            const addOne = async (d, fileName, month, nameSrc) => {
+                let sids = _guessReceiptStudents(nameSrc, month);
+                if (!sids.length && d.card4) {
+                    const own = _cardOwners(d.card4);
+                    if (own) { sids = own.sids; byCard++; }
+                }
+                // 금액·메모만 적어 둔(이미지 없는) 같은 학생들의 결제 줄이 있으면 거기에 붙인다
+                const slot = sids.length && (receiptMetas || []).find(r => !(r.pages > 0) &&
+                    sids.every(sid => r.allocs.some(a => a.month === month && a.sid === sid)));
+                const meta = slot || _newPaymentMeta(sids.map(sid => ({ sid, month })));
+                Object.assign(meta, {
+                    hash: d.hash, fileName, pages: d.images.length, thumb: d.thumb,
+                    payDate: meta.payDate || d.payDate, method: meta.method || d.method, card4: meta.card4 || d.card4
+                });
+                await window.receiptCloud.saveImages(meta.id, d.images);
+                await _savePaymentMeta(meta);
+                known.add(d.hash);
+                added++;
+            };
             for (let i = 0; i < files.length; i++) {
                 const f = files[i];
                 const path = f.webkitRelativePath || f.name;
-                _receiptBusy(`영수증 처리 중 ${i + 1}/${files.length} · ${_escapeHtml(f.name)}`);
+                const busy = () => _receiptBusy(`영수증 처리 중 ${i + 1}/${files.length} · ${_escapeHtml(f.name)}`);
+                busy();
                 try {
                     const hash = await _fileHash(f);
                     if (known.has(hash)) {
@@ -8952,25 +9216,19 @@
                         }
                         continue;
                     }
-                    const d = await _receiptFileData(f, hash);
-                    const month = _guessReceiptMonth(path, d.payDate);
-                    let sids = _guessReceiptStudents(f.name, month);
-                    if (!sids.length && d.card4) {
-                        const own = _cardOwners(d.card4);
-                        if (own) { sids = own.sids; byCard++; }
+                    const src = await _fileToPages(f);
+                    const crops = await _maybeCropReceipts(f, src, hash, known, force);
+                    busy();
+                    if (!crops) { skipped++; continue; }
+                    if (crops === 'whole') {
+                        const d = await _receiptFileData(f, hash, src);
+                        await addOne(d, f.name, _guessReceiptMonth(path, d.payDate), f.name);
+                        continue;
                     }
-                    // 금액·메모만 적어 둔(이미지 없는) 같은 학생들의 결제 줄이 있으면 거기에 붙인다
-                    const slot = sids.length && (receiptMetas || []).find(r => !(r.pages > 0) &&
-                        sids.every(sid => r.allocs.some(a => a.month === month && a.sid === sid)));
-                    const meta = slot || _newPaymentMeta(sids.map(sid => ({ sid, month })));
-                    Object.assign(meta, {
-                        hash, fileName: f.name, pages: d.images.length, thumb: d.thumb,
-                        payDate: meta.payDate || d.payDate, method: meta.method || d.method, card4: meta.card4 || d.card4
-                    });
-                    await window.receiptCloud.saveImages(meta.id, d.images);
-                    await _savePaymentMeta(meta);
-                    known.add(hash);
-                    added++;
+                    for (const cr of crops) {
+                        if (cr.done || known.has(cr.hash)) { dupCrop++; continue; }
+                        await addOne(_receiptCropData(cr), `${f.name} #${cr.no}`, cr.month, cr.names || f.name);
+                    }
                 } catch (e) {
                     console.error('영수증 올리기 실패', f.name, e);
                     failed.push(`${f.name} (${e.message || e})`);
@@ -8978,7 +9236,7 @@
             }
             _receiptBusy(null);
             renderAuditView();
-            alert(`영수증 ${added}장을 올렸어요.${byCard ? `\n파일 이름에 학생이 없던 ${byCard}장은 카드 끝 4자리로 지난번 같은 카드의 학생과 짝지었어요.` : ''}${dup ? `\n이미 올린 파일 ${dup}장은 건너뛰었어요.${filled ? ` (그중 ${filled}장은 카드 끝 4자리만 채움)` : ''}` : ''}${failed.length ? `\n\n실패 ${failed.length}장:\n${failed.join('\n')}` : ''}\n\n학생·월이 맞는지 확인하고, 다르면 영수증을 눌러 고쳐주세요.`);
+            alert(`영수증 ${added}장을 올렸어요.${byCard ? `\n파일 이름에 학생이 없던 ${byCard}장은 카드 끝 4자리로 지난번 같은 카드의 학생과 짝지었어요.` : ''}${dup ? `\n이미 올린 파일 ${dup}장은 건너뛰었어요.${filled ? ` (그중 ${filled}장은 카드 끝 4자리만 채움)` : ''}` : ''}${dupCrop ? `\n이미 올린 영수증 ${dupCrop}장은 건너뛰었어요.` : ''}${skipped ? `\n건너뛴 파일 ${skipped}개` : ''}${failed.length ? `\n\n실패 ${failed.length}장:\n${failed.join('\n')}` : ''}\n\n학생·월이 맞는지 확인하고, 다르면 영수증을 눌러 고쳐주세요.`);
         }
 
         // ─── 영수증 짝짓기(수정) 창 ───
