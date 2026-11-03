@@ -9677,7 +9677,7 @@
             const last = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate();
             return `${ym}-${String(Math.min(day, last)).padStart(2, '0')}`;
         }
-        // 이번 달까지 빠진 달을 채운다. 바뀐 게 있으면 저장(noSave면 저장은 부른 쪽이)
+        // 반복 시작 달부터 이번 달까지 빠진 달을 채운다. 바뀐 게 있으면 저장(noSave면 저장은 부른 쪽이)
         async function _fillLedgerRepeats(noSave) {
             const until = todayStr().slice(0, 7);
             let added = 0;
@@ -9704,8 +9704,8 @@
                 entry.rec = old.rec;
                 entry.recYm = old.recYm || ym;
                 if (on) {
-                    // 다시 켤 때는 이번 달부터 (멈춰 있던 달은 채우지 않음)
-                    if (t.to) { t.to = ''; if (!t.last || t.last < thisYm) t.last = _ymShift(thisYm, -1); }
+                    // 다시 켤 때는 다음 달부터 (멈춰 있던 달·이번 달은 채우지 않음)
+                    if (t.to) { t.to = ''; if (!t.last || t.last < thisYm) t.last = thisYm; }
                     // 가장 최근 달 거래를 고치면 다음 달부터 그 내용으로
                     const latest = ledgerEntries.filter(x => x.rec === t.id && x.id !== entry.id).every(x => (x.recYm || '') <= entry.recYm);
                     if (latest) Object.assign(t, fields);
@@ -9713,7 +9713,9 @@
                     t.to = entry.recYm > thisYm ? entry.recYm : thisYm;   // 다음 달부터 안 넣음
                 }
             } else if (on) {
-                t = { id: `lt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tpl: true, ...fields, from: ym, last: ym, to: '' };
+                // 입력한 달 다음 달부터만 — 지난 날짜로 적어도 그 사이 달은 채우지 않는다
+                const last = ym > thisYm ? ym : thisYm;
+                t = { id: `lt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tpl: true, ...fields, from: _ymShift(last, 1), last, to: '' };
                 ledgerEntries.push(t);
                 entry.rec = t.id;
                 entry.recYm = ym;
@@ -9728,7 +9730,7 @@
             const was = e && e.rec ? _ledgerRepeats().find(x => x.id === e.rec) : null;
             document.getElementById('le-repeat-hint').innerHTML = on
                 ? (was && !was.to ? '매달 자동으로 들어가는 거래예요. 가장 최근 달 거래를 고치면 다음 달부터 고친 내용으로 들어가요. 체크를 풀고 저장하면 다음 달부터 멈춰요.'
-                    : '저장하면 다음 달부터 매달 같은 날짜·금액으로 장부에 자동으로 들어가요(지난달까지 빠진 달도 채움). 들어간 거래는 달마다 따로 고칠 수 있어요.')
+                    : '저장하면 다음 달부터 매달 같은 날짜·금액으로 장부에 자동으로 들어가요(그 전 달은 안 들어가요). 들어간 거래는 달마다 따로 고칠 수 있어요.')
                 : (was && !was.to ? '<span class="text-rose-500 font-bold">저장하면 다음 달부터 자동 등록을 멈춰요.</span> 이미 들어간 거래는 남아요.'
                     : '임대료·관리비·통신비처럼 매달 나가는 비용이면 체크하세요.');
         }
