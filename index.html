@@ -9680,12 +9680,17 @@
         // 반복 시작 달부터 이번 달까지 빠진 달을 채운다. 바뀐 게 있으면 저장(noSave면 저장은 부른 쪽이)
         async function _fillLedgerRepeats(noSave) {
             const until = todayStr().slice(0, 7);
-            let added = 0;
+            let added = 0, dirty = false;
             _ledgerRepeats().forEach(t => {
-                // 한때 '입력한 달 다음 달부터'로 만든 반복은 거래일 다음 달부터로 되돌린다(아직 하나도 안 들어간 것만)
-                if (!t.to && t.from === _ymShift(t.last, 1) && !ledgerEntries.some(e => e.rec === t.id && String(e.id).startsWith('lr_'))) {
-                    const src = ledgerEntries.filter(e => e.rec === t.id && e.recYm).map(e => e.recYm).sort()[0];
-                    if (src && src < t.last) { t.last = src; t.from = _ymShift(src, 1); }
+                // 예전 반복 고치기(한 번만): 아직 자동 거래가 하나도 안 들어갔는데 처음 거래의 날짜가 반복 시작보다 앞이면
+                // (입력한 달 다음 달부터로 만들었거나, 저장한 뒤 날짜를 앞 달로 고친 경우) 그 거래일 다음 달부터로 맞춘다
+                if (!t.chk) {
+                    t.chk = 1; dirty = true;
+                    const mine = ledgerEntries.filter(e => e.rec === t.id);
+                    if (!t.to && mine.length === 1 && !String(mine[0].id).startsWith('lr_')) {
+                        const src = String(mine[0].date || '').slice(0, 7);
+                        if (src && src < t.last) { t.last = src; t.from = _ymShift(src, 1); mine[0].recYm = src; }
+                    }
                 }
                 const end = t.to && t.to < until ? t.to : until;
                 for (let ym = _ymShift(t.last || _ymShift(t.from, -1), 1); ym <= end; ym = _ymShift(ym, 1)) {
@@ -9697,7 +9702,7 @@
                     t.last = ym;
                 }
             });
-            if (added && !noSave) await _saveLedger();
+            if ((added || dirty) && !noSave) await _saveLedger();
         }
         // 저장하는 거래에 매월 반복 켜기/끄기/내용 바꾸기
         function _applyLedgerRepeat(entry, on) {
@@ -9708,6 +9713,9 @@
             if (t) {
                 entry.rec = old.rec;
                 entry.recYm = old.recYm || ym;
+                // 처음 거래 하나뿐일 때(아직 자동으로 들어간 달이 없음) 날짜를 바꾸면 반복도 새 날짜 다음 달부터로 다시 맞춘다
+                const alone = !String(entry.id).startsWith('lr_') && !ledgerEntries.some(x => x.rec === t.id && x.id !== entry.id);
+                if (on && !t.to && alone && ym !== entry.recYm) { entry.recYm = ym; t.last = ym; t.from = _ymShift(ym, 1); }
                 if (on) {
                     // 다시 켤 때는 다음 달부터 (멈춰 있던 달·이번 달은 채우지 않음)
                     if (t.to) { t.to = ''; if (!t.last || t.last < thisYm) t.last = thisYm; }
@@ -9719,7 +9727,7 @@
                 }
             } else if (on) {
                 // 거래일 다음 달부터 — 지난 날짜로 적으면 이번 달까지 빠진 달을 채운다
-                t = { id: `lt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tpl: true, ...fields, from: _ymShift(ym, 1), last: ym, to: '' };
+                t = { id: `lt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tpl: true, ...fields, from: _ymShift(ym, 1), last: ym, to: '', chk: 1 };
                 ledgerEntries.push(t);
                 entry.rec = t.id;
                 entry.recYm = ym;
