@@ -7814,6 +7814,22 @@
         </div>
     </div>
 
+    <!-- 간편장부 교재비 불러오기 -->
+    <div id="textbookFetchModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[96] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-book mr-1 text-indigo-500"></i> 교재비 불러오기</h3>
+                <button onclick="closeTextbookFetchModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="tb-body" class="p-5 overflow-y-auto custom-scrollbar text-sm space-y-4"></div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                <button onclick="closeTextbookFetchModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">닫기</button>
+                <button onclick="runTextbookFetch()" id="tb-fetch" class="px-4 py-2 bg-white hover:bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-lg text-sm font-bold transition"><i class="fa-solid fa-cloud-arrow-down mr-1"></i>불러오기</button>
+                <button onclick="saveTextbookFetch()" id="tb-save" class="hidden px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">장부에 넣기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== 교육청 지도점검 ====================
         // 수강생 대장(학원법 시행규칙 별지 제25호서식) · 교육비 수납부 · 간편장부(국세청 서식).
@@ -8037,7 +8053,7 @@
                 <span class="text-slate-400">~</span>
                 <select onchange="auditTo=this.value; renderAuditView()" class="audit-select">${opts(auditTo)}</select>
                 <div class="ml-auto flex flex-wrap gap-2">
-                    ${auditTab === 'ledger' ? btn('openLedgerEntryModal()', 'fa-plus', '거래 입력', 'primary') : ''}
+                    ${auditTab === 'ledger' ? btn('openLedgerEntryModal()', 'fa-plus', '거래 입력', 'primary') + btn('openTextbookFetchModal()', 'fa-book', '교재비 불러오기') : ''}
                     ${auditTab === 'receipts' ? `
                         ${btn('pickReceiptFiles()', 'fa-file-arrow-up', '영수증 올리기', 'primary')}
                         ${btn('pickReceiptFiles(true)', 'fa-scissors', '잘라서 올리기')}
@@ -10070,6 +10086,169 @@
                 addLedgerShots(ev.dataTransfer.files);
             });
         })();
+
+        // ─── 교재비 불러오기 ───
+        // 미래엔수학(본사입금관리 → 결제내역: 결제일·결제금액, 고른 달 = 주문월)·미래엔영어(주문/배정현황: 주문일·주문금액)를
+        // 사이트에 대신 로그인해 읽어 온다(functions/api/textbook.js). 아이디·비밀번호는 이 기기(localStorage)에만 저장
+        var TB_SITES = {
+            math: { name: '미래엔수학', label: '미래엔수학 교재비', desc: '수학교재비', vendor: '미래엔수학', hint: '본사입금관리의 결제내역 — 고른 달은 주문월, 날짜는 결제일(보통 다음 달)', color: 'sky' },
+            eng: { name: '미래엔영어', label: '미래엔영어 교재비', desc: '영어교재비', vendor: '미래엔영어', hint: '주문/배정현황의 주문내역 — 날짜는 주문일, 주문취소는 빼요', color: 'rose' }
+        };
+        var _tb = null;   // { sites:Set, year, months:Set, busy, rows:[{id, site, ym, date, amount, ref, on, tag}], done:{site:{ym:n}}, errors:{site:msg}, showCred }
+        function _tbCreds() { try { return JSON.parse(localStorage.getItem('miraenCreds') || '{}'); } catch (e) { return {}; } }
+        function _tbSaveCreds(c) { try { localStorage.setItem('miraenCreds', JSON.stringify(c)); } catch (e) {} }
+        // 그 사이트로 등록해 둔 '자주 쓰는 거래'가 있으면 그 거래내용·비고를 따른다
+        function _tbEntryBase(site) {
+            const S = TB_SITES[site];
+            const p = (ledgerPresets || []).find(x => (x.vendor || '').replace(/\s/g, '') === S.vendor) || (ledgerPresets || []).find(x => (x.desc || '').replace(/\s/g, '').includes(S.desc));
+            return { kind: 'expense', desc: p ? p.desc : S.desc, vendor: p && p.vendor ? p.vendor : S.vendor, note: p && p.note ? p.note : '' };
+        }
+        async function openTextbookFetchModal() {
+            const now = new Date();
+            const last = now.getMonth() === 0 ? 12 : now.getMonth();   // 기본: 지난달
+            _tb = { sites: new Set(['math', 'eng']), year: now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(), months: new Set([last]), busy: '', rows: [], done: {}, errors: {}, showCred: false };
+            const c = _tbCreds();
+            _tb.showCred = !(c.math && c.math.id) || !(c.eng && c.eng.id);
+            _renderTb();
+            const m = document.getElementById('textbookFetchModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            await Promise.all([ledgerEntries ? null : _ensureLedgerLoaded(), _ensureLedgerPresets()]);
+        }
+        function closeTextbookFetchModal() {
+            const m = document.getElementById('textbookFetchModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+            _tb = null;
+        }
+        var _TB_TAG = { cancel: ['주문취소', 'text-rose-600 bg-rose-50 border-rose-200'], have: ['장부에 이미 있음', 'text-amber-700 bg-amber-50 border-amber-200'] };
+        function _renderTb() {
+            if (!_tb) return;
+            const c = _tbCreds();
+            const chip = (on, extra) => `px-3 py-1.5 rounded-lg border text-xs font-bold transition ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'} ${extra || ''}`;
+            const credRow = (k) => `
+                <div class="grid grid-cols-[5.5rem_1fr_1fr] gap-1.5 items-center">
+                    <span class="text-xs font-bold text-slate-600">${TB_SITES[k].name}</span>
+                    <input id="tb-id-${k}" value="${_escapeHtml((c[k] && c[k].id) || '')}" placeholder="아이디" autocomplete="off" class="si-input !py-1.5 text-xs">
+                    <input id="tb-pw-${k}" type="password" value="${_escapeHtml((c[k] && c[k].pw) || '')}" placeholder="비밀번호" autocomplete="new-password" class="si-input !py-1.5 text-xs">
+                </div>`;
+            const years = [_tb.year - 1, _tb.year, _tb.year + 1].filter(y => y <= new Date().getFullYear());
+            const rows = _tb.rows, on = rows.filter(r => r.on), sum = on.reduce((t, r) => t + r.amount, 0);
+            const ymLabel = (ym) => `${Number(ym.slice(5))}월`;
+            const summary = Object.keys(_tb.done).length || Object.keys(_tb.errors).length ? Object.keys(TB_SITES).filter(k => _tb.done[k] || _tb.errors[k]).map(k => _tb.errors[k]
+                ? `<div class="text-xs text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${_escapeHtml(_tb.errors[k])}</div>`
+                : `<div class="text-xs text-slate-500"><b class="text-slate-700">${TB_SITES[k].name}</b> · ${Object.keys(_tb.done[k]).sort().map(ym => `${ymLabel(ym)} ${_tb.done[k][ym]}건`).join(' · ')}</div>`).join('') : '';
+            document.getElementById('tb-body').innerHTML = `
+                <div>
+                    <span class="si-label">교재</span>
+                    <div class="flex flex-wrap gap-2">${Object.keys(TB_SITES).map(k => `<button type="button" onclick="tbToggleSite('${k}')" class="${chip(_tb.sites.has(k))}">${TB_SITES[k].label}</button>`).join('')}</div>
+                    <div class="mt-1 space-y-0.5">${[..._tb.sites].map(k => `<p class="text-[11px] text-slate-400">${TB_SITES[k].name}: ${TB_SITES[k].hint}</p>`).join('')}</div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1"><span class="si-label" style="margin:0">월 (여러 개 고를 수 있어요)</span>
+                        <div class="flex items-center gap-2">
+                            <select onchange="_tb.year=Number(this.value); _renderTb()" class="audit-select">${years.map(y => `<option value="${y}"${y === _tb.year ? ' selected' : ''}>${y}년</option>`).join('')}</select>
+                            <button type="button" onclick="tbAllMonths()" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">${_tb.months.size === 12 ? '모두 풀기' : '1~12월 전체'}</button>
+                        </div></div>
+                    <div class="grid grid-cols-6 gap-1.5">${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `<button type="button" onclick="tbToggleMonth(${m})" class="${chip(_tb.months.has(m), '!px-0')}">${m}월</button>`).join('')}</div>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <button type="button" onclick="_tb.showCred=!_tb.showCred; _renderTb()" class="w-full flex items-center justify-between text-xs font-bold text-slate-600">
+                        <span><i class="fa-solid fa-key mr-1 text-slate-400"></i>사이트 로그인 정보 <span class="font-normal text-slate-400">(이 기기에만 저장돼요)</span></span>
+                        <i class="fa-solid fa-chevron-${_tb.showCred ? 'up' : 'down'} text-slate-400"></i>
+                    </button>
+                    ${_tb.showCred ? `<div class="mt-2 space-y-1.5">${credRow('math')}${credRow('eng')}</div>` : ''}
+                </div>
+                ${_tb.busy ? `<div class="text-xs font-bold text-indigo-700"><i class="fa-solid fa-spinner fa-spin mr-1"></i>${_escapeHtml(_tb.busy)}</div>` : ''}
+                ${summary ? `<div class="space-y-0.5">${summary}</div>` : ''}
+                ${rows.length ? `
+                <div class="rounded-lg border border-indigo-200 overflow-hidden">
+                    <div class="flex items-center justify-between px-3 py-1.5 text-xs bg-indigo-50/60 border-b border-indigo-100">
+                        <label class="flex items-center gap-1.5 font-bold text-slate-700 cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 accent-indigo-600" ${on.length === rows.length ? 'checked' : ''} onchange="tbAllRows(this.checked)">불러온 거래 ${rows.length}건</label>
+                        <span class="text-slate-500">선택 ${on.length}건 · <b class="text-slate-800">${formatNumber(sum)}원</b></span>
+                    </div>
+                    <div class="max-h-72 overflow-y-auto custom-scrollbar bg-white">
+                        ${rows.map(r => `
+                        <label class="flex items-center gap-2 px-3 py-1.5 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${r.on ? '' : 'opacity-50'}">
+                            <input type="checkbox" class="w-3.5 h-3.5 accent-indigo-600 shrink-0" ${r.on ? 'checked' : ''} onchange="tbSetRow('${r.id}', this.checked)">
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-${TB_SITES[r.site].color}-50 text-${TB_SITES[r.site].color}-700 border border-${TB_SITES[r.site].color}-200 shrink-0">${r.site === 'math' ? '수학' : '영어'}</span>
+                            <span class="font-bold text-slate-700 tabular-nums">${r.date}</span>
+                            ${r.site === 'math' ? `<span class="text-[11px] text-slate-400">${ymLabel(r.ym)} 주문분</span>` : ''}
+                            ${r.tag ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${_TB_TAG[r.tag][1]}">${_TB_TAG[r.tag][0]}</span>` : ''}
+                            <span class="ml-auto font-bold text-slate-800 tabular-nums">${formatNumber(r.amount)}원</span>
+                        </label>`).join('')}
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-400">비용으로 들어가요 · 거래내용·거래처: ${[...new Set(rows.map(r => r.site))].map(k => { const b = _tbEntryBase(k); return `${_escapeHtml(b.desc)} / ${_escapeHtml(b.vendor)}${b.note ? ` (비고 ${_escapeHtml(b.note)})` : ''}`; }).join(', ')}</p>` : ''}`;
+            const save = document.getElementById('tb-save');
+            save.classList.toggle('hidden', !rows.length);
+            save.textContent = `${on.length}건 장부에 넣기`;
+            document.getElementById('tb-fetch').disabled = !!_tb.busy;
+            document.getElementById('tb-fetch').classList.toggle('opacity-50', !!_tb.busy);
+        }
+        // 화면을 다시 그리기 전에 입력 중인 로그인 정보를 잡아 둔다
+        function _tbKeepCreds() {
+            if (!_tb || !_tb.showCred || !document.getElementById('tb-id-math')) return _tbCreds();
+            const c = _tbCreds();
+            Object.keys(TB_SITES).forEach(k => {
+                const id = document.getElementById(`tb-id-${k}`).value.trim(), pw = document.getElementById(`tb-pw-${k}`).value;
+                if (id || pw) c[k] = { id, pw }; else delete c[k];
+            });
+            _tbSaveCreds(c);
+            return c;
+        }
+        function tbToggleSite(k) { _tbKeepCreds(); _tb.sites.has(k) ? _tb.sites.delete(k) : _tb.sites.add(k); _renderTb(); }
+        function tbToggleMonth(m) { _tbKeepCreds(); _tb.months.has(m) ? _tb.months.delete(m) : _tb.months.add(m); _renderTb(); }
+        function tbAllMonths() { _tbKeepCreds(); _tb.months = _tb.months.size === 12 ? new Set() : new Set(Array.from({ length: 12 }, (_, i) => i + 1)); _renderTb(); }
+        function tbSetRow(id, v) { const r = _tb && _tb.rows.find(x => x.id === id); if (r) { r.on = v; _tbKeepCreds(); _renderTb(); } }
+        function tbAllRows(v) { _tbKeepCreds(); _tb.rows.forEach(r => { r.on = v; }); _renderTb(); }
+        async function runTextbookFetch() {
+            if (!_tb || _tb.busy) return;
+            const c = _tbKeepCreds();
+            const sites = [..._tb.sites], months = [..._tb.months].sort((a, b) => a - b);
+            if (!sites.length) return alert('미래엔수학·미래엔영어 중 하나 이상 골라주세요.');
+            if (!months.length) return alert('불러올 달을 골라주세요.');
+            const missing = sites.filter(k => !(c[k] && c[k].id && c[k].pw));
+            if (missing.length) { _tb.showCred = true; _renderTb(); return alert(`${missing.map(k => TB_SITES[k].name).join('·')} 아이디·비밀번호를 입력해주세요.`); }
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            const st = _tb;
+            st.busy = `${sites.map(k => TB_SITES[k].name).join('·')} 사이트에서 ${months.length}개월치 읽는 중…`;
+            st.rows = []; st.done = {}; st.errors = {};
+            _renderTb();
+            await Promise.all(sites.map(async (k) => {
+                try {
+                    const r = await fetch('/api/textbook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site: k, id: c[k].id, pw: c[k].pw, year: st.year, months }) });
+                    const j = await r.json().catch(() => null);
+                    if (!j) throw new Error(`서버 응답이 없어요 (${r.status})`);
+                    if (!j.ok) throw new Error(j.error || '불러오지 못했어요.');
+                    st.done[k] = j.counts || {};
+                    (j.rows || []).forEach(x => {
+                        const have = (ledgerEntries || []).some(e => !e.tpl && !e.auto && ((x.ref && e.ocrRef === x.ref) || (e.kind === 'expense' && e.date === x.date && e.amount === x.amount)));
+                        const tag = x.cancel ? 'cancel' : have ? 'have' : '';
+                        st.rows.push({ id: `t${st.rows.length}_${k}`, site: k, ym: x.ym, date: x.date, amount: x.amount, ref: x.ref, on: !tag, tag });
+                    });
+                } catch (e) {
+                    st.errors[k] = `${TB_SITES[k].name}: ${e.message}`;
+                    if (/로그인 실패/.test(e.message)) st.showCred = true;
+                }
+            }));
+            st.rows.sort((a, b) => a.date.localeCompare(b.date) || a.site.localeCompare(b.site));
+            st.busy = '';
+            if (_tb === st) _renderTb();
+        }
+        async function saveTextbookFetch() {
+            if (!_tb || _tb.busy) return;
+            const rows = _tb.rows.filter(r => r.on);
+            if (!rows.length) return alert('장부에 넣을 줄을 체크해주세요.');
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            const t = Date.now();
+            rows.forEach((r, i) => {
+                ledgerEntries.push({ id: `le_${t + i}_${Math.random().toString(36).slice(2, 7)}`, ..._tbEntryBase(r.site), date: r.date, amount: r.amount, vat: 0, ocrRef: r.ref });
+            });
+            _tbKeepCreds();
+            closeTextbookFetchModal();
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+            alert(`교재비 ${rows.length}건을 장부에 넣었어요.`);
+        }
 
         async function deleteLedgerEntry() {
             const e = (ledgerEntries || []).find(x => x.id === _editLedgerId);
