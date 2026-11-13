@@ -7773,6 +7773,14 @@
                         <button type="button" onclick="addLedgerPreset()" class="text-xs font-bold text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-star mr-1"></i>지금 내용 등록</button></div>
                     <div id="le-presets" class="flex flex-wrap gap-1.5"></div>
                 </div>
+                <div id="le-ocr-row" class="col-span-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="document.getElementById('le-ocr-file').click()" class="px-3 py-1.5 rounded-lg border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition"><i class="fa-solid fa-camera mr-1"></i>스크린샷에서 여러 건 읽기</button>
+                        <span class="text-[11px] text-slate-400">주문내역 캡처의 날짜·주문금액만 읽어요 · ⌘V 붙여넣기·끌어놓기도 돼요</span>
+                    </div>
+                    <input type="file" id="le-ocr-file" multiple accept="image/*" class="hidden" onchange="addLedgerShots(this.files); this.value=''">
+                    <div id="le-ocr-box" class="hidden mt-2"></div>
+                </div>
                 <div id="le-auto-hint" class="col-span-2 hidden text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2"></div>
                 <div id="le-kind-row" class="col-span-2"><span class="si-label">구분</span>
                     <div class="flex gap-2">
@@ -7800,7 +7808,7 @@
                 <button onclick="resetLedgerAuto()" id="le-reset" class="hidden px-4 py-2 text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg text-sm font-bold transition"><i class="fa-solid fa-rotate-left mr-1"></i>자동값으로</button>
                 <div class="flex gap-2 ml-auto">
                     <button onclick="closeLedgerEntryModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-bold transition">취소</button>
-                    <button onclick="saveLedgerEntry()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">저장</button>
+                    <button onclick="saveLedgerEntry()" id="le-save" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">저장</button>
                 </div>
             </div>
         </div>
@@ -9597,6 +9605,9 @@
             document.getElementById('le-repeat-row').classList.toggle('hidden', auto);
             document.getElementById('le-auto-hint').classList.toggle('hidden', !auto);
             document.getElementById('le-reset').classList.add('hidden');
+            document.getElementById('le-ocr-row').classList.toggle('hidden', auto);
+            _leOcr = null;
+            _renderLeOcr();
         }
         // 금액 칸: 치는 동안 세 자리마다 쉼표 — 커서는 앞쪽 숫자 개수 기준으로 제자리에
         function _commaInput(el) {
@@ -9762,6 +9773,7 @@
             _setLedgerModalMode(false);
             document.getElementById('le-title').textContent = e ? '거래 수정' : '거래 입력';
             document.getElementById('le-delete').classList.toggle('hidden', !e);
+            document.getElementById('le-ocr-row').classList.toggle('hidden', !!e);
             const kind = e ? e.kind : 'expense';
             document.querySelectorAll('input[name="le-kind"]').forEach(r => { r.checked = r.value === kind; });
             document.getElementById('le-date').value = e ? e.date : todayStr();
@@ -9835,6 +9847,7 @@
         }
         async function saveLedgerEntry() {
             if (_editLedgerAuto) return _saveLedgerAuto();
+            if (_leOcr && _leOcr.rows.length) return _saveLedgerOcr();
             const entry = {
                 id: _editLedgerId || `le_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                 kind: document.querySelector('input[name="le-kind"]:checked')?.value || 'expense',
@@ -9857,6 +9870,207 @@
             await _saveLedger();
             if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
         }
+        // ─── 스크린샷에서 여러 건 읽기 ───
+        // 교재 주문내역 같은 표 캡처에서 줄마다 '날짜'와 '주문금액'(쉼표 있는 숫자)만 읽어 여러 거래를 한 번에 넣는다.
+        // 글자 읽기는 브라우저 안에서(tesseract.js, 처음 한 번 인식 데이터를 내려받음). 거래내용·거래처·비고는 위 칸을 모든 줄에 같이 쓴다
+        var _leOcr = null;          // { rows: [{ id, date, amount, ref, on, tag }], busy }
+        var _leOcrWorker = null;
+        function _loadTesseract() {
+            if (window.Tesseract) return Promise.resolve();
+            return new Promise((ok, no) => {
+                const sc = document.createElement('script');
+                sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+                sc.onload = ok; sc.onerror = () => no(new Error('글자 인식 프로그램을 불러오지 못했어요. 인터넷 연결을 확인해주세요.'));
+                document.head.appendChild(sc);
+            });
+        }
+        async function _getOcrWorker() {
+            if (!_leOcrWorker) {
+                _leOcrWorker = (async () => {
+                    await _loadTesseract();
+                    return Tesseract.createWorker('kor+eng', 1, {
+                        logger: m => { if (_leOcr && _leOcr.busy && /loading|initializ/.test(m.status) && m.progress < 1) { _leOcr.busy = '글자 인식 준비 중… (처음 한 번은 조금 걸려요)'; _renderLeOcr(); } }
+                    });
+                })();
+                _leOcrWorker.catch(() => { _leOcrWorker = null; });
+            }
+            return _leOcrWorker;
+        }
+        // 작은 캡처는 두 배로 키워서 읽는다
+        async function _ocrSource(file) {
+            const bmp = await createImageBitmap(file);
+            const k = bmp.width < 1400 ? 2 : 1;
+            const c = document.createElement('canvas');
+            c.width = bmp.width * k; c.height = bmp.height * k;
+            const g = c.getContext('2d');
+            g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+            g.imageSmoothingQuality = 'high';
+            g.drawImage(bmp, 0, 0, c.width, c.height);
+            return c;
+        }
+        // 낱말들을 높이로 묶어 줄을 만들고, 날짜가 있는 줄마다 날짜·금액·주문번호·취소 여부를 뽑는다
+        function _parseOcrRows(words) {
+            const ws = words.filter(w => w.text && w.text.trim()).map(w => ({ t: w.text.trim(), x: w.bbox.x0, yc: (w.bbox.y0 + w.bbox.y1) / 2, h: w.bbox.y1 - w.bbox.y0 }));
+            ws.sort((a, b) => a.yc - b.yc);
+            const lines = [];
+            ws.forEach(w => {
+                const r = lines[lines.length - 1];
+                if (r && Math.abs(w.yc - r.yc) < Math.max(r.h, w.h) * 0.6) r.ws.push(w); else lines.push({ yc: w.yc, h: w.h, ws: [w] });
+            });
+            const out = [];
+            lines.forEach(r => {
+                const s = r.ws.sort((a, b) => a.x - b.x).map(w => w.t).join(' ');
+                const d = s.match(/(20\d{2})\s*[-.\/년]\s*(\d{1,2})\s*[-.\/월]\s*(\d{1,2})/);
+                if (!d) return;
+                const mo = Number(d[2]), dy = Number(d[3]);
+                if (mo < 1 || mo > 12 || dy < 1 || dy > 31) return;
+                const rest = s.slice(d.index + d[0].length);
+                const am = [...rest.matchAll(/(?<![\d,.])\d{1,3}(?:[,.]\d{3})+(?!\d)/g)].map(m => Number(m[0].replace(/[,.]/g, '')));
+                const ref = (rest.match(/(\d{6})\s*-\s*(\d{8})/) || [])[0];
+                out.push({ date: `${d[1]}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}`, amount: am.length ? Math.max(...am) : 0, ref: ref ? ref.replace(/\s/g, '') : '', cancel: /취\s*소/.test(s) });
+            });
+            return out;
+        }
+        async function addLedgerShots(files) {
+            files = [...(files || [])].filter(f => f.type.startsWith('image/'));
+            if (!files.length) return;
+            if (!_leOcr) _leOcr = { rows: [] };
+            const st = _leOcr;   // 읽는 사이 창을 닫았다 열면 새 목록 — 이 목록에만 넣는다
+            if (st.busy) return;
+            const draw = () => { if (_leOcr === st) _renderLeOcr(); };
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            let found = 0, failed = 0;
+            for (let i = 0; i < files.length; i++) {
+                st.busy = `스크린샷 읽는 중 ${i + 1}/${files.length}…`;
+                draw();
+                try {
+                    const w = await _getOcrWorker();
+                    st.busy = `스크린샷 읽는 중 ${i + 1}/${files.length}…`; draw();
+                    const { data } = await w.recognize(await _ocrSource(files[i]), {}, { blocks: true });
+                    const words = data.words && data.words.length ? data.words
+                        : (data.blocks || []).flatMap(b => b.paragraphs.flatMap(p => p.lines.flatMap(l => l.words)));
+                    _parseOcrRows(words).forEach(r => {
+                        found++;
+                        // 같은 주문을 두 번 캡처했으면 한 줄만
+                        if (r.ref && st.rows.some(x => x.ref === r.ref)) return;
+                        if (!r.ref && st.rows.some(x => !x.ref && x.date === r.date && x.amount === r.amount)) return;
+                        const have = (ledgerEntries || []).some(e => !e.tpl && !e.auto && ((r.ref && e.ocrRef === r.ref) || (e.date === r.date && e.amount === r.amount)));
+                        const tag = r.cancel ? 'cancel' : have ? 'have' : !r.amount ? 'noamt' : '';
+                        st.rows.push({ id: `o${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, date: r.date, amount: r.amount, ref: r.ref, on: !tag, tag });
+                    });
+                } catch (e) {
+                    console.error('스크린샷 읽기 실패', e);
+                    failed++;
+                    if (/불러오지/.test(e.message || '')) { st.busy = ''; draw(); return alert(e.message); }
+                }
+            }
+            st.rows.sort((a, b) => a.date.localeCompare(b.date));
+            st.busy = '';
+            draw();
+            if (!found) alert(`스크린샷에서 날짜(2026-11-12 꼴)가 있는 줄을 찾지 못했어요.${failed ? `\n(읽지 못한 이미지 ${failed}장)` : ''}\n표가 잘 보이게 다시 캡처해 주세요.`);
+            else if (failed) alert(`이미지 ${failed}장은 읽지 못했어요.`);
+        }
+        var _LE_OCR_TAG = { cancel: ['주문취소', 'text-rose-600 bg-rose-50 border-rose-200'], have: ['장부에 이미 있음', 'text-amber-700 bg-amber-50 border-amber-200'], noamt: ['금액 못 읽음', 'text-slate-600 bg-slate-100 border-slate-200'] };
+        function _renderLeOcr() {
+            const box = document.getElementById('le-ocr-box');
+            const active = !!(_leOcr && _leOcr.rows.length);
+            ['le-date', 'le-amount', 'le-vat'].forEach(id => document.getElementById(id).closest('label').classList.toggle('hidden', active));
+            const rep = document.getElementById('le-repeat-row');
+            if (active) rep.classList.add('hidden'); else if (!_editLedgerAuto) rep.classList.remove('hidden');
+            if (!_leOcr || (!active && !_leOcr.busy)) {
+                box.classList.add('hidden'); box.innerHTML = '';
+                document.getElementById('le-save').textContent = '저장';
+                return;
+            }
+            box.classList.remove('hidden');
+            const rows = _leOcr.rows, on = rows.filter(r => r.on && r.date && r.amount);
+            const sum = on.reduce((t, r) => t + r.amount, 0);
+            document.getElementById('le-save').textContent = active ? `${on.length}건 저장` : '저장';
+            box.innerHTML = `
+                <div class="rounded-lg border border-indigo-200 bg-indigo-50/40 overflow-hidden">
+                    ${_leOcr.busy ? `<div class="px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50"><i class="fa-solid fa-spinner fa-spin mr-1"></i>${_escapeHtml(_leOcr.busy)}</div>` : ''}
+                    ${active ? `
+                    <div class="flex items-center justify-between px-3 py-1.5 text-xs bg-white border-b border-indigo-100">
+                        <label class="flex items-center gap-1.5 font-bold text-slate-700 cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 accent-indigo-600" ${on.length === rows.length ? 'checked' : ''} onchange="leOcrAll(this.checked)">읽은 거래 ${rows.length}건</label>
+                        <span class="text-slate-500">선택 ${on.length}건 · <b class="text-slate-800">${formatNumber(sum)}원</b></span>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar bg-white">
+                        ${rows.map(r => `
+                        <div class="flex items-center gap-1.5 px-3 py-1 border-b border-slate-100 ${r.on ? '' : 'opacity-50'}">
+                            <input type="checkbox" class="w-3.5 h-3.5 accent-indigo-600 shrink-0" ${r.on ? 'checked' : ''} onchange="leOcrSet('${r.id}','on',this.checked)">
+                            <input type="date" value="${r.date}" onchange="leOcrSet('${r.id}','date',this.value)" class="si-input !py-1 !px-1.5 text-xs" style="width:8.6rem">
+                            <input inputmode="numeric" value="${r.amount ? formatNumber(r.amount) : ''}" oninput="_commaInput(this); leOcrSet('${r.id}','amount',parseNumber(this.value),1)" onchange="_renderLeOcr()" placeholder="금액" class="si-input !py-1 !px-1.5 text-xs text-right font-bold" style="width:6.5rem">
+                            ${r.tag ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${_LE_OCR_TAG[r.tag][1]}">${_LE_OCR_TAG[r.tag][0]}</span>` : ''}
+                            <button type="button" onclick="leOcrDel('${r.id}')" class="ml-auto w-5 h-5 rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 leading-none shrink-0" title="이 줄 빼기">×</button>
+                        </div>`).join('')}
+                    </div>
+                    <div class="flex items-center justify-between px-3 py-1.5 text-[11px] text-slate-500 bg-white">
+                        <span>날짜·금액이 캡처와 맞는지 확인하세요. 거래내용·거래처·비고는 위 칸이 모든 줄에 들어가요.</span>
+                        <button type="button" onclick="leOcrClear()" class="font-bold text-slate-500 hover:text-rose-500 whitespace-nowrap ml-2">모두 지우기</button>
+                    </div>` : ''}
+                </div>`;
+        }
+        function leOcrSet(id, k, v, quiet) {
+            const r = _leOcr && _leOcr.rows.find(x => x.id === id);
+            if (!r) return;
+            r[k] = v;
+            if (quiet) {   // 금액을 치는 중: 칸을 다시 그리지 않고 합계·버튼만
+                const on = _leOcr.rows.filter(x => x.on && x.date && x.amount);
+                document.getElementById('le-save').textContent = `${on.length}건 저장`;
+                return;
+            }
+            _renderLeOcr();
+        }
+        function leOcrAll(v) { (_leOcr ? _leOcr.rows : []).forEach(r => { r.on = v; }); _renderLeOcr(); }
+        function leOcrDel(id) { if (_leOcr) _leOcr.rows = _leOcr.rows.filter(r => r.id !== id); _renderLeOcr(); }
+        function leOcrClear() { if (_leOcr && !_leOcr.busy) { _leOcr = null; _renderLeOcr(); } }
+        async function _saveLedgerOcr() {
+            if (_leOcr.busy) return alert('스크린샷을 아직 읽는 중이에요.');
+            const base = {
+                kind: document.querySelector('input[name="le-kind"]:checked')?.value || 'expense',
+                desc: document.getElementById('le-desc').value.trim(),
+                vendor: document.getElementById('le-vendor').value.trim(),
+                note: document.getElementById('le-note').value.trim()
+            };
+            const rows = _leOcr.rows.filter(r => r.on);
+            if (!rows.length) return alert('저장할 줄을 체크해주세요.');
+            if (rows.some(r => !r.date || !r.amount)) return alert('체크한 줄 중에 날짜나 금액이 빈 줄이 있어요.');
+            if (!base.desc) return alert('거래내용을 입력해주세요. (예: 교재 구입)');
+            if (!ledgerEntries) await _ensureLedgerLoaded();
+            const t = Date.now();
+            rows.forEach((r, i) => {
+                const e = { id: `le_${t + i}_${Math.random().toString(36).slice(2, 7)}`, ...base, date: r.date, amount: r.amount, vat: 0 };
+                if (r.ref) e.ocrRef = r.ref;
+                ledgerEntries.push(e);
+            });
+            closeLedgerEntryModal();
+            _leOcr = null;
+            await _saveLedger();
+            if (_auditMonths) document.getElementById('audit-content').innerHTML = _ledgerHtml(_ledgerData(_auditMonths));
+            alert(`거래 ${rows.length}건을 장부에 넣었어요.`);
+        }
+        // 거래 입력 창이 열려 있으면 붙여넣기(⌘V)·끌어놓기한 이미지를 바로 읽는다
+        function _leOcrOpen() {
+            const m = document.getElementById('ledgerEntryModal');
+            return m && !m.classList.contains('hidden') && !_editLedgerId && !_editLedgerAuto;
+        }
+        document.addEventListener('paste', (ev) => {
+            if (!_leOcrOpen()) return;
+            const files = [...(ev.clipboardData ? ev.clipboardData.items : [])].filter(it => it.kind === 'file' && it.type.startsWith('image/')).map(it => it.getAsFile()).filter(Boolean);
+            if (!files.length) return;
+            ev.preventDefault();
+            addLedgerShots(files);
+        });
+        (() => {
+            const m = document.getElementById('ledgerEntryModal');
+            m.addEventListener('dragover', (ev) => { if (_leOcrOpen()) ev.preventDefault(); });
+            m.addEventListener('drop', (ev) => {
+                if (!_leOcrOpen()) return;
+                ev.preventDefault();
+                addLedgerShots(ev.dataTransfer.files);
+            });
+        })();
+
         async function deleteLedgerEntry() {
             const e = (ledgerEntries || []).find(x => x.id === _editLedgerId);
             if (!e || !confirm(e.rec ? '이 달 거래만 지울까요?\n(매월 반복은 계속돼요. 멈추려면 지우지 말고 \'매월 반복\' 체크를 풀고 저장하세요)' : '이 거래를 지울까요?')) return;
