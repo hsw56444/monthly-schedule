@@ -10266,12 +10266,18 @@
             if (!area) return;
             const titles = { register: '수강생 대장', ledger: '간편장부' };
             const title = `${titles[auditTab]}_${auditFrom}~${auditTo}`;
+            // 간편장부: 쪽마다 위에 학원 이름·인쇄 날짜, 아래 가운데 쪽 번호 (@page 여백 칸 — 크롬 131+)
+            const mb = 'font-family: Pretendard Variable, Pretendard, sans-serif; font-size: 8.5pt; color: #64748b;';
+            const pageBoxes = auditTab === 'ledger' ? `
+                        @top-left { content: "미래엔영어수학연세학원"; ${mb} font-weight: 700; vertical-align: bottom; padding-bottom: 3mm; }
+                        @top-right { content: "인쇄날짜 ${todayStr()}"; ${mb} vertical-align: bottom; padding-bottom: 3mm; }
+                        @bottom-center { content: counter(page) " / " counter(pages); ${mb} vertical-align: top; padding-top: 3mm; }` : '';
             const w = window.open('', '_blank');
             if (!w) return alert('팝업이 차단되었어요. 이 사이트의 팝업을 허용한 뒤 다시 눌러주세요.');
             w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${title}</title>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
                 <style>${AUDIT_DOC_CSS}
-                    @page { size: A4 ${auditTab === 'ledger' ? 'landscape' : 'portrait'}; margin: 15mm; }
+                    @page { size: A4 ${auditTab === 'ledger' ? 'landscape' : 'portrait'}; margin: 15mm;${pageBoxes} }
                     body { margin: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .screen-only { display: none !important; }
                     .adoc-page { border: 0; box-shadow: none; padding: 0; margin: 0; max-width: none !important; break-after: page; }
