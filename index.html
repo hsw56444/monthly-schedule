@@ -879,6 +879,11 @@
         .smn-btn { width: 28px; height: 28px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; border: 1px solid #e2e8f0; color: #64748b; font-size: 12px; box-shadow: 0 1px 2px rgba(15,23,42,.06); transition: background .15s, color .15s, border-color .15s; }
         .smn-btn:hover:not(:disabled) { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
         .smn-btn:disabled { opacity: .3; cursor: default; box-shadow: none; }
+        /* ─── 학생 창 달력 제목 아래: 수업기준일 범위 (네모 = 달력의 파란 칸 색) ─── */
+        .session-range-label { display: flex; align-items: center; gap: 6px; padding-left: 36px; font-size: 11.5px; font-weight: 600; color: #94a3b8; letter-spacing: -0.1px; white-space: nowrap; line-height: 1.4; }
+        .session-range-label:empty { display: none; }
+        .session-range-label .srl-swatch { width: 10px; height: 10px; border-radius: 3px; background: #dbe4ff; border: 1px solid #c7d2fe; flex-shrink: 0; }
+        .session-range-label .srl-dates { color: #64748b; font-variant-numeric: tabular-nums; }
         /* ─── 카톡 메시지 버튼 ─── */
         .kakao-btn { background: #FEE500; color: #191919; border: 1px solid #f1d900; }
         .kakao-btn:hover { background: #fada0a; }
@@ -1165,7 +1170,10 @@
                     <div class="grid grid-cols-1 gap-6 pb-40">
                         <div id="capture-target-apr" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <div class="flex justify-between items-end mb-3">
+                                <div class="flex flex-col gap-1 min-w-0">
                                 <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><button type="button" id="smn-prev" class="smn-btn" onclick="moveStudentModalMonth(-1)" data-html2canvas-ignore title="이전 달"><i class="fa-solid fa-chevron-left"></i></button><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded year-title">2026</span> <span class="month-title">4월</span><button type="button" id="smn-next" class="smn-btn" onclick="moveStudentModalMonth(1)" data-html2canvas-ignore title="다음 달"><i class="fa-solid fa-chevron-right"></i></button></h3>
+                                <div id="session-range-label" class="session-range-label"></div>
+                                </div>
                                 <div class="print-student-name hidden" style="font-size:1.2rem;font-weight:800;color:#ffffff;background:#4f46e5;background:linear-gradient(135deg,#4338ca,#6366f1);padding:8px 22px;border-radius:9999px;box-shadow:0 4px 12px rgba(67,56,202,0.35);letter-spacing:-0.02em;white-space:nowrap;line-height:1.45;"></div>
                                 <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="stat-apr"></div>
                             </div>
@@ -4209,6 +4217,7 @@
             const editSection = clone.querySelector('#notice-edit-section');
             if (editSection) editSection.remove();
             clone.querySelectorAll('.smn-btn').forEach(el => el.remove()); // 전달/다음 달 화살표
+            clone.querySelectorAll('.session-range-label').forEach(el => el.style.paddingLeft = '0'); // 화살표 빠진 만큼 왼쪽 정렬
 
             // 학생 이름 박스 표시
             const printName = clone.querySelector('.print-student-name');
@@ -4602,8 +4611,21 @@
             return cls;
         }
 
+        // 달력 제목 아래 '수업기준일 : 11/30(월) ~ 12/24(목)' — 월별 설정의 시작/종료일 그대로
+        function updateSessionRangeLabel() {
+            const el = document.getElementById('session-range-label');
+            if (!el) return;
+            const s = window.APP_CONFIG.startDate, e = window.APP_CONFIG.endDate;
+            if (!s || !e) { el.innerHTML = ''; return; }
+            const W = ['일', '월', '화', '수', '목', '금', '토'];
+            const f = (ds) => { const [y, m, d] = ds.split('-').map(Number); return `${m}/${d}(${W[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]})`; };
+            el.innerHTML = `<span class="srl-swatch"></span><span>수업기준일 : <span class="srl-dates">${f(s)} ~ ${f(e)}</span></span>`;
+            el.title = '달력의 파란 칸이 수업기준일이에요 (월별 설정에서 바꿀 수 있어요)';
+        }
+
         function renderCalendars() {
             if (!currentStudentId) return; // 선택된 학생이 없을 때는 달력을 그리지 않음
+            updateSessionRangeLabel();
             if (currentStudentViewMode === 'month') {
                 renderMonthCalendar('calendar-apr'); 
             } else {
@@ -6057,6 +6079,7 @@
             const editSection = clone.querySelector('#notice-edit-section');
             if (editSection) editSection.remove();
             clone.querySelectorAll('.smn-btn').forEach(el => el.remove()); // 전달/다음 달 화살표
+            clone.querySelectorAll('.session-range-label').forEach(el => el.style.paddingLeft = '0'); // 화살표 빠진 만큼 왼쪽 정렬
 
             // 학생 이름 뱃지 표시
             const printNameEl = clone.querySelector('.print-student-name');
