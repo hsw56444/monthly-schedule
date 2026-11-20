@@ -875,6 +875,10 @@
         .ms-save-btn { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: #4f46e5; color: #fff; border: 1px solid #4f46e5; white-space: nowrap; flex-shrink: 0; transition: background .15s; }
         .ms-save-btn:hover:not(:disabled) { background: #4338ca; }
         .ms-save-btn:disabled { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; cursor: default; }
+        /* ─── 학생 창 달력: 전달/다음 달 화살표 (저장 이미지에는 안 찍힘) ─── */
+        .smn-btn { width: 28px; height: 28px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; border: 1px solid #e2e8f0; color: #64748b; font-size: 12px; box-shadow: 0 1px 2px rgba(15,23,42,.06); transition: background .15s, color .15s, border-color .15s; }
+        .smn-btn:hover:not(:disabled) { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+        .smn-btn:disabled { opacity: .3; cursor: default; box-shadow: none; }
         /* ─── 카톡 메시지 버튼 ─── */
         .kakao-btn { background: #FEE500; color: #191919; border: 1px solid #f1d900; }
         .kakao-btn:hover { background: #fada0a; }
@@ -1161,7 +1165,7 @@
                     <div class="grid grid-cols-1 gap-6 pb-40">
                         <div id="capture-target-apr" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <div class="flex justify-between items-end mb-3">
-                                <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded year-title">2026</span> <span class="month-title">4월</span></h3>
+                                <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><button type="button" id="smn-prev" class="smn-btn" onclick="moveStudentModalMonth(-1)" data-html2canvas-ignore title="이전 달"><i class="fa-solid fa-chevron-left"></i></button><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded year-title">2026</span> <span class="month-title">4월</span><button type="button" id="smn-next" class="smn-btn" onclick="moveStudentModalMonth(1)" data-html2canvas-ignore title="다음 달"><i class="fa-solid fa-chevron-right"></i></button></h3>
                                 <div class="print-student-name hidden" style="font-size:1.2rem;font-weight:800;color:#ffffff;background:#4f46e5;background:linear-gradient(135deg,#4338ca,#6366f1);padding:8px 22px;border-radius:9999px;box-shadow:0 4px 12px rgba(67,56,202,0.35);letter-spacing:-0.02em;white-space:nowrap;line-height:1.45;"></div>
                                 <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="stat-apr"></div>
                             </div>
@@ -2871,7 +2875,23 @@
             labels.forEach(el => el.textContent = `${year}년 ${window.APP_CONFIG.monthTitle}`);
 
             const datePicker = document.getElementById('director-date-picker');
-            if(datePicker) datePicker.value = window.APP_CONFIG.startDate; 
+            if(datePicker) datePicker.value = window.APP_CONFIG.startDate;
+
+            updateStudentMonthNav();
+        }
+
+        // 학생 창 달력 제목 옆 ◀ ▶ — 처음/마지막 달이면 막고, 툴팁에 갈 달 이름
+        function updateStudentMonthNav() {
+            const keys = Object.keys(window.MONTHS_CONFIG).sort();
+            const i = keys.indexOf(currentMonthKey());
+            const label = (k) => `${k.slice(0, 4)}년 ${Number(k.slice(5, 7))}월`;
+            [['smn-prev', -1, '이전 달'], ['smn-next', 1, '다음 달']].forEach(([id, off, word]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                const k = i >= 0 ? keys[i + off] : null;
+                btn.disabled = !k;
+                btn.title = k ? `${word} (${label(k)})` : `${word} 없음`;
+            });
         }
 
         function sortStudentList() {
@@ -2911,7 +2931,12 @@
             // 학생 정보 탭은 즉시 갱신(지도점검 서류는 여러 달을 다시 불러와야 해서 탭을 다시 열 때 갱신)
             if (document.getElementById('view-students').classList.contains('active')) renderStudentsView();
             if (currentStudentId && !document.getElementById('plannerModal').classList.contains('hidden')) {
-                renderCalendars(); 
+                // 클라우드에서 받은 달 데이터에 이 학생이 없을 수 있음(학생 창에서 달을 넘긴 직후 등)
+                if (!attendanceData[currentStudentId]) attendanceData[currentStudentId] = { 'A': {}, 'B': {} };
+                renderCalendars();
+                // 안내사항 칸도 받은 데이터로 — 입력 중이면 건드리지 않음
+                const ae = document.activeElement;
+                if (!ae || (ae.id !== 'student-notice' && ae.id !== 'student-personal-notice')) loadStudentNoticeFields();
             }
         }
 
@@ -4183,6 +4208,7 @@
             // 편집 영역 제거 (학부모 미리보기 카드만 남김)
             const editSection = clone.querySelector('#notice-edit-section');
             if (editSection) editSection.remove();
+            clone.querySelectorAll('.smn-btn').forEach(el => el.remove()); // 전달/다음 달 화살표
 
             // 학생 이름 박스 표시
             const printName = clone.querySelector('.print-student-name');
@@ -4465,7 +4491,13 @@
             cancelMultiSelect();
             if (isBulkCardMode) cancelBulkCardMode();
             renderCalendars();
+            loadStudentNoticeFields();
+        }
 
+        // 편집 영역의 학부모 안내·개인 안내 칸을 지금 학생·A/B·달 데이터로 채움
+        function loadStudentNoticeFields() {
+            if (!currentStudentId) return;
+            if (!attendanceData[currentStudentId]) attendanceData[currentStudentId] = { 'A': {}, 'B': {} };
             // 학생별 공지가 설정되어 있지 않으면(undefined) 전체 공지를 기본으로 표시
             const studentNotice = attendanceData[currentStudentId][currentOption]?.__notice;
             const notice = (studentNotice !== undefined && studentNotice !== null) ? studentNotice : getGlobalNoticeForStudent(currentStudentId);
@@ -4525,6 +4557,38 @@
             d.setDate(d.getDate() + (offset * 7));
             currentStudentWeekDate = d.toISOString().split('T')[0];
             renderStudentWeekCalendar();
+        }
+
+        // 학생 창에서 전달/다음 달로 — 같은 학생·같은 A/B·같은 월간/주간 보기 그대로, 앱 전체 달도 함께 바뀜
+        function moveStudentModalMonth(offset) {
+            const keys = Object.keys(window.MONTHS_CONFIG).sort();
+            const i = keys.indexOf(currentMonthKey());
+            const target = i >= 0 ? keys[i + offset] : null;
+            const id = currentStudentId;
+            if (!target || id == null) return;
+
+            const s = allStudents.find(x => x.id === id);
+            if (s && !isEnrolledInMonth(s, target)) {
+                const tl = `${target.slice(0, 4)}년 ${Number(target.slice(5, 7))}월`;
+                const why = (s.joinDate && s.joinDate > monthRangeOf(target).last) ? `입원일 ${s.joinDate}` : `퇴원일 ${s.leaveDate}`;
+                alert(`${_nameText(s)} 학생은 ${tl}에 다니지 않았어요. (${why})`);
+                return;
+            }
+
+            closeInputOverlay();
+            cancelMultiSelect();
+            if (isBulkCardMode) cancelBulkCardMode();
+
+            const opt = currentOption;
+            changeMonth(target);
+            const sel = document.getElementById('monthSelector');
+            if (sel) sel.value = target;
+
+            currentStudentId = id;
+            if (!attendanceData[id]) attendanceData[id] = { 'A': {}, 'B': {} };
+            switchOption(opt); // 달력 + 안내사항 칸을 새 달 데이터로
+            const area = document.getElementById('calendar-area');
+            if (area) area.scrollTop = 0;
         }
 
         // 직접입력 라벨이 셀을 넘지 않도록 글자 길이별 축소 클래스 결정
@@ -5992,6 +6056,7 @@
             // 편집 영역 제거 — 학부모 미리보기 카드(달력 상단)만 남김
             const editSection = clone.querySelector('#notice-edit-section');
             if (editSection) editSection.remove();
+            clone.querySelectorAll('.smn-btn').forEach(el => el.remove()); // 전달/다음 달 화살표
 
             // 학생 이름 뱃지 표시
             const printNameEl = clone.querySelector('.print-student-name');
