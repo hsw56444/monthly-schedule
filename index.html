@@ -894,6 +894,18 @@
             '2026-10': { monthTitle: "10월", startDate: "2026-09-30", endDate: "2026-10-31", dbName: "oct_2026" },
             '2026-11': { monthTitle: "11월", startDate: "2026-10-31", endDate: "2026-11-30", dbName: "nov_2026" },
             '2026-12': { monthTitle: "12월", startDate: "2026-11-30", endDate: "2026-12-31", dbName: "dec_2026" },
+            '2027-01': { monthTitle: "1월", startDate: "2026-12-31", endDate: "2027-01-31", dbName: "jan_2027" },
+            '2027-02': { monthTitle: "2월", startDate: "2027-01-31", endDate: "2027-02-28", dbName: "feb_2027" },
+            '2027-03': { monthTitle: "3월", startDate: "2027-02-28", endDate: "2027-03-31", dbName: "mar_2027" },
+            '2027-04': { monthTitle: "4월", startDate: "2027-03-31", endDate: "2027-04-30", dbName: "apr_2027" },
+            '2027-05': { monthTitle: "5월", startDate: "2027-04-30", endDate: "2027-05-31", dbName: "may_2027" },
+            '2027-06': { monthTitle: "6월", startDate: "2027-05-31", endDate: "2027-06-30", dbName: "jun_2027" },
+            '2027-07': { monthTitle: "7월", startDate: "2027-06-30", endDate: "2027-07-31", dbName: "jul_2027" },
+            '2027-08': { monthTitle: "8월", startDate: "2027-07-31", endDate: "2027-08-31", dbName: "aug_2027" },
+            '2027-09': { monthTitle: "9월", startDate: "2027-08-31", endDate: "2027-09-30", dbName: "sep_2027" },
+            '2027-10': { monthTitle: "10월", startDate: "2027-09-30", endDate: "2027-10-31", dbName: "oct_2027" },
+            '2027-11': { monthTitle: "11월", startDate: "2027-10-31", endDate: "2027-11-30", dbName: "nov_2027" },
+            '2027-12': { monthTitle: "12월", startDate: "2027-11-30", endDate: "2027-12-31", dbName: "dec_2027" },
         };
         // 초기 설정: 오늘 날짜 기준으로 자동 선택
         // - 오늘 월이 MONTHS_CONFIG에 있으면 그 월
@@ -938,6 +950,18 @@
                             <option value="2026-10">2026년 10월 정규반 매니저</option>
                             <option value="2026-11">2026년 11월 정규반 매니저</option>
                             <option value="2026-12">2026년 12월 정규반 매니저</option>
+                            <option value="2027-01">2027년 1월 정규반 매니저</option>
+                            <option value="2027-02">2027년 2월 정규반 매니저</option>
+                            <option value="2027-03">2027년 3월 정규반 매니저</option>
+                            <option value="2027-04">2027년 4월 정규반 매니저</option>
+                            <option value="2027-05">2027년 5월 정규반 매니저</option>
+                            <option value="2027-06">2027년 6월 정규반 매니저</option>
+                            <option value="2027-07">2027년 7월 정규반 매니저</option>
+                            <option value="2027-08">2027년 8월 정규반 매니저</option>
+                            <option value="2027-09">2027년 9월 정규반 매니저</option>
+                            <option value="2027-10">2027년 10월 정규반 매니저</option>
+                            <option value="2027-11">2027년 11월 정규반 매니저</option>
+                            <option value="2027-12">2027년 12월 정규반 매니저</option>
                         </select>
                         <p class="text-[11px] text-slate-400 font-semibold tracking-wide">미래엔 연세영어 · Class &amp; Tuition Manager</p>
                     </div>
@@ -1137,7 +1161,7 @@
                     <div class="grid grid-cols-1 gap-6 pb-40">
                         <div id="capture-target-apr" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <div class="flex justify-between items-end mb-3">
-                                <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded">2026</span> <span class="month-title">4월</span></h3>
+                                <h3 class="flex items-center gap-2 font-bold text-lg text-slate-700"><span class="bg-slate-800 text-white text-sm px-2 py-1 rounded year-title">2026</span> <span class="month-title">4월</span></h3>
                                 <div class="print-student-name hidden" style="font-size:1.2rem;font-weight:800;color:#ffffff;background:#4f46e5;background:linear-gradient(135deg,#4338ca,#6366f1);padding:8px 22px;border-radius:9999px;box-shadow:0 4px 12px rgba(67,56,202,0.35);letter-spacing:-0.02em;white-space:nowrap;line-height:1.45;"></div>
                                 <div class="font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100" id="stat-apr"></div>
                             </div>
@@ -2840,8 +2864,11 @@
             const titleStrs = document.querySelectorAll('.month-title');
             titleStrs.forEach(el => el.textContent = window.APP_CONFIG.monthTitle);
 
+            // 연도는 고른 달(2027-01 등)에서 — 1월 수업 기준일이 12/31에 시작해도 2027로
+            const year = (currentMonthKey() || window.APP_CONFIG.endDate || '').slice(0, 4);
+            document.querySelectorAll('.year-title').forEach(el => el.textContent = year);
             const labels = document.querySelectorAll('.month-label');
-            labels.forEach(el => el.textContent = `2026년 ${window.APP_CONFIG.monthTitle}`);
+            labels.forEach(el => el.textContent = `${year}년 ${window.APP_CONFIG.monthTitle}`);
 
             const datePicker = document.getElementById('director-date-picker');
             if(datePicker) datePicker.value = window.APP_CONFIG.startDate; 
